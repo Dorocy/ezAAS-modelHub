@@ -1,21 +1,21 @@
 import { getCodeList } from "@/api";
+import mantineTreeClasses from "@/css/MantineTree.module.css";
 import { getCodeTree } from "@/utils";
 import {
-  useCombobox,
-  Combobox,
-  Tree,
-  Group,
-  Flex,
   Box,
-  useTree,
-  Text,
-  Input,
   CheckIcon,
+  Combobox,
+  Flex,
+  Group,
+  Input,
+  Text,
+  Tree,
+  useCombobox,
+  useTree,
 } from "@mantine/core";
 import { IconChevronDown, IconPointFilled } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
-import React, { ReactNode, useEffect, useMemo, useState } from "react";
-import mantineTreeClasses from "@/css/MantineTree.module.css";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 
 function CategoryCombobox({
   className = "",
@@ -47,18 +47,18 @@ function CategoryCombobox({
   const categoryTree = useMemo(
     () =>
       getCodeTree(
-        Array.isArray(categorys2)
-          ? categorys2.filter((item) =>
-              item.title.toLowerCase().includes(search.toLowerCase())
+        Array.isArray(categorys2?.data)
+          ? categorys2.data.filter((item) =>
+              item.title.toLowerCase().includes(search.toLowerCase()),
             )
-          : categorys2
+          : categorys2?.data,
       ),
-    [categorys2, search, value]
+    [categorys2, search, value],
   );
 
   useEffect(() => {
-    if (categorys2) {
-      setLabel(categorys2.find((item) => item.value === value)?.title);
+    if (categorys2?.data) {
+      setLabel(categorys2.data.find((item) => item.value === value)?.title);
     }
   }, [value, categorys2]);
 
@@ -71,7 +71,7 @@ function CategoryCombobox({
       resetSelectionOnOptionHover
       onOptionSubmit={(val) => {
         setValue(val);
-        setLabel(categorys2.find((item) => item.c_id === val)?.title);
+        setLabel(categorys2?.data?.find((item) => item.c_id === val)?.title);
         setSearch("");
         combobox.updateSelectedOptionIndex("active");
         combobox.closeDropdown();
@@ -154,7 +154,10 @@ function CategoryCombobox({
                 const optionContent = (
                   <Flex align={"center"}>
                     {!isNaN(Number(node.value)) && (
-                      <IconPointFilled size={"0.8rem"} style={{ color: "var(--mantine-color-blue-6)" }} />
+                      <IconPointFilled
+                        size={"0.8rem"}
+                        style={{ color: "var(--mantine-color-blue-6)" }}
+                      />
                     )}
                     <Text ml={6}>{node.label}</Text>
                     {node.value === value && (

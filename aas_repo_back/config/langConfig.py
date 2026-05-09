@@ -73,7 +73,9 @@ WHERE grpcode = 'LANG100'
     if result["result"] == "ok":
         language_dataset = result["data"]
     else:
-        language_dataset = None
+        # language_dataset = None
+        language_dataset = []
+        
 
 if language_dataset is None or len(language_dataset) == 0:
     load_language_data()
@@ -94,4 +96,28 @@ def Message(messageCode:str, lang_code:Union[int, str] = '1'):
 
     message = next((item['codename' + ('' if str(lang_code) == '1' else str(lang_code)) ] for item in language_dataset if item['code'] == messageCode), "")
     return message
+
+# def Message(messageCode: str = "", lang_code: Union[int, str] = "1"):
+#     global language_dataset
+
+#     try:
+#         if not language_dataset:
+#             load_language_data()
+
+#         if not language_dataset:
+#             return messageCode
+
+#         key = "codename" if str(lang_code) == "1" else f"codename{lang_code}"
+
+#         return next(
+#             (
+#                 item.get(key, item.get("codename", messageCode))
+#                 for item in language_dataset
+#                 if item.get("code") == messageCode
+#             ),
+#             messageCode
+#         )
+
+#     except Exception:
+#         return messageCode
     

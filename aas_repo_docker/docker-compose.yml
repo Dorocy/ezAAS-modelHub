@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   portainer:
@@ -6,7 +6,7 @@ services:
     container_name: portainer
     command: -H unix:///var/run/docker.sock --base-url /portainer/
     restart: always
-    networks: 
+    networks:
       - aas-network
     volumes:
       - /etc/localtime:/etc/localtime:ro
@@ -22,12 +22,12 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ipx2309753 
+      POSTGRES_PASSWORD: 1234123412
       POSTGRES_DB: postgres
     ports:
       - "5432:5432"
     volumes:
-      - ./data:/var/lib/postgresql/data
+      - pg16_data:/var/lib/postgresql/data
     networks:
       - aas-network
 
@@ -77,3 +77,4 @@ networks:
 
 volumes:
   portainer_data:
+  pg16_data:

@@ -1,6 +1,4 @@
-import { AuthTokenData, TokenPayload, TokenProfile } from "@/types/auth";
 import { TreeNodeData } from "@mantine/core";
-import { jwtDecode } from "jwt-decode";
 
 export async function parseJsonFile(file: File): Promise<any> {
   return new Promise((resolve, reject) => {
@@ -62,8 +60,8 @@ export function base64ToFile(imageBase64, filename, mimeType) {
 }
 
 export function getCodeTree(data) {
-  if (data == null) {
-    return;
+  if (!Array.isArray(data)) {
+    return [];
   }
   const treeMap = new Map();
 
