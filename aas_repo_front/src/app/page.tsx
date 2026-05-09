@@ -3,17 +3,14 @@
  * 설명: shadcn/ui 기반으로 재작성된 메인 홈 페이지.
  *       Bootstrap/Metronic 클래스 완전 제거.
  */
-import { getPublishedCount } from "@/api";
+import { MOCK_PUBLISHED_COUNT } from "@/lib/mock-data";
 import AASSearchBar from "@/components/feature/app/AASSearchBar";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import {
   FileText,
@@ -25,48 +22,31 @@ import {
 } from "lucide-react";
 
 export const metadata = { title: "KETI ezAAS Model Hub" };
-export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  let publishedCount: Record<string, unknown> = {};
-  try {
-    let raw = await getPublishedCount();
-    if (Array.isArray(raw)) {
-      publishedCount = raw.reduce(
-        (prev: Record<string, unknown>, curr: { ty: string }) => {
-          prev[curr.ty] = curr;
-          return prev;
-        },
-        {}
-      );
-    } else if (raw && typeof raw === "object") {
-      publishedCount = raw as Record<string, unknown>;
-    }
-  } catch {
-    // backend unavailable — show 0 counts
-  }
+  const publishedCount = MOCK_PUBLISHED_COUNT;
 
   const statCards = [
     {
       href: "/aas",
       icon: FileText,
       label: "AAS Templates",
-      count: publishedCount?.["aasmodel"]?.["cnt"] ?? "0",
-      isNew: publishedCount?.["aasmodel"]?.["is_new"],
+      count: publishedCount.aasmodel.count,
+      isNew: false,
     },
     {
       href: "/submodel",
       icon: File,
       label: "Submodel Templates",
-      count: publishedCount?.["submodel"]?.["cnt"] ?? "0",
-      isNew: publishedCount?.["submodel"]?.["is_new"],
+      count: publishedCount.submodel.count,
+      isNew: false,
     },
     {
       href: "/instance",
       icon: Layers,
       label: "AAS Instances",
-      count: publishedCount?.["instance"]?.["cnt"] ?? "0",
-      isNew: publishedCount?.["instance"]?.["is_new"],
+      count: publishedCount.instance.count,
+      isNew: true,
     },
   ];
 
