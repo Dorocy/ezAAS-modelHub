@@ -1,5 +1,5 @@
 import { getInstance } from "@/api";
-import InstanceForm from "@/components/feature/instance/InstanceForm";
+import InstanceFormClient from "@/components/feature/instance/InstanceFormClient";
 
 interface Props {
   params: Promise<{ instanceSeq: string }>;
@@ -11,7 +11,7 @@ export default async function Page({ params }: Props) {
 
   return (
     <>
-      {instance != null && <InstanceForm mode="edit" instance={instance} />}
+      {instance != null && <InstanceFormClient mode="edit" instance={instance} />}
     </>
   );
 }

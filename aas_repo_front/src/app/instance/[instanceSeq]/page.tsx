@@ -1,5 +1,5 @@
 import { getInstance, getInstanceDetail } from "@/api";
-import InstanceForm from "@/components/feature/instance/InstanceForm";
+import InstanceFormClient from "@/components/feature/instance/InstanceFormClient";
 
 interface Props {
   params: Promise<{ instanceSeq: string }>;
@@ -14,7 +14,7 @@ export default async function Page({ params }: Props) {
   return (
     <>
       {instance != null && (
-        <InstanceForm
+        <InstanceFormClient
           mode="view"
           instance={instance}
           combinedAAS={instanceDetail[0]?.metadata}

@@ -21,6 +21,18 @@ interface AuthContextType {
   language: ReturnType<typeof useLanguage>;
 }
 
+// ── 개발용 Mock Admin ──────────────────────────────────────────────────────
+// 백엔드 없이 v0 preview에서 모든 페이지를 볼 수 있도록 mock 관리자 세션을 제공.
+// NEXT_PUBLIC_MOCK_ADMIN=true 환경변수가 설정되어 있거나, tokenMessage가 비어있을 때 활성화.
+const MOCK_ADMIN_PROFILE: TokenProfile = {
+  user_seq: 1,
+  user_id: "admin",
+  user_name: "Admin",
+  user_group_seq: 1,   // Manager
+  user_group_name: "Manager",
+  user_photo_url: undefined,
+};
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({
@@ -30,7 +42,11 @@ export const AuthProvider = ({
   tokenMessage: string;
   children: React.ReactNode;
 }) => {
+  const isMockMode =
+    process.env.NEXT_PUBLIC_MOCK_ADMIN === "true" || !tokenMessage;
+
   const [authToken, setAuthToken] = useState<AuthTokenData | undefined>(() => {
+    if (isMockMode) return { target: "AASREPO_MOCK", payload: { jwt_access_token: "" } } as any;
     let authToken: AuthTokenData | undefined;
     try {
       authToken = JSON.parse(tokenMessage);
@@ -43,11 +59,13 @@ export const AuthProvider = ({
     }
   });
   const [payload, setPayload] = useState<TokenPayload | undefined>(() => {
+    if (isMockMode) return undefined;
     return authToken
       ? jwtDecode<TokenPayload>(authToken.payload.jwt_access_token)
       : undefined;
   });
   const [user, setUser] = useState<TokenProfile | null>(() => {
+    if (isMockMode) return MOCK_ADMIN_PROFILE;
     return payload ? payload.profile : null;
   });
 
@@ -221,8 +239,8 @@ export const AuthProvider = ({
 
 
   useEffect(() => {
-    // 로그인 페이지에서는 세션 만료 체크를 하지 않음
-    if (pathname === ROUTES.LOGIN) {
+    // mock 모드 또는 로그인 페이지에서는 세션 만료 체크를 하지 않음
+    if (isMockMode || pathname === ROUTES.LOGIN) {
       return;
     }
 
