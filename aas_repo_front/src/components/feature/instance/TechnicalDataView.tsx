@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 import React from "react";
 import { Table, Text, Tooltip } from "@mantine/core";

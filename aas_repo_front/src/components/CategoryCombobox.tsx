@@ -1,26 +1,21 @@
-import { getCodeList } from "@/api";
-import mantineTreeClasses from "@/css/MantineTree.module.css";
-import { getCodeTree } from "@/utils";
-import {
-  Box,
-  CheckIcon,
-  Combobox,
-  Flex,
-  Group,
-  Input,
-  Text,
-  Tree,
-  useCombobox,
-  useTree,
-} from "@mantine/core";
-import { IconChevronDown, IconPointFilled } from "@tabler/icons-react";
+"use client";
+
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { getCodeList } from "@/api";
+import { ChevronDown, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface CodeItem {
+  c_id?: string;
+  value?: string;
+  title: string;
+  p_id?: string;
+}
 
 function CategoryCombobox({
   className = "",
   disabled = false,
-  selectLeafOnly = false,
   code = "category2",
   value,
   setValue,
@@ -30,200 +25,95 @@ function CategoryCombobox({
   selectLeafOnly?: boolean;
   code?: "category2" | "aas_category" | "sm_category";
   value: any;
-  setValue: Function;
+  setValue: (v: string | undefined) => void;
 }) {
-  const combobox = useCombobox({});
-  const codeTree = useTree();
-
-  const [label, setLabel] = useState("");
+  const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [selectedItem, setSelectedItem] = useState<string | null>(null);
 
-  const { data: categorys2 } = useQuery({
+  const { data: categorys } = useQuery({
     queryKey: ["common/code", code],
     queryFn: () => getCodeList(code),
   });
 
-  const categoryTree = useMemo(
-    () =>
-      getCodeTree(
-        Array.isArray(categorys2?.data)
-          ? categorys2.data.filter((item) =>
-              item.title.toLowerCase().includes(search.toLowerCase()),
-            )
-          : categorys2?.data,
-      ),
-    [categorys2, search, value],
-  );
+  const items: CodeItem[] = useMemo(() => {
+    const raw = Array.isArray(categorys?.data) ? categorys.data : Array.isArray(categorys) ? categorys : [];
+    if (!search) return raw;
+    return raw.filter((item: CodeItem) => item.title?.toLowerCase().includes(search.toLowerCase()));
+  }, [categorys, search]);
 
-  useEffect(() => {
-    if (categorys2?.data) {
-      setLabel(categorys2.data.find((item) => item.value === value)?.title);
-    }
-  }, [value, categorys2]);
+  const selectedLabel = useMemo(() => {
+    const raw = Array.isArray(categorys?.data) ? categorys.data : Array.isArray(categorys) ? categorys : [];
+    return raw.find((item: CodeItem) => (item.c_id ?? item.value) === value)?.title ?? "";
+  }, [categorys, value]);
+
+  const handleSelect = (item: CodeItem) => {
+    setValue(item.c_id ?? item.value);
+    setSearch("");
+    setOpen(false);
+  };
 
   return (
-    <Combobox
-      disabled={!!disabled}
-      zIndex={2000}
-      width={500}
-      store={combobox}
-      resetSelectionOnOptionHover
-      onOptionSubmit={(val) => {
-        setValue(val);
-        setLabel(categorys2?.data?.find((item) => item.c_id === val)?.title);
-        setSearch("");
-        combobox.updateSelectedOptionIndex("active");
-        combobox.closeDropdown();
-      }}
-    >
-      <Combobox.Target>
-        <Flex
-          align="center"
-          w={"100%"}
-          bd={className == "border-0" ? "" : "1px solid gray.4"}
-          style={{
-            borderRadius: "8px",
-          }}
-        >
-          <input
-            className={"form-control border-0 flex-grow-1"}
-            disabled={!!disabled}
-            placeholder="Category All"
-            value={label || search}
-            onChange={(e) => {
-              setLabel("");
-              setSearch(e.currentTarget.value);
-              codeTree.expandAllNodes();
-            }}
-            onKeyDown={() => {
-              codeTree.expandAllNodes();
-            }}
-            onClick={() => {
-              codeTree.expandAllNodes();
+    <div className="relative w-full">
+      <div
+        className={cn(
+          "flex items-center border rounded-md bg-background px-2 h-9 text-sm gap-1",
+          disabled && "opacity-50 pointer-events-none",
+          className
+        )}
+      >
+        <input
+          className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-foreground"
+          placeholder="Category All"
+          disabled={disabled}
+          value={open ? search : (selectedLabel || search)}
+          onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => { setTimeout(() => setOpen(false), 150); }}
+        />
+        {!disabled && value && (
+          <button type="button" onClick={(e) => { e.stopPropagation(); setValue(undefined); setSearch(""); }}
+            className="text-muted-foreground hover:text-foreground">
+            <X className="size-3.5" />
+          </button>
+        )}
+        <button type="button" onClick={() => setOpen(!open)} className="text-muted-foreground hover:text-foreground">
+          <ChevronDown className={cn("size-3.5 transition-transform", open && "rotate-180")} />
+        </button>
+      </div>
 
-              combobox.openDropdown();
-            }}
-            onFocus={() => {
-              codeTree.expandAllNodes();
-
-              combobox.openDropdown();
-            }}
-            onBlur={() => {
-              setLabel(categorys2.find((item) => item.value === value)?.title);
-              setSearch(search);
-              codeTree.expandAllNodes();
-
-              combobox.closeDropdown();
-            }}
-          />
-          {!disabled && value !== "" && (
-            <Input.ClearButton
-              style={{ cursor: "pointer" }}
-              size="1.5rem"
-              onClick={() => {
-                setSearch("");
-                setValue(undefined);
-              }}
-            />
+      {open && (
+        <div className="absolute z-50 mt-1 w-full max-h-60 overflow-auto rounded-md border bg-popover shadow-md">
+          {/* All option */}
+          <button
+            type="button"
+            className={cn("w-full px-3 py-1.5 text-left text-sm hover:bg-accent", !value && "font-medium text-primary")}
+            onMouseDown={(e) => { e.preventDefault(); setValue(undefined); setOpen(false); }}
+          >
+            All
+          </button>
+          {items.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-muted-foreground">No results.</div>
+          ) : (
+            items.map((item) => {
+              const id = item.c_id ?? item.value ?? item.title;
+              const isSelected = id === value;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  className={cn("w-full px-3 py-1.5 text-left text-sm hover:bg-accent flex items-center gap-2", isSelected && "font-medium text-primary")}
+                  onMouseDown={(e) => { e.preventDefault(); handleSelect(item); }}
+                >
+                  <span className="size-1.5 rounded-full bg-primary/60 shrink-0" />
+                  {item.title}
+                </button>
+              );
+            })
           )}
-          <Combobox.Chevron
-            size="2.5rem"
-            style={{ cursor: "pointer" }}
-            onClick={() => combobox.openDropdown()}
-          />
-        </Flex>
-      </Combobox.Target>
-
-      <Combobox.Dropdown>
-        <Combobox.Options mah={500} style={{ overflowY: "auto" }}>
-          {/* 공통코드 트리 */}
-          {Array.isArray(categoryTree) && (
-            <Tree
-              data={categoryTree || []}
-              tree={codeTree}
-              expandOnClick={false}
-              renderNode={({
-                level,
-                node,
-                hasChildren,
-                expanded,
-                elementProps,
-                tree,
-              }) => {
-                const optionContent = (
-                  <Flex align={"center"}>
-                    {!isNaN(Number(node.value)) && (
-                      <IconPointFilled
-                        size={"0.8rem"}
-                        style={{ color: "var(--mantine-color-blue-6)" }}
-                      />
-                    )}
-                    <Text ml={6}>{node.label}</Text>
-                    {node.value === value && (
-                      <CheckIcon size="1rem" style={{ marginLeft: "0.5rem" }} />
-                    )}
-                  </Flex>
-                );
-                const wrapped =
-                  selectLeafOnly && isNaN(Number(node.value)) ? (
-                    <div key={node.value}>{optionContent}</div>
-                  ) : (
-                    <Combobox.Option
-                      value={node.value}
-                      key={node.value}
-                      active={node.value === value}
-                    >
-                      {optionContent}
-                    </Combobox.Option>
-                  );
-                const childNode = (
-                  <Group>
-                    <Flex h="100%" align="center">
-                      {hasChildren && (
-                        <IconChevronDown
-                          size={14}
-                          style={{
-                            marginRight: 4,
-                            transform: expanded
-                              ? "rotate(0deg)"
-                              : "rotate(-90deg)",
-                          }}
-                          onClick={() => {
-                            tree.toggleExpanded(node.value);
-                          }}
-                        />
-                      )}{" "}
-                      {wrapped}
-                    </Flex>
-                  </Group>
-                );
-                return (
-                  <div key={node.value}>
-                    {Array.from({
-                      length: level - 1,
-                    }).reduce<ReactNode>((child, _, index) => {
-                      return (
-                        <Box
-                          className={
-                            level - index + 1 > 1
-                              ? mantineTreeClasses.treeLine
-                              : ""
-                          }
-                          pl={20}
-                        >
-                          {child}
-                        </Box>
-                      );
-                    }, childNode)}
-                  </div>
-                );
-              }}
-            />
-          )}
-        </Combobox.Options>
-      </Combobox.Dropdown>
-    </Combobox>
+        </div>
+      )}
+    </div>
   );
 }
+
 export default CategoryCombobox;

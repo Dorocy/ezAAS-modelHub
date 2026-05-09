@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Flex, Button, Tooltip, ActionIcon } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import React from "react";

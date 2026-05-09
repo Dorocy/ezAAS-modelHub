@@ -120,6 +120,18 @@ export interface UpsertInstanceParams {
   errorThrow?: boolean;
 }
 
+export interface InstanceSavePayload {
+  instance_seq: string;
+  instance_name: string;
+  description: string;
+  verification: "success" | "fail" | undefined;
+  verification_log?: { total: number; success: number; fail: number };
+  aasmodel_seq: string;
+  aasmodel_metadata: string;
+  status: string;
+  submodels: Array<{ submodel_seq: string | null; submodel_metadata: string }>;
+}
+
 export interface AASInstance {
   instance_seq: string;
   instance_name: string;
