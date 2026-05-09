@@ -64,7 +64,11 @@ export const ROUTES = {
   },
 };
 
-export const PROTECTED_ROUTES = [
+export const PROTECTED_ROUTES: Array<{
+  path: string;
+  minRole?: UserRole;
+  allowRoles: UserRole[];
+}> = [
   { path: ROUTES.HOME, minRole: undefined, allowRoles: [] },
   { path: ROUTES.ABOUT, minRole: undefined, allowRoles: [] },
   { path: ROUTES.SAMPLE, minRole: undefined, allowRoles: [] },

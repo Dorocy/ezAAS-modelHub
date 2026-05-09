@@ -42,8 +42,8 @@ export default function AASSearchBar() {
       {/* Model type */}
       <Select
         value={modelType}
-        onValueChange={(value) => {
-          setModelType(value as "aasmodel" | "submodel");
+        onValueChange={(value: string | null) => {
+          if (value) setModelType(value as "aasmodel" | "submodel");
           setCategorySeq("all");
         }}
       >
@@ -59,7 +59,7 @@ export default function AASSearchBar() {
       </Select>
 
       {/* Category */}
-      <Select value={categorySeq} onValueChange={(v: string) => setCategorySeq(v)}>
+      <Select value={categorySeq} onValueChange={(v: string | null) => { if (v) setCategorySeq(v); }}>
         <SelectTrigger className="h-9 w-48 shrink-0">
           <SelectValue placeholder="All Categories" />
         </SelectTrigger>
