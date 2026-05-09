@@ -1,0 +1,40 @@
+✅ Mounting StaticFiles: URL='/aas_files/aas' -> Path='/home/datalake/aas_files/aas'
+✅ Mounting SM Files : URL='/aas_files/sm' -> Path='/home/datalake/aas_files/sm'
+Traceback (most recent call last):
+  File "/home/ezmodel-hub/aas_repo_back/main.py", line 124, in <module>
+    start_jvm()
+  File "/home/ezmodel-hub/aas_repo_back/app/basyxAasenvironmentModule.py", line 121, in start_jvm
+    jpype.startJVM(classpath=all_jars)
+  File "/home/ezmodel-hub/aas_repo_back/venv/lib/python3.12/site-packages/jpype/_core.py", line 267, in startJVM
+    jvmpath = getDefaultJVMPath()
+              ^^^^^^^^^^^^^^^^^^^
+  File "/home/ezmodel-hub/aas_repo_back/venv/lib/python3.12/site-packages/jpype/_jvmfinder.py", line 70, in getDefaultJVMPath
+    return finder.get_jvm_path()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ezmodel-hub/aas_repo_back/venv/lib/python3.12/site-packages/jpype/_jvmfinder.py", line 204, in get_jvm_path
+    raise JVMNotFoundException("No JVM shared library file ({0}) "
+jpype._jvmfinder.JVMNotFoundException: No JVM shared library file (libjvm.so) found. Try setting up the JAVA_HOME environment variable properly.
+✅ Mounting StaticFiles: URL='/aas_files/aas' -> Path='/home/datalake/aas_files/aas'
+✅ Mounting SM Files : URL='/aas_files/sm' -> Path='/home/datalake/aas_files/sm'
+✅ Mounting StaticFiles: URL='/aas_files/aas' -> Path='/home/datalake/aas_files/aas'
+✅ Mounting SM Files : URL='/aas_files/sm' -> Path='/home/datalake/aas_files/sm'
+✅ Mounting StaticFiles: URL='/aas_files/aas' -> Path='/home/datalake/aas_files/aas'
+✅ Mounting SM Files : URL='/aas_files/sm' -> Path='/home/datalake/aas_files/sm'
+✅ Mounting StaticFiles: URL='/aas_files/aas' -> Path='/home/datalake/aas_files/aas'
+✅ Mounting SM Files : URL='/aas_files/sm' -> Path='/home/datalake/aas_files/sm'
+✅ Mounting StaticFiles: URL='/aas_files/aas' -> Path='/home/datalake/aas_files/aas'
+✅ Mounting SM Files : URL='/aas_files/sm' -> Path='/home/datalake/aas_files/sm'
+✅ Mounting StaticFiles: URL='/aas_files/aas' -> Path='/home/datalake/aas_files/aas'
+✅ Mounting SM Files : URL='/aas_files/sm' -> Path='/home/datalake/aas_files/sm'
+✅ Mounting StaticFiles: URL='/aas_files/aas' -> Path='/home/datalake/aas_files/aas'
+✅ Mounting SM Files : URL='/aas_files/sm' -> Path='/home/datalake/aas_files/sm'
+✅ Mounting StaticFiles: URL='/aas_files/aas' -> Path='/home/datalake/aas_files/aas'
+✅ Mounting SM Files : URL='/aas_files/sm' -> Path='/home/datalake/aas_files/sm'
+✅ Mounting StaticFiles: URL='/aas_files/aas' -> Path='/home/datalake/aas_files/aas'
+✅ Mounting SM Files : URL='/aas_files/sm' -> Path='/home/datalake/aas_files/sm'
+✅ Mounting StaticFiles: URL='/aas_files/aas' -> Path='/home/datalake/aas_files/aas'
+✅ Mounting SM Files : URL='/aas_files/sm' -> Path='/home/datalake/aas_files/sm'
+✅ Mounting StaticFiles: URL='/aas_files/aas' -> Path='/home/datalake/aas_files/aas'
+✅ Mounting SM Files : URL='/aas_files/sm' -> Path='/home/datalake/aas_files/sm'
+✅ Mounting StaticFiles: URL='/aas_files/aas' -> Path='/home/datalake/aas_files/aas'
+✅ Mounting SM Files : URL='/aas_files/sm' -> Path='/home/datalake/aas_files/sm'

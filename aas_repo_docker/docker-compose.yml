@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    command: -H unix:///var/run/docker.sock --base-url /portainer/
+    restart: always
+    networks: 
+      - aas-network
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    ports:
+      - "9443:9443"
+      - "9000:9000"
+
+  postgres:
+    image: postgres:16
+    container_name: pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ipx2309753 
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    networks:
+      - aas-network
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: nginx
+    restart: always
+    networks:
+      - aas-network
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+
+  aas_repo_front:
+    build:
+      context: ../aas_repo_front
+      dockerfile: Dockerfile
+    container_name: aas_repo_front
+    restart: always
+    ports:
+      - "5000:5000"
+    networks:
+      - aas-network
+
+  backend:
+    build:
+      context: ../aas_repo_back
+      dockerfile: Dockerfile
+    container_name: aas_repo_back
+    env_file:
+      - /home/ezmodel-hub/aas_repo_back/.env
+    depends_on:
+      - postgres
+    networks:
+      - aas-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/datalake/aas_files:/home/datalake/aas_files
+
+networks:
+  aas-network:
+    driver: bridge
+
+volumes:
+  portainer_data:
