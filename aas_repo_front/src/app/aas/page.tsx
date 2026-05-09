@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { getModelList, getCodeList } from "@/api/index";

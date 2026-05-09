@@ -1,4 +1,4 @@
-import { MOCK_PUBLISHED_COUNT } from "@/lib/mock-data";
+import { getPublishedCount } from "@/api";
 import AASSearchBar from "@/components/feature/app/AASSearchBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,14 +12,29 @@ import {
 } from "lucide-react";
 
 export const metadata = { title: "KETI ezAAS Model Hub" };
+export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const { aasmodel, submodel, instance } = MOCK_PUBLISHED_COUNT;
+  let aasCount = 0;
+  let smCount = 0;
+  let insCount = 0;
+
+  try {
+    const raw = await getPublishedCount();
+    const list: Array<{ ty: string; cnt: number }> = Array.isArray(raw)
+      ? raw
+      : [];
+    aasCount = list.find((r) => r.ty === "aasmodel")?.cnt ?? 0;
+    smCount  = list.find((r) => r.ty === "submodel")?.cnt ?? 0;
+    insCount = list.find((r) => r.ty === "instance")?.cnt ?? 0;
+  } catch {
+    // backend unreachable — counts stay 0
+  }
 
   const statCards = [
-    { href: "/aas",      icon: LayoutTemplate, label: "AAS Templates",      count: aasmodel.count, color: "text-blue-600",   bg: "bg-blue-50" },
-    { href: "/submodel", icon: Puzzle,          label: "Submodel Templates", count: submodel.count, color: "text-violet-600", bg: "bg-violet-50" },
-    { href: "/instance", icon: Layers,          label: "AAS Instances",      count: instance.count, color: "text-emerald-600",bg: "bg-emerald-50", isNew: true },
+    { href: "/aas",      icon: LayoutTemplate, label: "AAS Templates",      count: aasCount,  color: "text-blue-600",    bg: "bg-blue-50" },
+    { href: "/submodel", icon: Puzzle,          label: "Submodel Templates", count: smCount,   color: "text-violet-600",  bg: "bg-violet-50" },
+    { href: "/instance", icon: Layers,          label: "AAS Instances",      count: insCount,  color: "text-emerald-600", bg: "bg-emerald-50", isNew: true },
   ];
 
   const features = [

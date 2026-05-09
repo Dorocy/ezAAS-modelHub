@@ -245,12 +245,10 @@ export default function InstancePage() {
                           {hasPermission && (
                             <div className="flex items-center gap-1.5">
                               <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
-                                    <Download className="size-3" />
-                                    Export
-                                    <ChevronDown className="size-3" />
-                                  </Button>
+                                <DropdownMenuTrigger className="inline-flex h-7 items-center justify-center gap-1 rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs hover:bg-accent hover:text-accent-foreground">
+                                  <Download className="size-3" />
+                                  Export
+                                  <ChevronDown className="size-3" />
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   {(["json", "xml", "aasx"] as const).map((fmt) => (
