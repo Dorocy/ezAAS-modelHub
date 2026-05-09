@@ -1,52 +1,17 @@
-import {
-  MOCK_PUBLISHED_COUNT,
-  MOCK_AAS_CATEGORIES,
-  MOCK_SM_CATEGORIES,
-} from "@/lib/mock-data";
+import { MOCK_PUBLISHED_COUNT } from "@/lib/mock-data";
 import AASSearchBar from "@/components/feature/app/AASSearchBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import {
-  FileText,
   Layers,
-  File,
-  Factory,
-  Zap,
-  Cpu,
-  Building2,
-  Leaf,
-  Bot,
-  Tag,
-  FileBarChart2,
-  BookOpen,
-  IdCard,
-  Sprout,
-  ClipboardList,
   ShieldCheck,
   LayoutTemplate,
   Puzzle,
-  type LucideIcon,
+  Cpu,
 } from "lucide-react";
 
 export const metadata = { title: "KETI ezAAS Model Hub" };
-
-// Map icon string names → lucide components
-const ICON_MAP: Record<string, LucideIcon> = {
-  Factory,
-  Zap,
-  Cpu,
-  Building2,
-  Leaf,
-  Bot,
-  Tag,
-  FileBarChart2,
-  BookOpen,
-  IdCard,
-  Sprout,
-  ClipboardList,
-};
 
 export default async function Home() {
   const { aasmodel, submodel, instance } = MOCK_PUBLISHED_COUNT;
@@ -122,99 +87,6 @@ export default async function Home() {
               );
             })}
           </div>
-        </div>
-      </section>
-
-      {/* ── Category Browse ───────────────────────────────────────── */}
-      <section className="py-12 border-b border-border">
-        <div className="mx-auto max-w-screen-xl px-4 lg:px-8">
-
-          {/* AAS Template categories */}
-          <div className="mb-10">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex size-8 items-center justify-center rounded-md bg-blue-50">
-                <LayoutTemplate className="size-4 text-blue-600" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-foreground leading-none">
-                  AAS Template Categories
-                </h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Browse templates by asset type
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-              {MOCK_AAS_CATEGORIES.map((cat) => {
-                const Icon = ICON_MAP[cat.icon] ?? File;
-                return (
-                  <Link
-                    key={cat.id}
-                    href={`/aas?category_seq=${cat.id}`}
-                  >
-                    <Card className="group cursor-pointer transition-all hover:border-blue-300 hover:shadow-sm">
-                      <CardContent className="flex flex-col items-center gap-2.5 px-3 py-5 text-center">
-                        <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50 transition-colors group-hover:bg-blue-100">
-                          <Icon className="size-5 text-blue-600" />
-                        </div>
-                        <span className="text-xs font-medium text-foreground leading-snug text-balance">
-                          {cat.text}
-                        </span>
-                        <span className="text-xs tabular-nums text-muted-foreground">
-                          {cat.count} templates
-                        </span>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-
-          <Separator className="mb-10" />
-
-          {/* Submodel Template categories */}
-          <div>
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex size-8 items-center justify-center rounded-md bg-violet-50">
-                <Puzzle className="size-4 text-violet-600" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-foreground leading-none">
-                  Submodel Template Categories
-                </h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Browse submodel templates by type
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-              {MOCK_SM_CATEGORIES.map((cat) => {
-                const Icon = ICON_MAP[cat.icon] ?? File;
-                return (
-                  <Link
-                    key={cat.id}
-                    href={`/submodel?category_seq=${cat.id}`}
-                  >
-                    <Card className="group cursor-pointer transition-all hover:border-violet-300 hover:shadow-sm">
-                      <CardContent className="flex flex-col items-center gap-2.5 px-3 py-5 text-center">
-                        <div className="flex size-10 items-center justify-center rounded-xl bg-violet-50 transition-colors group-hover:bg-violet-100">
-                          <Icon className="size-5 text-violet-600" />
-                        </div>
-                        <span className="text-xs font-medium text-foreground leading-snug text-balance">
-                          {cat.text}
-                        </span>
-                        <span className="text-xs tabular-nums text-muted-foreground">
-                          {cat.count} templates
-                        </span>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-
         </div>
       </section>
 
