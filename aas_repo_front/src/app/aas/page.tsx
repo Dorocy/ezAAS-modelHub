@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { MOCK_AAS_TEMPLATES, MOCK_CATEGORIES } from "@/lib/mock-data";
+import useSWR from "swr";
+import { getModelList, getCodeList } from "@/api/index";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/constants/roles";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { buttonVariants } from "@/components/ui/button";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -26,8 +26,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, List, Plus, Search } from "lucide-react";
+import { LayoutGrid, List, Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
+
+const PAGE_SIZE = 20;
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   published: "default",
@@ -40,20 +43,46 @@ export default function AASPage() {
   const { user } = useAuth();
 
   const [searchKey, setSearchKey] = useState("");
+  const [inputValue, setInputValue] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [layoutType, setLayoutType] = useState<"grid" | "table">("grid");
+  const [page, setPage] = useState(1);
 
-  const filtered = useMemo(() => {
-    return MOCK_AAS_TEMPLATES.filter((m) => {
-      const matchKey =
-        !searchKey ||
-        m.aasmodel_name.toLowerCase().includes(searchKey.toLowerCase()) ||
-        m.description.toLowerCase().includes(searchKey.toLowerCase());
-      const matchCategory =
-        categoryFilter === "all" || m.category_seq === categoryFilter;
-      return matchKey && matchCategory;
-    });
-  }, [searchKey, categoryFilter]);
+  // Category code list
+  const { data: categories = [] } = useSWR(
+    "categories-aasmodel",
+    () => getCodeList("category")
+  );
+
+  // Model list
+  const searchParams: Record<string, string> = {};
+  if (searchKey) searchParams.searchKey = searchKey;
+  if (categoryFilter !== "all") searchParams.category_seq = categoryFilter;
+
+  const { data: modelData, isLoading, error } = useSWR(
+    ["aasmodel-list", page, searchKey, categoryFilter],
+    () =>
+      getModelList({
+        modelType: "aasmodel",
+        pageNumber: page,
+        pageSize: PAGE_SIZE,
+        searchParams,
+      })
+  );
+
+  const models: any[] = modelData?.list ?? modelData ?? [];
+  const totalCount: number = modelData?.totalCount ?? modelData?.total ?? models.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+  const handleSearch = useCallback(() => {
+    setSearchKey(inputValue);
+    setPage(1);
+  }, [inputValue]);
+
+  const handleCategoryChange = (val: string | null) => {
+    setCategoryFilter(val ?? "all");
+    setPage(1);
+  };
 
   return (
     <div className="flex flex-col">
@@ -85,29 +114,34 @@ export default function AASPage() {
       {/* Filters */}
       <div className="border-b border-border bg-muted/30 px-6 py-3">
         <div className="mx-auto max-w-screen-2xl flex flex-wrap items-center gap-3">
-          <Select
-            value={categoryFilter}
-            onValueChange={(val) => setCategoryFilter(val ?? "all")}
-          >
+          <Select value={categoryFilter} onValueChange={handleCategoryChange}>
             <SelectTrigger className="h-8 w-44 text-sm">
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              {MOCK_CATEGORIES.map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.text}</SelectItem>
+              {categories.map((c: any) => (
+                <SelectItem key={c.category_seq ?? c.id} value={String(c.category_seq ?? c.id)}>
+                  {c.category_name ?? c.text}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-            <Input
-              className="h-8 pl-8 text-sm"
-              placeholder="Keyword Search"
-              value={searchKey}
-              onChange={(e) => setSearchKey(e.target.value)}
-            />
+          <div className="relative flex-1 min-w-[200px] max-w-sm flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+              <Input
+                className="h-8 pl-8 text-sm"
+                placeholder="Keyword Search"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              />
+            </div>
+            <Button size="sm" className="h-8" onClick={handleSearch}>
+              Search
+            </Button>
           </div>
 
           <div className="ml-auto flex items-center gap-1">
@@ -132,12 +166,24 @@ export default function AASPage() {
       {/* Content */}
       <div className="mx-auto max-w-screen-2xl w-full px-6 py-6">
         <p className="mb-4 text-sm text-muted-foreground">
-          {filtered.length} results found
+          {isLoading ? "Loading..." : `${totalCount} results found`}
         </p>
 
-        {layoutType === "grid" ? (
+        {error && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive mb-4">
+            Failed to load data. Please check your connection or try again.
+          </div>
+        )}
+
+        {isLoading ? (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {filtered.map((model) => (
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-36 rounded-lg" />
+            ))}
+          </div>
+        ) : layoutType === "grid" ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {models.map((model: any) => (
               <Link key={model.aasmodel_seq} href={ROUTES.AASMODEL.VIEW(model.aasmodel_seq)}>
                 <Card className="h-full transition-shadow hover:shadow-md cursor-pointer">
                   <CardHeader className="pb-2">
@@ -158,6 +204,9 @@ export default function AASPage() {
                 </Card>
               </Link>
             ))}
+            {models.length === 0 && (
+              <p className="col-span-full text-center text-muted-foreground py-16">No templates found.</p>
+            )}
           </div>
         ) : (
           <div className="rounded-lg border border-border overflow-hidden">
@@ -172,7 +221,7 @@ export default function AASPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((model) => (
+                {models.map((model: any) => (
                   <TableRow key={model.aasmodel_seq}>
                     <TableCell>
                       <Badge variant={STATUS_VARIANT[model.status] ?? "outline"}>
@@ -196,7 +245,7 @@ export default function AASPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {filtered.length === 0 && (
+                {models.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
                       No templates found.
@@ -205,6 +254,33 @@ export default function AASPage() {
                 )}
               </TableBody>
             </Table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-6 flex items-center justify-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              {page} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              <ChevronRight className="size-4" />
+            </Button>
           </div>
         )}
       </div>
