@@ -2,8 +2,9 @@
   "name": "ezaas-modelhub-root",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "npm@10.0.0",
   "scripts": {
-    "dev": "cd aas_repo_front && npm install --legacy-peer-deps && npm run dev",
+    "dev": "cd aas_repo_front && npm run dev",
     "build": "cd aas_repo_front && npm run build",
     "start": "cd aas_repo_front && npm run start"
   }

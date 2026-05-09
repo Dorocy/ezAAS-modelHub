@@ -239,7 +239,7 @@ function Header() {
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href={ROUTES.USER.VIEW(profile?.user_seq)}>
+                    <Link href={profile?.user_seq ? ROUTES.USER.VIEW(String(profile.user_seq)) : ROUTES.USER.LIST}>
                       {t("My Profile")}
                     </Link>
                   </DropdownMenuItem>

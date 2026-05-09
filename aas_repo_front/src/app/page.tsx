@@ -28,15 +28,22 @@ export const metadata = { title: "KETI ezAAS Model Hub" };
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  let publishedCount = await getPublishedCount();
-  if (Array.isArray(publishedCount)) {
-    publishedCount = publishedCount.reduce(
-      (prev: Record<string, unknown>, curr: { ty: string }) => {
-        prev[curr.ty] = curr;
-        return prev;
-      },
-      {}
-    );
+  let publishedCount: Record<string, unknown> = {};
+  try {
+    let raw = await getPublishedCount();
+    if (Array.isArray(raw)) {
+      publishedCount = raw.reduce(
+        (prev: Record<string, unknown>, curr: { ty: string }) => {
+          prev[curr.ty] = curr;
+          return prev;
+        },
+        {}
+      );
+    } else if (raw && typeof raw === "object") {
+      publishedCount = raw as Record<string, unknown>;
+    }
+  } catch {
+    // backend unavailable — show 0 counts
   }
 
   const statCards = [
