@@ -1,12 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { getCodeList } from "@/api";
-import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/constants/routes";
 import SearchBox from "@/components/SearchBox";
-import CategoryCombobox from "@/components/CategoryCombobox";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -17,71 +14,73 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search } from "lucide-react";
+import { MOCK_AAS_CATEGORIES, MOCK_SM_CATEGORIES } from "@/lib/mock-data";
 
 export default function AASSearchBar() {
   const router = useRouter();
   const [modelType, setModelType] = useState<"aasmodel" | "submodel">("aasmodel");
-
-  const [searchState, setSearchState] = useState({
-    category_seq: "",
-    searchKey: "",
-  });
-
+  const [categorySeq, setCategorySeq] = useState<string>("all");
   const searchRef = useRef({ searchKey: "" });
+
+  const categories =
+    modelType === "aasmodel" ? MOCK_AAS_CATEGORIES : MOCK_SM_CATEGORIES;
 
   const handleSearch = () => {
     const route =
       modelType === "aasmodel" ? ROUTES.AASMODEL.LIST : ROUTES.SUBMODEL.LIST;
-    const query = new URLSearchParams({
+    const params: Record<string, string> = {
       title: searchRef.current.searchKey,
-      category_seq: searchState.category_seq,
-    }).toString();
-    router.push(`${route}?${query}`);
+    };
+    if (categorySeq && categorySeq !== "all") {
+      params.category_seq = categorySeq;
+    }
+    router.push(`${route}?${new URLSearchParams(params).toString()}`);
   };
 
   return (
     <SearchBox onSearch={handleSearch}>
-      {/* Model type selector */}
+      {/* Model type */}
       <Select
         value={modelType}
         onValueChange={(value) => {
           setModelType(value as "aasmodel" | "submodel");
-          setSearchState((prev) => ({ ...prev, category_seq: "" }));
+          setCategorySeq("all");
         }}
       >
-        <SelectTrigger className="h-9 w-44">
+        <SelectTrigger className="h-9 w-44 shrink-0">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
             <SelectItem value="aasmodel">AAS Template</SelectItem>
-            <SelectItem value="submodel">SubModel Template</SelectItem>
+            <SelectItem value="submodel">Submodel Template</SelectItem>
           </SelectGroup>
         </SelectContent>
       </Select>
 
-      {/* Category (Mantine combobox — 이후 Phase에서 shadcn Combobox로 교체 예정) */}
-      <div className="w-52">
-        <CategoryCombobox
-          className="border-0"
-          code={modelType === "aasmodel" ? "aas_category" : "sm_category"}
-          value={searchState.category_seq}
-          setValue={(value: string) =>
-            setSearchState((prev) => ({
-              ...prev,
-              category_seq: value ?? "",
-              searchKey: searchRef.current.searchKey,
-            }))
-          }
-        />
-      </div>
+      {/* Category */}
+      <Select value={categorySeq} onValueChange={setCategorySeq}>
+        <SelectTrigger className="h-9 w-48 shrink-0">
+          <SelectValue placeholder="All Categories" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value="all">All Categories</SelectItem>
+            {categories.map((cat) => (
+              <SelectItem key={cat.id} value={cat.id}>
+                {cat.text}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
 
-      {/* Keyword search */}
-      <div className="relative flex-1 min-w-52">
+      {/* Keyword */}
+      <div className="relative flex-1 min-w-40">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="text"
-          className="pl-9"
+          className="h-9 pl-9"
           placeholder="Keyword Search"
           onChange={(e) => {
             searchRef.current.searchKey = e.target.value;

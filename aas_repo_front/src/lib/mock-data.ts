@@ -404,6 +404,24 @@ export const MOCK_CATEGORIES = [
   { id: "5", text: "Sustainability" },
 ];
 
+export const MOCK_AAS_CATEGORIES = [
+  { id: "101", icon: "Factory",      text: "Manufacturing Equipment", count: 3 },
+  { id: "102", icon: "Zap",          text: "Drives & Motors",         count: 2 },
+  { id: "103", icon: "Cpu",          text: "Sensors & IoT",           count: 2 },
+  { id: "104", icon: "Building2",    text: "Facility",                count: 2 },
+  { id: "105", icon: "Leaf",         text: "Energy & Sustainability", count: 1 },
+  { id: "106", icon: "Bot",          text: "Robotics & Automation",   count: 2 },
+];
+
+export const MOCK_SM_CATEGORIES = [
+  { id: "201", icon: "Tag",           text: "Nameplate",               count: 4 },
+  { id: "202", icon: "FileBarChart2", text: "Technical Data",           count: 5 },
+  { id: "203", icon: "BookOpen",      text: "Documentation",            count: 6 },
+  { id: "204", icon: "IdCard",        text: "Digital Nameplate",        count: 3 },
+  { id: "205", icon: "Sprout",        text: "Carbon Footprint",         count: 4 },
+  { id: "206", icon: "ClipboardList", text: "Handover Documentation",   count: 6 },
+];
+
 // ─── Home Stats ──────────────────────────────────────────────────────────────
 
 export const MOCK_PUBLISHED_COUNT = {

@@ -1,108 +1,118 @@
-/*
- * 파일명: src/app/page.tsx
- * 설명: shadcn/ui 기반으로 재작성된 메인 홈 페이지.
- *       Bootstrap/Metronic 클래스 완전 제거.
- */
-import { MOCK_PUBLISHED_COUNT } from "@/lib/mock-data";
-import AASSearchBar from "@/components/feature/app/AASSearchBar";
 import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+  MOCK_PUBLISHED_COUNT,
+  MOCK_AAS_CATEGORIES,
+  MOCK_SM_CATEGORIES,
+} from "@/lib/mock-data";
+import AASSearchBar from "@/components/feature/app/AASSearchBar";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import {
   FileText,
-  File,
   Layers,
-  ShieldCheck,
+  File,
+  Factory,
   Zap,
-  BarChart3,
+  Cpu,
+  Building2,
+  Leaf,
+  Bot,
+  Tag,
+  FileBarChart2,
+  BookOpen,
+  IdCard,
+  Sprout,
+  ClipboardList,
+  ShieldCheck,
+  LayoutTemplate,
+  Puzzle,
+  type LucideIcon,
 } from "lucide-react";
 
 export const metadata = { title: "KETI ezAAS Model Hub" };
 
+// Map icon string names → lucide components
+const ICON_MAP: Record<string, LucideIcon> = {
+  Factory,
+  Zap,
+  Cpu,
+  Building2,
+  Leaf,
+  Bot,
+  Tag,
+  FileBarChart2,
+  BookOpen,
+  IdCard,
+  Sprout,
+  ClipboardList,
+};
+
 export default async function Home() {
-  const publishedCount = MOCK_PUBLISHED_COUNT;
+  const { aasmodel, submodel, instance } = MOCK_PUBLISHED_COUNT;
 
   const statCards = [
-    {
-      href: "/aas",
-      icon: FileText,
-      label: "AAS Templates",
-      count: publishedCount.aasmodel.count,
-      isNew: false,
-    },
-    {
-      href: "/submodel",
-      icon: File,
-      label: "Submodel Templates",
-      count: publishedCount.submodel.count,
-      isNew: false,
-    },
-    {
-      href: "/instance",
-      icon: Layers,
-      label: "AAS Instances",
-      count: publishedCount.instance.count,
-      isNew: true,
-    },
+    { href: "/aas",      icon: LayoutTemplate, label: "AAS Templates",      count: aasmodel.count, color: "text-blue-600",   bg: "bg-blue-50" },
+    { href: "/submodel", icon: Puzzle,          label: "Submodel Templates", count: submodel.count, color: "text-violet-600", bg: "bg-violet-50" },
+    { href: "/instance", icon: Layers,          label: "AAS Instances",      count: instance.count, color: "text-emerald-600",bg: "bg-emerald-50", isNew: true },
   ];
 
   const features = [
     {
-      icon: FileText,
-      title: "Unified AAS and Submodel Template",
+      icon: LayoutTemplate,
+      title: "Central Template Repository",
       description:
-        "Store and manage all AAS and Submodel templates in a single central repository.",
+        "Store and manage all AAS and Submodel templates in one place, versioned and always accessible.",
     },
     {
       icon: ShieldCheck,
-      title: "Compliance with AAS Standard",
+      title: "AAS Standard Compliant",
       description:
-        "All templates strictly follow the Asset Administration Shell (AAS) meta-model specification.",
+        "Every template strictly follows the Asset Administration Shell (AAS) meta-model specification.",
     },
     {
-      icon: Zap,
-      title: "Simplified AAS Generation",
+      icon: Layers,
+      title: "No-Code Instance Creation",
       description:
-        "Create AAS instances without knowing the meta-model — just fill in values from templates.",
+        "Create AAS instances without knowing the meta-model — just pick a template and fill in values.",
     },
     {
-      icon: BarChart3,
-      title: "Scalability through API Support",
+      icon: Cpu,
+      title: "Full REST API Support",
       description:
-        "Full REST API support for seamless integration with your existing systems.",
+        "Integrate seamlessly with your existing systems through a comprehensive REST API.",
     },
   ];
 
   return (
     <div className="flex flex-col">
-      {/* Hero / Search section */}
-      <section className="border-b border-border bg-muted/30 py-10">
-        <div className="mx-auto max-w-screen-2xl px-4 lg:px-8">
+
+      {/* ── Hero / Search ─────────────────────────────────────────── */}
+      <section className="border-b border-border bg-muted/40 py-10">
+        <div className="mx-auto max-w-screen-xl px-4 lg:px-8">
           <AASSearchBar />
 
           {/* Stat cards */}
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
             {statCards.map((card) => {
               const Icon = card.icon;
               return (
                 <Link key={card.href} href={card.href}>
-                  <Card className="transition-shadow hover:shadow-md cursor-pointer">
-                    <CardContent className="flex items-center justify-between py-4 px-5">
-                      <div className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
-                        <Icon className="size-4 shrink-0" />
-                        {card.label}
+                  <Card className="cursor-pointer transition-shadow hover:shadow-md">
+                    <CardContent className="flex items-center justify-between px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`flex size-9 items-center justify-center rounded-lg ${card.bg}`}>
+                          <Icon className={`size-4 ${card.color}`} />
+                        </div>
+                        <span className="text-sm font-medium text-muted-foreground">
+                          {card.label}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        {card.isNew && (
-                          <Badge variant="secondary" className="text-xs">
-                            New
-                          </Badge>
+                        {"isNew" in card && card.isNew && (
+                          <Badge variant="secondary" className="text-xs">New</Badge>
                         )}
-                        <span className="text-lg font-bold text-foreground">
+                        <span className="text-xl font-bold text-foreground tabular-nums">
                           {card.count}
                         </span>
                       </div>
@@ -115,34 +125,130 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Intro section */}
-      <section className="py-14 border-b border-border">
-        <div className="mx-auto max-w-screen-2xl px-4 lg:px-8">
+      {/* ── Category Browse ───────────────────────────────────────── */}
+      <section className="py-12 border-b border-border">
+        <div className="mx-auto max-w-screen-xl px-4 lg:px-8">
+
+          {/* AAS Template categories */}
+          <div className="mb-10">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex size-8 items-center justify-center rounded-md bg-blue-50">
+                <LayoutTemplate className="size-4 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-foreground leading-none">
+                  AAS Template Categories
+                </h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Browse templates by asset type
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {MOCK_AAS_CATEGORIES.map((cat) => {
+                const Icon = ICON_MAP[cat.icon] ?? File;
+                return (
+                  <Link
+                    key={cat.id}
+                    href={`/aas?category_seq=${cat.id}`}
+                  >
+                    <Card className="group cursor-pointer transition-all hover:border-blue-300 hover:shadow-sm">
+                      <CardContent className="flex flex-col items-center gap-2.5 px-3 py-5 text-center">
+                        <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50 transition-colors group-hover:bg-blue-100">
+                          <Icon className="size-5 text-blue-600" />
+                        </div>
+                        <span className="text-xs font-medium text-foreground leading-snug text-balance">
+                          {cat.text}
+                        </span>
+                        <span className="text-xs tabular-nums text-muted-foreground">
+                          {cat.count} templates
+                        </span>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          <Separator className="mb-10" />
+
+          {/* Submodel Template categories */}
+          <div>
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex size-8 items-center justify-center rounded-md bg-violet-50">
+                <Puzzle className="size-4 text-violet-600" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-foreground leading-none">
+                  Submodel Template Categories
+                </h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Browse submodel templates by type
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {MOCK_SM_CATEGORIES.map((cat) => {
+                const Icon = ICON_MAP[cat.icon] ?? File;
+                return (
+                  <Link
+                    key={cat.id}
+                    href={`/submodel?category_seq=${cat.id}`}
+                  >
+                    <Card className="group cursor-pointer transition-all hover:border-violet-300 hover:shadow-sm">
+                      <CardContent className="flex flex-col items-center gap-2.5 px-3 py-5 text-center">
+                        <div className="flex size-10 items-center justify-center rounded-xl bg-violet-50 transition-colors group-hover:bg-violet-100">
+                          <Icon className="size-5 text-violet-600" />
+                        </div>
+                        <span className="text-xs font-medium text-foreground leading-snug text-balance">
+                          {cat.text}
+                        </span>
+                        <span className="text-xs tabular-nums text-muted-foreground">
+                          {cat.count} templates
+                        </span>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── Intro card ────────────────────────────────────────────── */}
+      <section className="py-12 border-b border-border">
+        <div className="mx-auto max-w-screen-xl px-4 lg:px-8">
           <Card className="overflow-hidden">
-            <CardContent className="flex flex-col items-center gap-10 py-12 px-8 lg:flex-row lg:items-center lg:gap-16 lg:px-14">
-              <div className="flex flex-col items-center gap-5 text-center lg:items-start lg:text-left lg:flex-1">
+            <CardContent className="flex flex-col items-center gap-8 px-8 py-12 text-center lg:flex-row lg:items-center lg:gap-16 lg:px-14 lg:text-left">
+              <div className="flex flex-col items-center gap-5 lg:items-start lg:flex-1">
                 <div>
-                  <p className="text-sm font-semibold uppercase tracking-widest text-primary mb-2">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-2">
                     Industrial Digital Twin
                   </p>
                   <h2 className="text-3xl font-bold text-foreground lg:text-4xl text-balance">
                     ezAAS Model Hub
                   </h2>
-                  <p className="mt-3 text-base text-muted-foreground leading-relaxed max-w-md text-pretty">
-                    Serves as a central hub that supports the efficient creation and
-                    management of digital twins for industrial assets, based on the
-                    Asset Administration Shell (AAS) standard.
+                  <p className="mt-3 text-sm text-muted-foreground leading-relaxed max-w-md text-pretty">
+                    A central hub for efficient creation and management of digital
+                    twins for industrial assets, built on the Asset Administration
+                    Shell (AAS) standard.
                   </p>
                 </div>
-                <Button asChild>
-                  <Link href="/about">Learn more about ezAAS</Link>
-                </Button>
+                <Link
+                  href="/aas"
+                  className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
+                >
+                  Browse AAS Templates
+                </Link>
               </div>
-              <div className="shrink-0 lg:flex-none">
+              <div className="shrink-0">
                 <img
                   src="/assets/media/aas/aas_main_ob.png"
                   alt="AAS Model Hub illustration"
-                  className="w-52 lg:w-72"
+                  className="w-48 lg:w-64"
                 />
               </div>
             </CardContent>
@@ -150,40 +256,44 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Feature cards */}
-      <section className="py-14 border-b border-border">
-        <div className="mx-auto max-w-screen-2xl px-4 lg:px-8">
+      {/* ── Feature cards ─────────────────────────────────────────── */}
+      <section className="py-12 border-b border-border">
+        <div className="mx-auto max-w-screen-xl px-4 lg:px-8">
+          <div className="mb-8 text-center">
+            <h2 className="text-xl font-bold text-foreground">Key Features</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Everything you need to work with AAS templates
+            </p>
+          </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {features.map((feature) => {
-              const Icon = feature.icon;
+            {features.map((f) => {
+              const Icon = f.icon;
               return (
-                <Link key={feature.title} href="/aas">
-                  <Card className="group h-full cursor-pointer transition-all hover:border-primary hover:shadow-md">
-                    <CardContent className="flex flex-col items-center gap-4 py-8 px-6 text-center">
-                      <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10">
-                        <Icon className="size-6 text-primary" />
-                      </div>
-                      <p className="text-sm font-semibold text-foreground leading-snug text-balance">
-                        {feature.title}
-                      </p>
-                      <p className="text-xs text-muted-foreground leading-relaxed text-pretty">
-                        {feature.description}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </Link>
+                <Card key={f.title} className="h-full">
+                  <CardContent className="flex flex-col items-center gap-3 px-6 py-8 text-center">
+                    <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10">
+                      <Icon className="size-5 text-primary" />
+                    </div>
+                    <p className="text-sm font-semibold text-foreground leading-snug text-balance">
+                      {f.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground leading-relaxed text-pretty">
+                      {f.description}
+                    </p>
+                  </CardContent>
+                </Card>
               );
             })}
           </div>
         </div>
       </section>
 
-      {/* About / Video section */}
-      <section className="py-14">
-        <div className="mx-auto max-w-screen-2xl px-4 lg:px-8">
-          <div className="mb-8 text-center">
-            <h3 className="text-2xl font-bold text-foreground">About</h3>
-            <p className="mt-1.5 text-sm text-muted-foreground">ezAAS Model Hub</p>
+      {/* ── About / Video ─────────────────────────────────────────── */}
+      <section className="py-12">
+        <div className="mx-auto max-w-screen-xl px-4 lg:px-8">
+          <div className="mb-6 text-center">
+            <h2 className="text-xl font-bold text-foreground">About</h2>
+            <p className="mt-1 text-sm text-muted-foreground">ezAAS Model Hub</p>
           </div>
           <div className="overflow-hidden rounded-xl border border-border">
             <iframe
@@ -195,6 +305,7 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
     </div>
   );
 }
