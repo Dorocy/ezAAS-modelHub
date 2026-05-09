@@ -6,8 +6,8 @@ import { MOCK_AAS_TEMPLATES, MOCK_CATEGORIES } from "@/lib/mock-data";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/constants/roles";
-import ModelCard from "@/components/feature/model/ModelCard";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,8 +137,26 @@ export default function AASPage() {
 
         {layoutType === "grid" ? (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {filtered.map((model, i) => (
-              <ModelCard key={model.aasmodel_seq} model={model} modelType="aasmodel" i={i} />
+            {filtered.map((model) => (
+              <Link key={model.aasmodel_seq} href={ROUTES.AASMODEL.VIEW(model.aasmodel_seq)}>
+                <Card className="h-full transition-shadow hover:shadow-md cursor-pointer">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <CardTitle className="text-sm font-semibold leading-snug line-clamp-2">
+                        {model.aasmodel_name}
+                      </CardTitle>
+                      <Badge variant={STATUS_VARIANT[model.status] ?? "outline"} className="shrink-0 text-xs">
+                        {model.status_nm}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="text-xs text-muted-foreground space-y-1">
+                    <p className="line-clamp-2">{model.description}</p>
+                    <p className="font-medium text-foreground/70">{model.category_name}</p>
+                    <p className="font-mono truncate">{model.aasmodel_template_id}</p>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         ) : (

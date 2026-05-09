@@ -22,8 +22,6 @@ import { AuthProvider } from "../contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { usePathname } from "next/navigation";
 import { ROUTES } from "@/constants/routes";
-import { TokenProfile } from "@/types/auth";
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

@@ -59,7 +59,7 @@ export default function AASSearchBar() {
       </Select>
 
       {/* Category */}
-      <Select value={categorySeq} onValueChange={setCategorySeq}>
+      <Select value={categorySeq} onValueChange={(v: string) => setCategorySeq(v)}>
         <SelectTrigger className="h-9 w-48 shrink-0">
           <SelectValue placeholder="All Categories" />
         </SelectTrigger>

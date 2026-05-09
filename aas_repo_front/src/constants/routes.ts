@@ -194,7 +194,7 @@ export const canAccessPath = (
   const { minRole, allowRoles = [] } = matchedRoute;
 
   if (minRole == undefined && allowRoles.length == 0) return "allow";
-  if (allowRoles.includes(userRole)) return "allow";
+  if (userRole !== undefined && allowRoles.includes(userRole)) return "allow";
   if (minRole !== undefined && userRole !== undefined && userRole <= minRole)
     return "allow";
 

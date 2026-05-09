@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { sendPasswordResetEmail } from "@/api";
+import { sendPasswordResetEmail } from "@/api/index";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { XCircle } from "lucide-react";

@@ -2,8 +2,6 @@
  * 파일명: src/components/Footer.tsx
  * 설명: shadcn/ui 기반으로 재작성된 푸터 컴포넌트.
  */
-import { Separator } from "@/components/ui/separator";
-
 function Footer() {
   return (
     <footer className="mt-auto border-t border-border bg-background">

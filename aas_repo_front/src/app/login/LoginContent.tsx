@@ -18,7 +18,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import SendResetLinkForm from "@/components/feature/login/SendResetLinkForm";
 
@@ -111,12 +110,13 @@ export default function LoginContent({ redirectUrl }: LoginContentProps) {
                 <label htmlFor="password" className="text-sm font-medium">
                   Password
                 </label>
+                <button
+                  onClick={() => setResetOpen(true)}
+                  className="text-xs text-muted-foreground underline-offset-4 hover:underline hover:text-foreground transition-colors"
+                >
+                  Forgot password?
+                </button>
                 <Dialog open={resetOpen} onOpenChange={setResetOpen}>
-                  <DialogTrigger asChild>
-                    <button className="text-xs text-muted-foreground underline-offset-4 hover:underline hover:text-foreground transition-colors">
-                      Forgot password?
-                    </button>
-                  </DialogTrigger>
                   <DialogContent className="sm:max-w-sm">
                     <DialogHeader>
                       <DialogTitle>Reset your password</DialogTitle>

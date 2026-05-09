@@ -6,8 +6,8 @@ import { MOCK_SUBMODEL_TEMPLATES, MOCK_CATEGORIES } from "@/lib/mock-data";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/constants/roles";
-import ModelCard from "@/components/feature/model/ModelCard";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -136,8 +136,26 @@ export default function SubmodelPage() {
 
         {layoutType === "grid" ? (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {filtered.map((model, i) => (
-              <ModelCard key={model.submodel_seq} model={model} modelType="submodel" i={i} />
+            {filtered.map((model) => (
+              <Link key={model.submodel_seq} href={ROUTES.SUBMODEL.VIEW(model.submodel_seq)}>
+                <Card className="h-full transition-shadow hover:shadow-md cursor-pointer">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <CardTitle className="text-sm font-semibold leading-snug line-clamp-2">
+                        {model.submodel_name}
+                      </CardTitle>
+                      <Badge variant={STATUS_VARIANT[model.status] ?? "outline"} className="shrink-0 text-xs">
+                        {model.status_nm}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="text-xs text-muted-foreground space-y-1">
+                    <p className="line-clamp-2">{model.description}</p>
+                    <p className="font-medium text-foreground/70">{model.category_name}</p>
+                    <p className="font-mono truncate">{model.submodel_semantic_id}</p>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         ) : (
