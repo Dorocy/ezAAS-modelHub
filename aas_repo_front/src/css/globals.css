@@ -1,21 +1,101 @@
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+    /* KETI ezAAS Model Hub — Brand: deep blue primary */
+    --background: oklch(0.99 0 0);
+    --foreground: oklch(0.13 0.02 255);
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.13 0.02 255);
+
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.13 0.02 255);
+
+    /* Primary: #1B84FF → oklch approx */
+    --primary: oklch(0.56 0.22 255);
+    --primary-foreground: oklch(1 0 0);
+
+    --secondary: oklch(0.96 0.005 255);
+    --secondary-foreground: oklch(0.28 0.04 255);
+
+    --muted: oklch(0.96 0.003 255);
+    --muted-foreground: oklch(0.52 0.03 255);
+
+    --accent: oklch(0.94 0.01 255);
+    --accent-foreground: oklch(0.28 0.04 255);
+
+    --destructive: oklch(0.58 0.22 27);
+    --destructive-foreground: oklch(1 0 0);
+
+    --border: oklch(0.91 0.005 255);
+    --input: oklch(0.91 0.005 255);
+    --ring: oklch(0.56 0.22 255);
+
+    --radius: 0.5rem;
+
+    --sidebar: oklch(0.98 0.002 255);
+    --sidebar-foreground: oklch(0.13 0.02 255);
+    --sidebar-primary: oklch(0.56 0.22 255);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.94 0.01 255);
+    --sidebar-accent-foreground: oklch(0.28 0.04 255);
+    --sidebar-border: oklch(0.91 0.005 255);
+    --sidebar-ring: oklch(0.56 0.22 255);
+  }
+
+  .dark {
+    --background: oklch(0.14 0.02 255);
+    --foreground: oklch(0.97 0.005 255);
+
+    --card: oklch(0.19 0.025 255);
+    --card-foreground: oklch(0.97 0.005 255);
+
+    --popover: oklch(0.19 0.025 255);
+    --popover-foreground: oklch(0.97 0.005 255);
+
+    --primary: oklch(0.65 0.20 255);
+    --primary-foreground: oklch(1 0 0);
+
+    --secondary: oklch(0.26 0.03 255);
+    --secondary-foreground: oklch(0.97 0.005 255);
+
+    --muted: oklch(0.26 0.03 255);
+    --muted-foreground: oklch(0.68 0.03 255);
+
+    --accent: oklch(0.26 0.03 255);
+    --accent-foreground: oklch(0.97 0.005 255);
+
+    --destructive: oklch(0.70 0.19 22);
+    --destructive-foreground: oklch(1 0 0);
+
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.65 0.20 255);
+
+    --sidebar: oklch(0.19 0.025 255);
+    --sidebar-foreground: oklch(0.97 0.005 255);
+    --sidebar-primary: oklch(0.65 0.20 255);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.26 0.03 255);
+    --sidebar-accent-foreground: oklch(0.97 0.005 255);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.65 0.20 255);
+  }
+
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  html {
+    @apply font-sans;
+  }
 }
