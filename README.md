@@ -14,16 +14,19 @@ aas_repo/
 ## 🏗️ 시스템 아키텍처
 
 ### Backend (aas_repo_back)
+
 - **기술 스택**: Python 3.13.1, FastAPI, PostgreSQL
 - **주요 기능**: AAS 인스턴스, 모델, 서브모델 관리
 - **API 서버**: FastAPI 기반 RESTful API
 
 ### Frontend (aas_repo_front)
+
 - **기술 스택**: Next.js 15+, React 19, TypeScript, Tailwind CSS
 - **주요 기능**: AAS Repository 관리 웹 인터페이스
 - **UI 프레임워크**: Metronic UI
 
 ### Nginx & Docker (aas_repo_docker)
+
 - **기능**: 리버스 프록시, SSL/TLS 설정, Docker 기반 서비스 배포
 
 ## 🚀 빠른 시작
@@ -33,23 +36,27 @@ aas_repo/
 모든 서비스를 한 번에 실행:
 
 **Windows:**
+
 ```powershell
 .\start.ps1
 ```
 
 **macOS/Linux:**
+
 ```bash
 chmod +x start.sh
 ./start.sh
 ```
 
 이 스크립트는 백엔드와 프론트엔드를 자동으로 시작합니다:
+
 - 백엔드: http://localhost:8000
 - 프론트엔드: http://localhost:5000 (Production mode)
 
 ### 개별 실행
 
 각 하위 디렉토리의 README.md를 참고하세요:
+
 - [백엔드 설정](./aas_repo_back/README.md)
 - [프론트엔드 설정](./aas_repo_front/README.md)
 
@@ -57,7 +64,7 @@ chmod +x start.sh
 
 ```bash
 # 전체 프로젝트 클론
-git clone https://github.com/leeinbae/aas_repo.git
+git clone https://github.com/KETI-AAS/ezAAS-modelHub.git
 cd aas_repo
 
 # 백엔드 설정
@@ -77,6 +84,7 @@ yarn install
 ## 🛠️ 개발
 
 ### Backend 실행
+
 ```bash
 cd aas_repo_back
 source venv/bin/activate  # Linux/Mac
@@ -87,6 +95,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 ### Frontend 실행
 
 **Development 모드 (포트: 5000):**
+
 ```bash
 cd aas_repo_front
 npm run dev
@@ -95,6 +104,7 @@ yarn dev
 ```
 
 **Production 모드:**
+
 ```bash
 cd aas_repo_front
 npm run build
@@ -106,4 +116,3 @@ npm run start  # 포트: 5000
 ## 📝 라이센스
 
 Copyright (c) 2025
-
