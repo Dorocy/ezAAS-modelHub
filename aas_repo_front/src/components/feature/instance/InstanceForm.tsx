@@ -236,7 +236,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
   });
 
   const { data: models, isFetching: isFetchingModels } = useQuery({
-    queryKey: [modelType, pagination, searchState],
+    queryKey: [modelType, searchState],
     queryFn: () =>
       getInstanceTargetList({ modelType, category_seq: searchState.category_seq, withToast: true }),
     enabled: modelType !== "" && searchState.category_seq !== "",
