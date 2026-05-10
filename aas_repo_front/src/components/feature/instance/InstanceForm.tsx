@@ -208,6 +208,8 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
   const [modelSeq, setModelSeq] = useState("");
   const [aasmodel, setAasmodel] = useState(initialState.aasmodel);
   const [treeData, setTreeData] = useState<any[] | undefined>(undefined);
+  const [previewModel, setPreviewModel] = useState<any | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   const verificationRef = useRef<any>(null);
   const [verificationActive, setVerificationActive] = useState<any>();
@@ -993,75 +995,211 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
   );
 
   /* ─── Template select dialog ─── */
+  /* 템플릿 목록에서 항목 선택 시 미리보기 */
+  const handleTemplateItemSelect = async (seq: string) => {
+    setModelSeq(seq);
+    if (!seq) { setPreviewModel(null); return; }
+    setIsPreviewLoading(true);
+    try {
+      const data = await getModel({ modelSeq: seq, modelType });
+      setPreviewModel(data?.[0] ?? null);
+    } catch {
+      setPreviewModel(null);
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  };
+
+  /* OK 클릭 — 선택 확정 */
+  const handleTemplateConfirm = async () => {
+    if (!modelSeq) return showToast.error("Please select model");
+    const model = previewModel ?? (await getModel({ modelSeq, modelType }))?.[0];
+    if (!model) return showToast.error("Model not found");
+
+    if (modelType === "aasmodel") {
+      const renamedModel = renameKey(model, "metadata", "aasmodel_metadata");
+      if (renamedModel.aasmodel_metadata) normalizeMetadataPaths(renamedModel.aasmodel_metadata);
+      setAasmodel(renamedModel);
+      treeDataRef.current[model.aasmodel_id] = {};
+      setInputState((prev) => ({
+        ...prev,
+        instance_name: prev.instance_name || model.aasmodel_name,
+        description: prev.description || model.description,
+      }));
+    } else {
+      const fetchedMetadata = model.metadata;
+      const templateSubmodelData = fetchedMetadata.submodels?.[0];
+      if (!templateSubmodelData) return showToast.error("Selected submodel data is invalid.");
+      const submodelData = _.cloneDeep(templateSubmodelData);
+      const newInstanceId = uuidv4();
+      submodelData.id = newInstanceId;
+      if (submodelData.kind === "Template") submodelData.kind = "Instance";
+      submodelData.submodel_seq = model.submodel_seq;
+      submodelData.modelType = "Submodel";
+      const submodelReference = { type: "ModelReference", keys: [{ type: "Submodel", value: newInstanceId }] };
+      setAasmodel((prev) => {
+        const newMetadata = _.cloneDeep((prev as any).aasmodel_metadata);
+        if (!newMetadata.submodels) newMetadata.submodels = [];
+        newMetadata.submodels.push(submodelData);
+        newMetadata.assetAdministrationShells[0].submodels.push(submodelReference);
+        if (fetchedMetadata.conceptDescriptions) {
+          if (!newMetadata.conceptDescriptions) newMetadata.conceptDescriptions = [];
+          newMetadata.conceptDescriptions.push(...fetchedMetadata.conceptDescriptions);
+        }
+        return { ...prev, aasmodel_metadata: newMetadata };
+      });
+    }
+    setModelSeq("");
+    setPreviewModel(null);
+    setModalOpen(false);
+  };
+
+  /* 모델 목록 콤보박스용 데이터 */
+  const templateListItems = isFetchingModels
+    ? []
+    : (models ?? []).map((item: any) => ({
+        ...item,
+        value: String(item[`${modelType}_seq`]),
+        label: item[`${modelType}_name`],
+      }));
+
+  /* 선택된 모델의 미리보기 트리 */
+  const previewTreeData = useMemo(() => {
+    if (!previewModel) return undefined;
+    const meta = previewModel.metadata ?? previewModel.aasmodel_metadata;
+    if (!meta) return undefined;
+    try {
+      const valuePaths = addValuePaths({ ...meta });
+      return parsingAAS(valuePaths);
+    } catch {
+      return undefined;
+    }
+  }, [previewModel]);
+
   const templateSelectDialog = (
-    <Dialog open={modalOpen} onOpenChange={(open) => { setModalOpen(open); if (!open) setModelSeq(""); }}>
-      <DialogContent className="sm:max-w-lg">
+    <Dialog
+      open={modalOpen}
+      onOpenChange={(open) => {
+        setModalOpen(open);
+        if (!open) { setModelSeq(""); setPreviewModel(null); }
+      }}
+    >
+      <DialogContent className="max-w-4xl w-full max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>{modelType === "aasmodel" ? "AAS" : "Submodel"} Template 선택</DialogTitle>
+          <DialogTitle>
+            {modelType === "aasmodel" ? "AAS" : "Submodel"} Template 선택
+          </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold mb-1.5">Template 목록</label>
-            <div className="mb-3">
+
+        <div className="flex flex-1 gap-4 overflow-hidden min-h-0">
+          {/* ── 왼쪽: 카테고리 + 목록 선택 ── */}
+          <div className="w-72 shrink-0 flex flex-col gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                Category
+              </label>
               <CategoryCombobox
                 code={modelType === "aasmodel" ? "aas_category" : "sm_category"}
-                value={searchState.category_seq}
-                setValue={(value) => setSearchState((prev) => ({ ...prev, category_seq: value ?? "all" }))}
+                value={searchState.category_seq === "all" ? undefined : searchState.category_seq}
+                setValue={(value) => {
+                  setModelSeq("");
+                  setPreviewModel(null);
+                  setSearchState({ category_seq: value ?? "all" });
+                }}
               />
             </div>
-            <CustomCombobox
-              className="form-control form-control-solid border-0 flex-grow-1"
-              data={isFetchingModels ? [] : models?.map((item: any) => ({ ...item, value: String(item[`${modelType}_seq`]), label: item[`${modelType}_name`] }))}
-              value={modelSeq}
-              onChange={(value: string) => setModelSeq(value)}
-              renderComboboxOptionItem={(item: any) => (
-                <div className="flex gap-2 flex-wrap">
-                  <Badge variant="secondary">{item.category_name}</Badge>
-                  <Badge variant="outline">{item[`${modelType}_name`]}</Badge>
-                  <Badge variant="outline">{item.version}</Badge>
+
+            <div className="flex-1 flex flex-col min-h-0">
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                Template 목록
+              </label>
+              {isFetchingModels ? (
+                <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
+                  Loading...
+                </div>
+              ) : templateListItems.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground border rounded-md">
+                  No templates found.
+                </div>
+              ) : (
+                <div className="flex-1 overflow-y-auto border rounded-md divide-y">
+                  {templateListItems.map((item: any) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => handleTemplateItemSelect(item.value)}
+                      className={cn(
+                        "w-full text-left px-3 py-2.5 text-sm hover:bg-accent transition-colors",
+                        modelSeq === item.value && "bg-primary/10 font-medium text-primary"
+                      )}
+                    >
+                      <div className="font-medium truncate">{item.label}</div>
+                      <div className="flex gap-1.5 mt-1 flex-wrap">
+                        {item.category_name && (
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{item.category_name}</Badge>
+                        )}
+                        {item.version && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">v{item.version}</Badge>
+                        )}
+                      </div>
+                    </button>
+                  ))}
                 </div>
               )}
-            />
+            </div>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => { setModalOpen(false); setModelSeq(""); }}>Cancel</Button>
-            <Button onClick={async () => {
-              if (!modelSeq) return showToast.error("Please select model");
-              const data = await getModel({ modelSeq, modelType });
-              const model = data[0];
-              if (modelType === "aasmodel") {
-                const renamedModel = renameKey(model, "metadata", "aasmodel_metadata");
-                if (renamedModel.aasmodel_metadata) normalizeMetadataPaths(renamedModel.aasmodel_metadata);
-                setAasmodel(renamedModel);
-                treeDataRef.current[model.aasmodel_id] = {};
-                setInputState((prev) => ({ ...prev, instance_name: prev.instance_name || model.aasmodel_name, description: prev.description || model.description }));
-              } else {
-                const fetchedMetadata = model.metadata;
-                const templateSubmodelData = fetchedMetadata.submodels?.[0];
-                if (!templateSubmodelData) return showToast.error("Selected submodel data is invalid.");
-                const submodelData = _.cloneDeep(templateSubmodelData);
-                const newInstanceId = uuidv4();
-                submodelData.id = newInstanceId;
-                if (submodelData.kind === "Template") submodelData.kind = "Instance";
-                submodelData.submodel_seq = model.submodel_seq;
-                submodelData.modelType = "Submodel";
-                const submodelReference = { type: "ModelReference", keys: [{ type: "Submodel", value: newInstanceId }] };
-                setAasmodel((prev) => {
-                  const newMetadata = _.cloneDeep((prev as any).aasmodel_metadata);
-                  if (!newMetadata.submodels) newMetadata.submodels = [];
-                  newMetadata.submodels.push(submodelData);
-                  newMetadata.assetAdministrationShells[0].submodels.push(submodelReference);
-                  if (fetchedMetadata.conceptDescriptions) {
-                    if (!newMetadata.conceptDescriptions) newMetadata.conceptDescriptions = [];
-                    newMetadata.conceptDescriptions.push(...fetchedMetadata.conceptDescriptions);
-                  }
-                  return { ...prev, aasmodel_metadata: newMetadata };
-                });
-              }
-              setModelSeq("");
-              setModalOpen(false);
-            }}>Ok</Button>
+
+          {/* ── 오른쪽: 선택한 모델 트리 미리보기 ── */}
+          <div className="flex-1 flex flex-col min-h-0 border rounded-md overflow-hidden">
+            <div className="px-3 py-2 border-b bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide shrink-0">
+              Preview
+            </div>
+            <div className="flex-1 overflow-y-auto p-2">
+              {isPreviewLoading ? (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                  Loading model...
+                </div>
+              ) : !previewModel ? (
+                <div className="h-full flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <span className="text-3xl opacity-20">⬡</span>
+                  <span>Select a template to preview</span>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {/* 선택 모델 기본 정보 */}
+                  <div className="px-1 pb-2 border-b">
+                    <p className="font-semibold text-sm">
+                      {previewModel[`${modelType}_name`] ?? previewModel.aasmodel_name ?? previewModel.submodel_name}
+                    </p>
+                    {previewModel.description && (
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{previewModel.description}</p>
+                    )}
+                  </div>
+                  {/* AAS 트리 미리보기 */}
+                  {previewTreeData ? (
+                    <AASTree
+                      treeData={previewTreeData}
+                      onSelect={() => {}}
+                      selectedNode={null}
+                      mode="view"
+                      onUpdate={() => {}}
+                    />
+                  ) : (
+                    <div className="text-xs text-muted-foreground px-1">No tree data available.</div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-3 border-t shrink-0">
+          <Button variant="outline" onClick={() => { setModalOpen(false); setModelSeq(""); setPreviewModel(null); }}>
+            Cancel
+          </Button>
+          <Button disabled={!modelSeq} onClick={handleTemplateConfirm}>
+            OK
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

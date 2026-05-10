@@ -37,8 +37,12 @@ function CategoryCombobox({
 
   const items: CodeItem[] = useMemo(() => {
     const raw = Array.isArray(categorys?.data) ? categorys.data : Array.isArray(categorys) ? categorys : [];
-    if (!search) return raw;
-    return raw.filter((item: CodeItem) => item.title?.toLowerCase().includes(search.toLowerCase()));
+    // lv=0 루트 노드(카테고리 그룹 자체)는 제외하고 lv=1 이상만 표시
+    const leafItems = raw.filter((item: CodeItem & { lv?: number }) =>
+      item.lv === undefined || item.lv >= 1
+    );
+    if (!search) return leafItems;
+    return leafItems.filter((item: CodeItem) => item.title?.toLowerCase().includes(search.toLowerCase()));
   }, [categorys, search]);
 
   const selectedLabel = useMemo(() => {
