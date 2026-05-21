@@ -2,276 +2,331 @@
 "use client";
 
 import React, { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { ChevronRight, Layers, Box, List, Tag, FileText, Link2, ToggleLeft, Hash } from "lucide-react";
 
-/* ── Type colours ───────────────────────────────────────────────── */
-const TYPE_COLOR: Record<string, { dot: string; badge: string; text: string }> = {
-  Submodel:                    { dot: "#059669", badge: "bg-emerald-50 text-emerald-700 border-emerald-200",  text: "Submodel" },
-  SubmodelElementCollection:   { dot: "#7c3aed", badge: "bg-violet-50  text-violet-700  border-violet-200",   text: "Collection" },
-  SubmodelElementList:         { dot: "#4f46e5", badge: "bg-indigo-50  text-indigo-700  border-indigo-200",   text: "List" },
-  Property:                    { dot: "#d97706", badge: "bg-amber-50   text-amber-700   border-amber-200",    text: "Property" },
-  MultiLanguageProperty:       { dot: "#0891b2", badge: "bg-cyan-50    text-cyan-700    border-cyan-200",     text: "MLP" },
-  File:                        { dot: "#0284c7", badge: "bg-sky-50     text-sky-700     border-sky-200",      text: "File" },
-  Range:                       { dot: "#ea580c", badge: "bg-orange-50  text-orange-700  border-orange-200",   text: "Range" },
-  ReferenceElement:            { dot: "#db2777", badge: "bg-pink-50    text-pink-700    border-pink-200",     text: "Ref" },
-  Entity:                      { dot: "#dc2626", badge: "bg-red-50     text-red-700     border-red-200",      text: "Entity" },
-  RelationshipElement:         { dot: "#64748b", badge: "bg-slate-50   text-slate-600   border-slate-200",    text: "Relation" },
+/* ─────────────────────────────────────────────
+   Type icons & labels  (no per-type colors —
+   everything uses zinc/slate, one blue accent)
+───────────────────────────────────────────── */
+const TYPE_META: Record<string, { icon: React.ElementType; label: string }> = {
+  Submodel:                  { icon: Layers,      label: "Submodel" },
+  SubmodelElementCollection: { icon: Box,         label: "Collection" },
+  SubmodelElementList:       { icon: List,        label: "List" },
+  Property:                  { icon: Tag,         label: "Property" },
+  MultiLanguageProperty:     { icon: FileText,    label: "MLP" },
+  File:                      { icon: FileText,    label: "File" },
+  Range:                     { icon: Hash,        label: "Range" },
+  ReferenceElement:          { icon: Link2,       label: "Ref" },
+  Entity:                    { icon: Box,         label: "Entity" },
+  RelationshipElement:       { icon: Link2,       label: "Relation" },
+  Blob:                      { icon: FileText,    label: "Blob" },
+  Operation:                 { icon: ToggleLeft,  label: "Operation" },
 };
+const getMeta = (t: string) => TYPE_META[t] ?? { icon: Tag, label: t };
 
-const getColor = (t: string) =>
-  TYPE_COLOR[t] ?? { dot: "#94a3b8", badge: "bg-slate-50 text-slate-500 border-slate-200", text: t };
-
-/* ── valueType → human label ───────────────────────────────────── */
-const VALUE_TYPE_LABEL: Record<string, string> = {
-  string: "string", xs_string: "string",
-  "xs:string": "string",
-  int: "integer", "xs:int": "integer", integer: "integer",
+/* valueType → short label */
+const VT: Record<string, string> = {
+  string: "str", xs_string: "str", "xs:string": "str",
+  int: "int", "xs:int": "int", integer: "int",
   float: "float", "xs:float": "float",
-  double: "double", "xs:double": "double",
-  boolean: "boolean", "xs:boolean": "boolean",
+  double: "double", "xs:double": "dbl",
+  boolean: "bool", "xs:boolean": "bool",
   date: "date", "xs:date": "date",
-  dateTime: "dateTime", "xs:dateTime": "dateTime",
-  anyURI: "URI", "xs:anyURI": "URI",
+  dateTime: "dt", "xs:dateTime": "dt",
+  anyURI: "uri", "xs:anyURI": "uri",
 };
-const vt = (t?: string) => (t ? (VALUE_TYPE_LABEL[t] ?? t) : null);
+const vt = (t?: string) => (t ? (VT[t] ?? t) : null);
 
-/* ── Leaf row ───────────────────────────────────────────────────── */
-function LeafRow({ node, depth, showValues }: { node: any; depth: number; showValues?: boolean }) {
-  const c = getColor(node.modelType);
+/* extract display value from node */
+function extractValue(node: any): string | null {
+  if (node.modelType === "MultiLanguageProperty" && Array.isArray(node.originalValue)) {
+    const v = node.originalValue.map((x: any) => `[${x.language}] ${x.text}`).join(" · ");
+    return v || null;
+  }
+  if (node.modelType === "File" && typeof node.originalValue === "string") {
+    return node.originalValue.split("/").pop() || node.originalValue || null;
+  }
+  const v = node.originalValue;
+  if (v !== undefined && v !== null && v !== "") return String(v);
+  return null;
+}
+
+/* ─────────────────────────────────────────────
+   Property row  — key : value table row
+───────────────────────────────────────────── */
+function PropertyRow({
+  node,
+  showValues,
+  isLast,
+}: {
+  node: any;
+  showValues: boolean;
+  isLast: boolean;
+}) {
+  const meta = getMeta(node.modelType);
+  const Icon = meta.icon;
   const typeLabel = vt(node.valueType);
-
-  // 인스턴스 뷰에서만 실제 값을 읽음 — 템플릿 모드에선 값을 숨김
-  const instanceValue = showValues
-    ? (() => {
-        if (node.modelType === "MultiLanguageProperty" && Array.isArray(node.originalValue)) {
-          return node.originalValue.map((v: any) => `[${v.language}] ${v.text}`).join("  ·  ") || null;
-        }
-        if (node.modelType === "File" && typeof node.originalValue === "string") {
-          return node.originalValue.split("/").pop() || null;
-        }
-        if (node.originalValue !== undefined && node.originalValue !== null && node.originalValue !== "") {
-          return String(node.originalValue);
-        }
-        return null;
-      })()
-    : null; // 템플릿 모드 — 값 없음으로 고정
-
-  const hasValue = Boolean(instanceValue);
+  const value = showValues ? extractValue(node) : null;
+  const hasValue = Boolean(value);
 
   return (
     <div
       className={cn(
-        "flex items-center gap-2.5 py-[7px] px-3 rounded-md transition-colors",
-        // 인스턴스: 값 있으면 연한 녹색 행 강조, 없으면 빨간 배경으로 미입력 표시
-        showValues && hasValue  && "bg-emerald-50/50 hover:bg-emerald-50/80",
-        showValues && !hasValue && "hover:bg-muted/40",
-        // 템플릿: 일반 호버
-        !showValues && "hover:bg-muted/40",
+        "grid items-center gap-3 px-4 py-2 text-sm",
+        "grid-cols-[1fr_auto_minmax(160px,_40%)]",
+        !isLast && "border-b border-zinc-100",
+        showValues && hasValue && "hover:bg-zinc-50",
+        !showValues && "hover:bg-zinc-50/60",
       )}
-      style={{ paddingLeft: `${depth * 20 + 12}px` }}
     >
-      {/* connector dot */}
-      <div className="w-1.5 h-1.5 rounded-full shrink-0 opacity-50" style={{ background: c.dot }} />
-
-      {/* name */}
-      <span className="text-sm text-foreground flex-1 min-w-0 truncate font-medium" title={node.idShort}>
-        {node.idShort}
-      </span>
-
-      {/* type badge */}
-      <span className={cn("shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded border leading-none", c.badge)}>
-        {c.text}
-      </span>
-
-      {/* valueType chip */}
-      {typeLabel && (
-        <span className="shrink-0 text-[10px] text-muted-foreground/50 font-mono bg-muted/50 px-1.5 py-0.5 rounded hidden sm:block">
-          {typeLabel}
+      {/* col 1: name + icon */}
+      <div className="flex items-center gap-2 min-w-0">
+        <Icon className="size-3.5 text-zinc-400 shrink-0" />
+        <span className="text-zinc-700 font-medium truncate" title={node.idShort}>
+          {node.idShort}
         </span>
-      )}
+        {typeLabel && (
+          <span className="text-[10px] font-mono text-zinc-400 shrink-0 hidden sm:block">
+            {typeLabel}
+          </span>
+        )}
+      </div>
 
-      {/* 오른쪽 끝: 값 영역 */}
-      <div className="shrink-0 w-44 text-right">
+      {/* col 2: type label chip */}
+      <span className="text-[10px] font-medium text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded shrink-0">
+        {meta.label}
+      </span>
+
+      {/* col 3: value */}
+      <div className="text-right min-w-0">
         {showValues ? (
-          /* ── 인스턴스 모드 ── */
           hasValue ? (
             <span
-              className="text-xs font-mono bg-emerald-100/80 text-emerald-800 border border-emerald-200/70 px-2 py-0.5 rounded inline-block max-w-full truncate"
-              title={instanceValue!}
+              className="text-xs font-mono text-primary bg-primary/8 px-2 py-0.5 rounded truncate inline-block max-w-full"
+              title={value!}
             >
-              {instanceValue}
+              {value}
             </span>
           ) : (
-            <span className="text-[11px] text-muted-foreground/40 bg-muted/30 border border-dashed border-border/40 px-2 py-0.5 rounded">
-              미입력
-            </span>
+            <span className="text-xs text-zinc-300 italic">—</span>
           )
         ) : (
-          /* ── 템플릿 모드 — 항상 "입력 슬롯"으로 표시 ── */
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground/35">
-            <span className="h-px w-12 bg-border/60 inline-block" />
-            <span className="italic">입력 필요</span>
-          </span>
+          <span className="text-xs text-zinc-300">——</span>
         )}
       </div>
     </div>
   );
 }
 
-/* ── Group (SMC / SML) ──────────────────────────────────────────── */
-function GroupSection({ node, depth, showValues }: { node: any; depth: number; showValues?: boolean }) {
+/* ─────────────────────────────────────────────
+   Group block  (Collection / List / Entity)
+───────────────────────────────────────────── */
+function GroupBlock({
+  node,
+  depth,
+  showValues,
+}: {
+  node: any;
+  depth: number;
+  showValues: boolean;
+}) {
   const [open, setOpen] = useState(true);
-  const c = getColor(node.modelType);
-  const childCount = Array.isArray(node.children) ? node.children.length : 0;
+  const meta = getMeta(node.modelType);
+  const Icon = meta.icon;
+  const children: any[] = Array.isArray(node.children) ? node.children : [];
 
   return (
-    <div className="mt-1">
-      {/* group header */}
+    <div className={cn("mt-1", depth > 0 && "ml-4 border-l border-zinc-100 pl-3")}>
+      {/* group header row */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-2.5 py-1.5 px-3 rounded-md hover:bg-muted/40 transition-colors text-left"
-        style={{ paddingLeft: `${depth * 20 + 12}px` }}
+        className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left hover:bg-zinc-50 transition-colors group"
       >
-        {/* collapse icon */}
-        <svg
-          width="10" height="10" viewBox="0 0 10 10" fill="none"
-          className={cn("shrink-0 transition-transform text-muted-foreground/50", !open && "-rotate-90")}
-        >
-          <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-
-        {/* left accent */}
-        <div className="w-1 h-4 rounded-full shrink-0" style={{ background: c.dot }} />
-
-        <span className="text-sm font-semibold text-foreground flex-1 min-w-0 truncate" title={node.idShort}>
+        <ChevronRight
+          className={cn(
+            "size-3.5 text-zinc-400 shrink-0 transition-transform duration-150",
+            open && "rotate-90",
+          )}
+        />
+        <Icon className="size-3.5 text-zinc-500 shrink-0" />
+        <span className="text-sm font-semibold text-zinc-800 truncate flex-1 min-w-0">
           {node.idShort}
         </span>
-
-        <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded border shrink-0", c.badge)}>
-          {c.text}
+        <span className="text-[10px] font-medium text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded shrink-0">
+          {meta.label}
         </span>
-        <span className="text-[10px] text-muted-foreground/50 shrink-0 tabular-nums">{childCount}개</span>
+        <span className="text-[10px] text-zinc-400 shrink-0 tabular-nums mr-1">
+          {children.length}
+        </span>
       </button>
 
       {/* children */}
-      {open && childCount > 0 && (
-        <div className="relative ml-6 border-l border-dashed border-border/60 mt-0.5">
-          <BlueprintChildren nodes={node.children} depth={depth + 1} showValues={showValues} />
+      {open && children.length > 0 && (
+        <div className="mt-0.5">
+          <NodeList nodes={children} depth={depth + 1} showValues={showValues} />
         </div>
       )}
     </div>
   );
 }
 
-/* ── Children dispatcher ─────────────────────────────────────────── */
-function BlueprintChildren({ nodes, depth, showValues }: { nodes: any[]; depth: number; showValues?: boolean }) {
-  if (!Array.isArray(nodes) || nodes.length === 0) return null;
+/* ─────────────────────────────────────────────
+   Node list dispatcher
+───────────────────────────────────────────── */
+function NodeList({
+  nodes,
+  depth,
+  showValues,
+}: {
+  nodes: any[];
+  depth: number;
+  showValues: boolean;
+}) {
+  if (!nodes.length) return null;
+
+  // Split into groups and leaves at this level
+  const groups = nodes.filter(
+    (n) =>
+      n.modelType === "SubmodelElementCollection" ||
+      n.modelType === "SubmodelElementList" ||
+      n.modelType === "Entity",
+  );
+  const leaves = nodes.filter(
+    (n) =>
+      n.modelType !== "SubmodelElementCollection" &&
+      n.modelType !== "SubmodelElementList" &&
+      n.modelType !== "Entity",
+  );
+
   return (
-    <>
-      {nodes.map((child, i) => {
-        const mt = child.modelType;
-        if (mt === "SubmodelElementCollection" || mt === "SubmodelElementList" || mt === "Entity") {
-          return <GroupSection key={child.value ?? i} node={child} depth={depth} showValues={showValues} />;
-        }
-        return <LeafRow key={child.value ?? i} node={child} depth={depth} showValues={showValues} />;
-      })}
-    </>
+    <div>
+      {/* leaves as a compact table block */}
+      {leaves.length > 0 && (
+        <div
+          className={cn(
+            "rounded border border-zinc-100 overflow-hidden bg-white",
+            depth > 0 && "ml-4",
+            groups.length > 0 && "mb-2",
+          )}
+        >
+          {leaves.map((leaf, i) => (
+            <PropertyRow
+              key={leaf.value ?? leaf.idShort ?? i}
+              node={leaf}
+              showValues={showValues}
+              isLast={i === leaves.length - 1}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* groups */}
+      {groups.map((g, i) => (
+        <GroupBlock
+          key={g.value ?? g.idShort ?? i}
+          node={g}
+          depth={depth}
+          showValues={showValues}
+        />
+      ))}
+    </div>
   );
 }
 
-/* ── Submodel card ───────────────────────────────────────────────── */
-function SubmodelCard({ node, index, showValues }: { node: any; index: number; showValues?: boolean }) {
+/* ─────────────────────────────────────────────
+   Submodel section card
+───────────────────────────────────────────── */
+function SubmodelSection({
+  node,
+  index,
+  showValues,
+}: {
+  node: any;
+  index: number;
+  showValues: boolean;
+}) {
   const [open, setOpen] = useState(true);
-  const childCount = Array.isArray(node.children) ? node.children.length : 0;
+  const children: any[] = Array.isArray(node.children) ? node.children : [];
 
-  // 재귀적으로 리프 노드 수 집계
-  const countLeaves = (n: any): number => {
-    if (!Array.isArray(n.children) || n.children.length === 0) return 1;
-    return n.children.reduce((sum: number, c: any) => sum + countLeaves(c), 0);
-  };
-  const countFilledLeaves = (n: any): number => {
-    if (!Array.isArray(n.children) || n.children.length === 0) {
+  /* stats for instance mode */
+  const countLeaves = (n: any): number =>
+    !Array.isArray(n.children) || !n.children.length
+      ? 1
+      : n.children.reduce((s: number, c: any) => s + countLeaves(c), 0);
+  const countFilled = (n: any): number => {
+    if (!Array.isArray(n.children) || !n.children.length) {
       const v = n.originalValue;
       return v !== undefined && v !== null && v !== "" ? 1 : 0;
     }
-    return n.children.reduce((sum: number, c: any) => sum + countFilledLeaves(c), 0);
+    return n.children.reduce((s: number, c: any) => s + countFilled(c), 0);
   };
 
-  const totalFields = node.children ? node.children.reduce((s: number, c: any) => s + countLeaves(c), 0) : 0;
-  const filledFields = showValues && node.children
-    ? node.children.reduce((s: number, c: any) => s + countFilledLeaves(c), 0)
-    : 0;
-  const fillPct = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
-
-  const c = getColor("Submodel");
+  const total = children.reduce((s, c) => s + countLeaves(c), 0);
+  const filled = showValues ? children.reduce((s, c) => s + countFilled(c), 0) : 0;
+  const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
 
   return (
-    <div className="rounded-xl border border-border/80 overflow-hidden bg-card shadow-sm">
-      {/* submodel header */}
+    <div className="rounded-lg border border-zinc-200 overflow-hidden bg-white shadow-xs">
+      {/* header */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-3 px-4 py-3 bg-card hover:bg-muted/30 transition-colors text-left border-b border-border/60"
+        className="w-full flex items-center gap-3 px-4 py-3 bg-zinc-50 hover:bg-zinc-100/70 transition-colors text-left border-b border-zinc-200"
       >
-        {/* index pill */}
-        <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-bold flex items-center justify-center shrink-0">
+        {/* index */}
+        <span className="w-5 h-5 rounded bg-zinc-200 text-zinc-600 text-[10px] font-bold flex items-center justify-center shrink-0 tabular-nums">
           {index + 1}
-        </div>
+        </span>
 
+        {/* name + id */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-foreground truncate">{node.idShort}</span>
+            <span className="text-sm font-semibold text-zinc-900 truncate">{node.idShort}</span>
             {node.id && (
-              <span className="text-[10px] text-muted-foreground/50 font-mono truncate hidden md:block max-w-[240px]" title={node.id}>
+              <span className="text-[10px] font-mono text-zinc-400 truncate hidden md:block max-w-[220px]">
                 {node.id}
               </span>
             )}
           </div>
-          {node.description && (
-            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{
-              Array.isArray(node.description)
-                ? node.description[0]?.text ?? ""
-                : node.description
-            }</p>
-          )}
         </div>
 
+        {/* stats */}
         <div className="flex items-center gap-2 shrink-0">
           {showValues ? (
-            /* 인스턴스 모드 — 필드 완성도 */
-            <span className={cn(
-              "text-[10px] font-semibold px-2 py-0.5 rounded-full tabular-nums border",
-              fillPct === 100
-                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                : fillPct > 0
-                  ? "bg-amber-50 text-amber-700 border-amber-200"
-                  : "bg-muted/60 text-muted-foreground border-border/60"
-            )}>
-              {filledFields}/{totalFields} filled
+            <span
+              className={cn(
+                "text-[10px] font-semibold px-2 py-0.5 rounded-full tabular-nums border",
+                pct === 100
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : pct > 0
+                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                    : "bg-zinc-100 text-zinc-500 border-zinc-200",
+              )}
+            >
+              {filled}/{total}
             </span>
           ) : (
-            /* 템플릿 모드 — 단순 필드 수 */
-            <span className="text-[10px] text-muted-foreground/50 tabular-nums">{totalFields} fields</span>
+            <span className="text-[10px] text-zinc-400 tabular-nums">{total} fields</span>
           )}
-          <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded border", c.badge)}>SM</span>
-          <svg
-            width="14" height="14" viewBox="0 0 14 14" fill="none"
-            className={cn("transition-transform text-muted-foreground/40", !open && "-rotate-90")}
-          >
-            <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <span className="text-[10px] font-medium text-zinc-400 bg-zinc-200 px-1.5 py-0.5 rounded">SM</span>
+          <ChevronRight
+            className={cn(
+              "size-3.5 text-zinc-400 transition-transform duration-150",
+              open && "rotate-90",
+            )}
+          />
         </div>
       </button>
 
-      {/* submodel body */}
+      {/* body */}
       {open && (
-        <div className="py-1.5 px-1">
-          {childCount > 0 ? (
-            <BlueprintChildren nodes={node.children} depth={0} showValues={showValues} />
+        <div className="px-3 py-3">
+          {children.length > 0 ? (
+            <NodeList nodes={children} depth={0} showValues={showValues} />
           ) : (
-            <p className="text-xs text-muted-foreground/50 px-4 py-3 italic">No elements defined.</p>
+            <p className="text-xs text-zinc-400 px-2 py-4 text-center italic">No elements defined.</p>
           )}
         </div>
       )}
@@ -279,30 +334,34 @@ function SubmodelCard({ node, index, showValues }: { node: any; index: number; s
   );
 }
 
-/* ── Main export ─────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────
+   Main export
+───────────────────────────────────────────── */
 interface TemplateBlueprintProps {
-  treeData: any[];     // result of parsingAAS()
-  showValues?: boolean; // true = instance view (highlight filled values, mark empty)
+  treeData: any[];
+  showValues?: boolean;
 }
 
 export default function TemplateBlueprint({ treeData, showValues = false }: TemplateBlueprintProps) {
   if (!Array.isArray(treeData) || treeData.length === 0) {
     return (
-      <p className="text-xs text-muted-foreground px-4 py-6 text-center">구조 데이터가 없습니다.</p>
+      <p className="text-xs text-zinc-400 px-4 py-6 text-center">구조 데이터가 없습니다.</p>
     );
   }
 
   const root = treeData[0];
-
-  // root가 AAS인 경우 children이 submodels, 아니면 root 자체를 단일 카드로
   const isAASRoot = root.modelType === "AssetAdministrationShell";
   const submodels: any[] = isAASRoot
     ? (Array.isArray(root.children) ? root.children : [])
-    : treeData; // single submodel or list
+    : treeData;
 
-  // Count filled values (for instance view stat)
+  /* global stats */
   const countAll = (nodes: any[]): number =>
-    nodes.reduce((s, n) => s + (Array.isArray(n.children) && n.children.length ? countAll(n.children) : 1), 0);
+    nodes.reduce(
+      (s, n) =>
+        s + (Array.isArray(n.children) && n.children.length ? countAll(n.children) : 1),
+      0,
+    );
   const countFilled = (nodes: any[]): number =>
     nodes.reduce((s, n) => {
       if (Array.isArray(n.children) && n.children.length) return s + countFilled(n.children);
@@ -311,65 +370,70 @@ export default function TemplateBlueprint({ treeData, showValues = false }: Temp
     }, 0);
 
   const totalFields = countAll(submodels);
-  const filledFields = countFilled(submodels);
+  const filledFields = showValues ? countFilled(submodels) : 0;
   const fillPct = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
 
   return (
-    <div className="space-y-4">
-      {/* AAS / summary strip */}
+    <div className="space-y-3">
+      {/* AAS summary bar */}
       {isAASRoot && (
-        <div className={cn(
-          "flex items-center justify-between rounded-lg px-4 py-2.5 border",
-          showValues ? "bg-slate-50 border-slate-200" : "bg-blue-50 border-blue-100"
-        )}>
-          <div className="flex items-center gap-2.5">
-            <div className={cn("w-7 h-7 rounded-md flex items-center justify-center shrink-0", showValues ? "bg-slate-600" : "bg-blue-600")}>
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <rect x="2" y="2" width="12" height="12" rx="2.5" stroke="white" strokeWidth="1.5"/>
-                <path d="M5 8h6M8 5v6" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
+        <div className="flex items-center justify-between bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-6 h-6 rounded bg-primary flex items-center justify-center shrink-0">
+              <Layers className="size-3.5 text-white" />
             </div>
-            <div>
-              <p className={cn("text-xs font-semibold leading-none", showValues ? "text-slate-700" : "text-blue-800")}>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-zinc-800 leading-none truncate">
                 {root.idShort}
               </p>
               {root.id && (
-                <p className={cn("text-[10px] font-mono mt-0.5 truncate max-w-[340px]", showValues ? "text-slate-400" : "text-blue-500/80")}>
+                <p className="text-[10px] font-mono text-zinc-400 mt-0.5 truncate max-w-[300px]">
                   {root.id}
                 </p>
               )}
             </div>
           </div>
-          <div className={cn("flex items-center gap-3 text-xs shrink-0", showValues ? "text-slate-600" : "text-blue-600")}>
-            <span><span className="font-bold">{submodels.length}</span> submodels</span>
-            <span className={showValues ? "text-slate-300" : "text-blue-300"}>|</span>
+
+          <div className="flex items-center gap-3 text-xs text-zinc-500 shrink-0">
+            <span>
+              <span className="font-semibold text-zinc-700">{submodels.length}</span> submodels
+            </span>
+            <span className="text-zinc-300">|</span>
             {showValues ? (
-              /* 인스턴스 모드 — 전체 완성도 */
               <span className="flex items-center gap-1.5">
-                <span className="font-bold text-emerald-600">{filledFields}</span>
-                <span className="text-muted-foreground/70">/ {totalFields} filled</span>
-                <span className={cn(
-                  "text-[10px] font-bold px-1.5 py-0.5 rounded-full",
-                  fillPct === 100 ? "bg-emerald-100 text-emerald-700" : fillPct > 50 ? "bg-amber-100 text-amber-700" : "bg-red-50 text-red-500"
-                )}>{fillPct}%</span>
+                <span
+                  className={cn(
+                    "font-semibold tabular-nums text-xs px-2 py-0.5 rounded-full border",
+                    fillPct === 100
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : fillPct > 0
+                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                        : "bg-zinc-100 text-zinc-500 border-zinc-200",
+                  )}
+                >
+                  {filledFields}/{totalFields} filled
+                </span>
               </span>
             ) : (
-              /* 템플릿 모드 — 입력해야 할 필드 수 안내 */
-              <span className="flex items-center gap-1 text-blue-500/80">
-                <span className="font-bold">{totalFields}</span>
-                <span>개 항목 입력 필요</span>
+              <span>
+                <span className="font-semibold text-zinc-700">{totalFields}</span> fields
               </span>
             )}
           </div>
         </div>
       )}
 
-      {/* One card per Submodel */}
+      {/* Submodel sections */}
       {submodels.length === 0 ? (
-        <p className="text-xs text-muted-foreground text-center py-8 italic">Submodel이 없습니다.</p>
+        <p className="text-xs text-zinc-400 text-center py-8">Submodel이 없습니다.</p>
       ) : (
         submodels.map((sm, i) => (
-          <SubmodelCard key={sm.value ?? i} node={sm} index={i} showValues={showValues} />
+          <SubmodelSection
+            key={sm.value ?? sm.idShort ?? i}
+            node={sm}
+            index={i}
+            showValues={showValues}
+          />
         ))
       )}
     </div>
