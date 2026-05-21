@@ -32,8 +32,8 @@ export default async function Home() {
   }
 
   const statCards = [
-    { href: "/aas",      icon: LayoutTemplate, label: "AAS Templates",      count: aasCount,  color: "text-blue-600",    bg: "bg-blue-50" },
-    { href: "/submodel", icon: Puzzle,          label: "Submodel Templates", count: smCount,   color: "text-violet-600",  bg: "bg-violet-50" },
+    { href: "/aas",      icon: LayoutTemplate, label: "AAS Templates",      count: aasCount,  color: "text-primary",     bg: "bg-primary/8" },
+    { href: "/submodel", icon: Puzzle,          label: "Submodel Templates", count: smCount,   color: "text-indigo-600",  bg: "bg-indigo-50" },
     { href: "/instance", icon: Layers,          label: "AAS Instances",      count: insCount,  color: "text-emerald-600", bg: "bg-emerald-50", isNew: true },
   ];
 
@@ -68,7 +68,7 @@ export default async function Home() {
     <div className="flex flex-col">
 
       {/* ── Hero / Search ─────────────────────────────────────────── */}
-      <section className="border-b border-border bg-muted/40 py-10">
+      <section className="border-b border-border bg-card py-10">
         <div className="mx-auto max-w-screen-xl px-4 lg:px-8">
           <AASSearchBar />
 

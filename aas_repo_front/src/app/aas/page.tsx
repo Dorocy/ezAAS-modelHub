@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Select,
   SelectContent,
@@ -28,7 +29,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, List, Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { LayoutGrid, List, Plus, Search, ChevronLeft, ChevronRight, FileStack } from "lucide-react";
 
 const PAGE_SIZE = 20;
 
@@ -86,34 +87,25 @@ export default function AASPage() {
 
   return (
     <div className="flex flex-col">
-      {/* Page header */}
-      <div className="border-b border-border bg-background px-6 py-4">
-        <div className="mx-auto max-w-screen-2xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-foreground">AAS Template</h1>
-              <nav className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Link href="/" className="hover:text-foreground">Home</Link>
-                <span>/</span>
-                <span>AAS Template</span>
-              </nav>
-            </div>
-            {user && user.user_group_seq <= UserRole.User && (
-              <Link
-                href={ROUTES.AASMODEL.CREATE}
-                className={cn(buttonVariants({ size: "sm" }))}
-              >
-                <Plus data-icon="inline-start" />
-                AAS Register
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="AAS Template"
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "AAS Template" },
+        ]}
+        actions={
+          user && user.user_group_seq <= UserRole.User ? (
+            <Link href={ROUTES.AASMODEL.CREATE} className={cn(buttonVariants({ size: "sm" }))}>
+              <Plus className="size-3.5" data-icon="inline-start" />
+              Register AAS
+            </Link>
+          ) : undefined
+        }
+      />
 
       {/* Filters */}
-      <div className="border-b border-border bg-muted/30 px-6 py-3">
-        <div className="mx-auto max-w-screen-2xl flex flex-wrap items-center gap-3">
+      <div className="border-b border-border/60 bg-muted/30 px-6 py-2.5">
+        <div className="mx-auto max-w-screen-2xl flex flex-wrap items-center gap-2.5">
           <Select value={categoryFilter} onValueChange={handleCategoryChange}>
             <SelectTrigger className="h-8 w-44 text-sm">
               <SelectValue placeholder="All Categories" />
@@ -182,30 +174,37 @@ export default function AASPage() {
             ))}
           </div>
         ) : layoutType === "grid" ? (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {models.map((model: any) => (
-              <Link key={model.aasmodel_seq} href={ROUTES.AASMODEL.VIEW(model.aasmodel_seq)}>
-                <Card className="h-full transition-shadow hover:shadow-md cursor-pointer">
-                  <CardHeader className="pb-2">
+              <Link key={model.aasmodel_seq} href={ROUTES.AASMODEL.VIEW(model.aasmodel_seq)} className="group">
+                <Card className="h-full overflow-hidden transition-all duration-150 group-hover:shadow-md group-hover:ring-primary/20 cursor-pointer">
+                  {/* Accent bar */}
+                  <div className="h-0.5 w-full bg-primary/70" />
+                  <CardHeader className="pb-1.5 pt-3">
                     <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-sm font-semibold leading-snug line-clamp-2">
+                      <CardTitle className="text-sm font-semibold leading-snug line-clamp-2 text-foreground">
                         {model.aasmodel_name}
                       </CardTitle>
-                      <Badge variant={STATUS_VARIANT[model.status] ?? "outline"} className="shrink-0 text-xs">
+                      <Badge variant={STATUS_VARIANT[model.status] ?? "outline"} className="shrink-0 text-[10px] h-4 px-1.5">
                         {model.status_nm}
                       </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent className="text-xs text-muted-foreground space-y-1">
-                    <p className="line-clamp-2">{model.description}</p>
-                    <p className="font-medium text-foreground/70">{model.category_name}</p>
-                    <p className="font-mono truncate">{model.aasmodel_template_id}</p>
+                  <CardContent className="space-y-2 pb-3">
+                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{model.description}</p>
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/60">
+                      <span className="text-xs font-medium text-muted-foreground">{model.category_name}</span>
+                      <span className="font-mono text-[10px] text-muted-foreground/60 truncate max-w-[100px]">{model.aasmodel_template_id}</span>
+                    </div>
                   </CardContent>
                 </Card>
               </Link>
             ))}
             {models.length === 0 && (
-              <p className="col-span-full text-center text-muted-foreground py-16">No templates found.</p>
+              <div className="col-span-full flex flex-col items-center justify-center gap-3 py-20 text-muted-foreground">
+                <FileStack className="size-10 opacity-30" />
+                <p className="text-sm">No templates found.</p>
+              </div>
             )}
           </div>
         ) : (

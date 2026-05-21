@@ -33,8 +33,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
-import { Plus, Search, Download, Pencil, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, Download, Pencil, ChevronDown, ChevronLeft, ChevronRight, Layers } from "lucide-react";
 
 const PAGE_SIZE = 20;
 
@@ -92,31 +93,25 @@ export default function InstancePage() {
 
   return (
     <div className="flex flex-col">
-      {/* Page header */}
-      <div className="border-b border-border bg-background px-6 py-4">
-        <div className="mx-auto max-w-screen-2xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-foreground">My AAS Instance</h1>
-              <nav className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Link href="/" className="hover:text-foreground">Home</Link>
-                <span>/</span>
-                <span>My AAS Instance</span>
-              </nav>
-            </div>
-            {canCreate && (
-              <Link href="/instance/ins" className={cn(buttonVariants({ size: "sm" }))}>
-                <Plus data-icon="inline-start" />
-                Create AAS
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="My AAS Instance"
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "My AAS Instance" },
+        ]}
+        actions={
+          canCreate ? (
+            <Link href="/instance/ins" className={cn(buttonVariants({ size: "sm" }))}>
+              <Plus className="size-3.5" data-icon="inline-start" />
+              Create AAS
+            </Link>
+          ) : undefined
+        }
+      />
 
       {/* Filters */}
-      <div className="border-b border-border bg-muted/30 px-6 py-3">
-        <div className="mx-auto max-w-screen-2xl flex flex-wrap items-center gap-3">
+      <div className="border-b border-border/60 bg-muted/30 px-6 py-2.5">
+        <div className="mx-auto max-w-screen-2xl flex flex-wrap items-center gap-2.5">
           {user && user.user_group_seq !== UserRole.User && (
             <div className="flex rounded-md border border-border overflow-hidden text-sm">
               {(["my", "all"] as const).map((mode) => (
@@ -281,8 +276,11 @@ export default function InstancePage() {
                 })}
                 {instances.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                      No instances found.
+                    <TableCell colSpan={7} className="h-40">
+                      <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                        <Layers className="size-8 opacity-30" />
+                        <p className="text-sm">No instances found.</p>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )}

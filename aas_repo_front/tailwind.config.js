@@ -40,14 +40,28 @@ export default {
           DEFAULT:    "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
+        success: {
+          DEFAULT:    "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        sidebar: {
+          DEFAULT:    "hsl(var(--sidebar))",
+          border:     "hsl(var(--sidebar-border))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "calc(var(--radius) + 4px)",
+        "2xl": "calc(var(--radius) + 8px)",
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["Pretendard", "Inter", "system-ui", "sans-serif"],
+      },
+      boxShadow: {
+        xs: "0 1px 2px 0 rgb(0 0 0 / 0.04)",
+        sm: "0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04)",
       },
     },
   },
