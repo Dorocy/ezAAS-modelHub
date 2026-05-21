@@ -39,7 +39,7 @@ import { Plus, Search, Download, Pencil, ChevronDown, ChevronLeft, ChevronRight 
 const PAGE_SIZE = 20;
 
 export default function InstancePage() {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const [inputValue, setInputValue] = useState("");
   const [searchKey, setSearchKey] = useState("");
@@ -48,7 +48,7 @@ export default function InstancePage() {
   const [page, setPage] = useState(1);
 
   const { data: categories = [] } = useSWR(
-    "categories-instance",
+    isAuthenticated ? "categories-instance" : null,
     () => getCodeList("category")
   );
 
@@ -57,7 +57,7 @@ export default function InstancePage() {
   if (searchMode === "my" && user) searchParams.user_seq = String(user.user_seq);
 
   const { data: instanceData, isLoading, error } = useSWR(
-    ["instance-list", page, searchKey, categoryFilter, searchMode],
+    isAuthenticated ? ["instance-list", page, searchKey, categoryFilter, searchMode] : null,
     () =>
       getInstanceList({
         category_seq: categoryFilter === "all" ? "0" : categoryFilter,

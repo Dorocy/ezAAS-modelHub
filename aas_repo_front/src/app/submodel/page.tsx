@@ -40,7 +40,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
 };
 
 export default function SubmodelPage() {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const [searchKey, setSearchKey] = useState("");
   const [inputValue, setInputValue] = useState("");
@@ -49,7 +49,7 @@ export default function SubmodelPage() {
   const [page, setPage] = useState(1);
 
   const { data: categories = [] } = useSWR(
-    "categories-submodel",
+    isAuthenticated ? "categories-submodel" : null,
     () => getCodeList("category")
   );
 
@@ -58,7 +58,7 @@ export default function SubmodelPage() {
   if (categoryFilter !== "all") searchParams.category_seq = categoryFilter;
 
   const { data: modelData, isLoading, error } = useSWR(
-    ["submodel-list", page, searchKey, categoryFilter],
+    isAuthenticated ? ["submodel-list", page, searchKey, categoryFilter] : null,
     () =>
       getModelList({
         modelType: "submodel",

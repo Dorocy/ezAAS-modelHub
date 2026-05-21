@@ -5,6 +5,7 @@ import Link from "next/link";
 import useSWR from "swr";
 import { getPublishedList } from "@/api/index";
 import { ROUTES } from "@/constants/routes";
+import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ function formatDate(iso: string) {
 }
 
 export default function DistributePage() {
+  const { isAuthenticated } = useAuth();
   const [inputValue, setInputValue] = useState("");
   const [searchKey, setSearchKey] = useState("");
   const [statusFilter, setStatusFilter] = useState<"published" | "deprecated">("published");
@@ -56,7 +58,7 @@ export default function DistributePage() {
   if (searchKey) searchParams.searchKey = searchKey;
 
   const { data: publishedData, isLoading, error } = useSWR(
-    ["published-list", page, statusFilter, typeFilter, searchKey],
+    isAuthenticated ? ["published-list", page, statusFilter, typeFilter, searchKey] : null,
     () =>
       getPublishedList({
         status: statusFilter,

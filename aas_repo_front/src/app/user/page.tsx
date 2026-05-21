@@ -5,6 +5,7 @@ import Link from "next/link";
 import useSWR from "swr";
 import { getUserList } from "@/api/index";
 import { ROUTES } from "@/constants/routes";
+import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,7 @@ const GROUP_OPTIONS = [
 ];
 
 export default function UserPage() {
+  const { isAuthenticated } = useAuth();
   const [inputValue, setInputValue] = useState("");
   const [searchKey, setSearchKey] = useState("");
   const [groupFilter, setGroupFilter] = useState("all");
@@ -68,7 +70,7 @@ export default function UserPage() {
   if (groupFilter !== "all") searchParams.user_group_seq = groupFilter;
 
   const { data: userData, isLoading, error } = useSWR(
-    ["user-list", page, searchKey, groupFilter],
+    isAuthenticated ? ["user-list", page, searchKey, groupFilter] : null,
     () =>
       getUserList({
         pageNumber: page,

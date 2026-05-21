@@ -40,7 +40,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
 };
 
 export default function AASPage() {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const [searchKey, setSearchKey] = useState("");
   const [inputValue, setInputValue] = useState("");
@@ -50,7 +50,7 @@ export default function AASPage() {
 
   // Category code list
   const { data: categories = [] } = useSWR(
-    "categories-aasmodel",
+    isAuthenticated ? "categories-aasmodel" : null,
     () => getCodeList("category")
   );
 
@@ -60,7 +60,7 @@ export default function AASPage() {
   if (categoryFilter !== "all") searchParams.category_seq = categoryFilter;
 
   const { data: modelData, isLoading, error } = useSWR(
-    ["aasmodel-list", page, searchKey, categoryFilter],
+    isAuthenticated ? ["aasmodel-list", page, searchKey, categoryFilter] : null,
     () =>
       getModelList({
         modelType: "aasmodel",
