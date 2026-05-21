@@ -92,12 +92,12 @@ export default function LoginContent({ redirectUrl }: LoginContentProps) {
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <label htmlFor="email" className="text-sm font-medium">
-                Email
+                ID
               </label>
               <Input
                 id="email"
                 type="text"
-                placeholder="you@example.com"
+                placeholder="Enter your ID"
                 autoComplete="off"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

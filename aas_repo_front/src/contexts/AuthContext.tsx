@@ -22,13 +22,13 @@ interface AuthContextType {
 }
 
 // ── 개발용 Mock Admin ──────────────────────────────────────────────────────
-// 백엔드 없이 v0 preview에서 모든 페이지를 볼 수 있도록 mock 관리자 세션을 제공.
-// NEXT_PUBLIC_MOCK_ADMIN=true 환경변수가 설정되어 있거나, tokenMessage가 비어있을 때 활성화.
+// NEXT_PUBLIC_MOCK_ADMIN=true 환경변수가 설정되어 있을 때만 활성화.
+// ngrok 등 실제 백엔드가 연결된 경우에는 비활성화.
 const MOCK_ADMIN_PROFILE: TokenProfile = {
   user_seq: 1,
   user_id: "admin",
   user_name: "Admin",
-  user_group_seq: 1,   // Manager
+  user_group_seq: 1,
   user_group_name: "Manager",
   user_photo_url: undefined,
 };
@@ -42,8 +42,7 @@ export const AuthProvider = ({
   tokenMessage: string;
   children: React.ReactNode;
 }) => {
-  const isMockMode =
-    process.env.NEXT_PUBLIC_MOCK_ADMIN === "true" || !tokenMessage;
+  const isMockMode = process.env.NEXT_PUBLIC_MOCK_ADMIN === "true";
 
   const [authToken, setAuthToken] = useState<AuthTokenData | undefined>(() => {
     if (isMockMode) return { target: "AASREPO_MOCK", payload: { jwt_access_token: "" } } as any;
@@ -206,18 +205,13 @@ export const AuthProvider = ({
         const token = event.data.token;
         if (!token) return;
 
-        console.log("[DEBUG] Login: Sending token to /api/auth/cookie:", token);
-        fetch("/api/auth/cookie", { 
+        fetch("/api/auth/cookie", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token }),
         }).then((response) => {
-          console.log("[DEBUG] Login: Response status:", response.status);
           return response.json();
-        }).then((data) => {
-
-          console.log("[DEBUG] Login: Response data:", data);
-          
+        }).then(() => {
           setAuthToken(token);
           const payload = jwtDecode<TokenPayload>(
             token.payload.jwt_access_token
@@ -322,6 +316,10 @@ export const AuthProvider = ({
     return null;
   }
 
+  // mock 모드이거나 인증된 경우 항상 children 렌더링
+  // (forbidden 체크는 위의 useEffect에서 리다이렉트로 처리)
+  const shouldRender = isMockMode || allowRender === "allow";
+
   return (
     <AuthContext.Provider
       value={{
@@ -335,7 +333,7 @@ export const AuthProvider = ({
         language,
       }}
     >
-      {allowRender === "allow" && children}
+      {shouldRender && children}
     </AuthContext.Provider>
   );
 };
