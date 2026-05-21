@@ -35,6 +35,8 @@ export async function apiRequest({
 
   options.headers = {
     ...(options.headers || {}),
+    // ngrok 무료 플랜의 브라우저 경고 페이지를 건너뜀
+    "ngrok-skip-browser-warning": "true",
   };
 
   if (isServer) {
