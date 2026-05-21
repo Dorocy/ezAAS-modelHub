@@ -1084,7 +1084,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         if (!open) { setModelSeq(""); setPreviewModel(null); }
       }}
     >
-      <DialogContent className="max-w-4xl w-full max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {modelType === "aasmodel" ? "AAS" : "Submodel"} Template 선택
@@ -1178,11 +1178,8 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                   {/* AAS 트리 미리보기 */}
                   {previewTreeData ? (
                     <AASTree
-                      treeData={previewTreeData}
-                      onSelect={() => {}}
-                      selectedNode={null}
-                      mode="view"
-                      onUpdate={() => {}}
+                      data={previewTreeData}
+                      editMode={false}
                     />
                   ) : (
                     <div className="text-xs text-muted-foreground px-1">No tree data available.</div>
