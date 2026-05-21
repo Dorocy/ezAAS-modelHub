@@ -1,5 +1,3 @@
-"use server";
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 const BACKEND =
@@ -11,33 +9,18 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
   const { path } = await params;
   const pathStr = path.join("/");
 
-  // 쿼리스트링 그대로 전달
   const search = req.nextUrl.search;
   const targetUrl = `${BACKEND}/${pathStr}${search}`;
 
-  // 쿠키에서 토큰 추출 — token_message는 { target, payload: { jwt_access_token } } JSON
-  const cookieStore = await cookies();
-  const tokenRaw = cookieStore.get("token_message")?.value;
-
-  // URL-encode된 쿠키 값 디코딩
-  let tokenDecoded: string | undefined;
-  if (tokenRaw) {
-    try {
-      tokenDecoded = decodeURIComponent(tokenRaw);
-    } catch {
-      tokenDecoded = tokenRaw;
-    }
-  }
-
-  console.log("[v0] proxy path:", pathStr, "| tokenRaw exists:", !!tokenRaw, "| tokenDecoded prefix:", tokenDecoded?.slice(0, 40));
-
+  // 클라이언트가 apiRequest에서 넣어준 Authorization 헤더를 그대로 전달
   const forwardHeaders: Record<string, string> = {
     "Content-Type": req.headers.get("content-type") || "application/json",
     "ngrok-skip-browser-warning": "true",
   };
 
-  if (tokenDecoded) {
-    forwardHeaders["Authorization"] = `Bearer ${tokenDecoded}`;
+  const authHeader = req.headers.get("authorization");
+  if (authHeader) {
+    forwardHeaders["Authorization"] = authHeader;
   }
 
   // body 그대로 전달
@@ -53,7 +36,6 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
       body,
     });
 
-    console.log("[v0] proxy backend response:", pathStr, backendRes.status);
     const contentType = backendRes.headers.get("content-type") || "";
 
     // 백엔드가 HTML을 반환하면 에러로 처리 (ngrok 경고 페이지 방어)

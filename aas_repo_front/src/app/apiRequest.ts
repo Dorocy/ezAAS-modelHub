@@ -56,7 +56,12 @@ export async function apiRequest({
       console.warn("Unable to attach Authorization header on server", err);
     }
   } else {
-    // 클라이언트: 프록시가 쿠키를 읽어서 토큰을 붙여주므로 별도 처리 불필요
+    // 클라이언트: 메모리에서 토큰을 읽어 Authorization 헤더에 추가
+    const { getClientToken } = await import("@/app/tokenStore");
+    const clientToken = getClientToken();
+    if (clientToken) {
+      (options.headers as Record<string, string>)["Authorization"] = `Bearer ${clientToken}`;
+    }
     options.credentials = "include";
   }
 

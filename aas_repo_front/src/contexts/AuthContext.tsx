@@ -9,6 +9,7 @@ import { showToast } from "@/utils/toast";
 import { signUp, loginWithCredentials } from "@/api/index";
 import { jwtDecode } from "jwt-decode";
 import { useLanguage } from "./LanguageContext";
+import { setClientToken } from "@/app/tokenStore";
 
 interface AuthContextType {
   user: TokenProfile | null;
@@ -72,6 +73,13 @@ export const AuthProvider = ({
   const pathname = usePathname();
   const language = useLanguage();
 
+  // 페이지 새로고침 시 authToken이 있으면 클라이언트 토큰 복원
+  useEffect(() => {
+    if (authToken) {
+      setClientToken(JSON.stringify(authToken));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const isAuthenticated = !!user;
   const allowRender = canAccessPath(pathname, user?.user_group_seq);
 
@@ -113,8 +121,11 @@ export const AuthProvider = ({
       return showToast.error("로그인 정보가 올바르지 않습니다.");
     }
 
-    // 쿠키 설정을 위한 API 호출
-    await fetch("/api/auth/cookie", {
+    // 메모리 토큰 저장 (프록시 Authorization 헤더에 사용)
+    setClientToken(JSON.stringify(token));
+
+    // 쿠키 설정을 위한 API 호출 (서버사이드 렌더링용)
+    fetch("/api/auth/cookie", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),
@@ -145,6 +156,7 @@ export const AuthProvider = ({
   // 로그아웃 함수 (서버에 쿠키 삭제 요청)
   const logout = useCallback(async () => {
     await fetch("/api/logout", { method: "POST" });
+    setClientToken(null);
     setAuthToken(undefined);
     setUser(null);
     setPayload(undefined);
