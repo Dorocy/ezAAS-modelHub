@@ -15,7 +15,7 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
   const search = req.nextUrl.search;
   const targetUrl = `${BACKEND}/${pathStr}${search}`;
 
-  // 클라이언트에서 보낸 Authorization 헤더 또는 쿠키에서 토큰 추출
+  // 쿠키에서 토큰 추출 — token_message는 { target, payload: { jwt_access_token } } JSON
   const cookieStore = await cookies();
   const tokenRaw = cookieStore.get("token_message")?.value;
 
@@ -25,6 +25,7 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
   };
 
   if (tokenRaw) {
+    // 백엔드가 Authorization: Bearer {full token_message JSON} 형식을 기대함
     forwardHeaders["Authorization"] = `Bearer ${tokenRaw}`;
   }
 

@@ -47,9 +47,10 @@ export async function apiRequest({
     try {
       const { cookies } = await import("next/headers");
       const cookieStore = await cookies();
-      const token = cookieStore.get("token_message")?.value;
-      if (token) {
-        (options.headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+      const tokenRaw = cookieStore.get("token_message")?.value;
+      if (tokenRaw) {
+        // 백엔드가 Authorization: Bearer {full token_message JSON} 형식을 기대함
+        (options.headers as Record<string, string>)["Authorization"] = `Bearer ${tokenRaw}`;
       }
     } catch (err) {
       console.warn("Unable to attach Authorization header on server", err);
