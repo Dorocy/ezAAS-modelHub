@@ -19,14 +19,25 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
   const cookieStore = await cookies();
   const tokenRaw = cookieStore.get("token_message")?.value;
 
+  // URL-encode된 쿠키 값 디코딩
+  let tokenDecoded: string | undefined;
+  if (tokenRaw) {
+    try {
+      tokenDecoded = decodeURIComponent(tokenRaw);
+    } catch {
+      tokenDecoded = tokenRaw;
+    }
+  }
+
+  console.log("[v0] proxy path:", pathStr, "| tokenRaw exists:", !!tokenRaw, "| tokenDecoded prefix:", tokenDecoded?.slice(0, 40));
+
   const forwardHeaders: Record<string, string> = {
     "Content-Type": req.headers.get("content-type") || "application/json",
     "ngrok-skip-browser-warning": "true",
   };
 
-  if (tokenRaw) {
-    // 백엔드가 Authorization: Bearer {full token_message JSON} 형식을 기대함
-    forwardHeaders["Authorization"] = `Bearer ${tokenRaw}`;
+  if (tokenDecoded) {
+    forwardHeaders["Authorization"] = `Bearer ${tokenDecoded}`;
   }
 
   // body 그대로 전달
@@ -42,6 +53,7 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
       body,
     });
 
+    console.log("[v0] proxy backend response:", pathStr, backendRes.status);
     const contentType = backendRes.headers.get("content-type") || "";
 
     // 백엔드가 HTML을 반환하면 에러로 처리 (ngrok 경고 페이지 방어)
