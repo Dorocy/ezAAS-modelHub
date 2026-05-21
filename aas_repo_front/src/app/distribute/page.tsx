@@ -67,7 +67,7 @@ export default function DistributePage() {
       })
   );
 
-  const models: any[] = publishedData?.list ?? publishedData ?? [];
+  const models: any[] = Array.isArray(publishedData) ? publishedData : (Array.isArray(publishedData?.list) ? publishedData.list : []);
   const totalCount: number = publishedData?.totalCount ?? publishedData?.total ?? models.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 

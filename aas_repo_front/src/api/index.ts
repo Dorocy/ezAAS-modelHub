@@ -74,10 +74,11 @@ export async function resetPassword(
 // ── Model ─────────────────────────────────────────────────────────────────────
 
 export async function getModelList(params: GetModelListParams) {
-  const query = params.searchParams
-    ? new URLSearchParams(params.searchParams as Record<string, string>).toString()
-    : "";
-  const url = `${params.modelType}/list/${params.pageNumber}/${params.pageSize}${query ? `?${query}` : ""}`;
+  // API: instance/list/{modelType}/{category_seq|all}
+  const categorySeq = (params.searchParams as any)?.category_seq || "all";
+  const searchKey = (params.searchParams as any)?.searchKey;
+  const query = searchKey ? `?search=${encodeURIComponent(searchKey)}` : "";
+  const url = `instance/list/${params.modelType}/${categorySeq}${query}`;
   return apiRequest({ url, withToast: params.withToast });
 }
 
@@ -167,10 +168,10 @@ export async function getCodeList(type: string, withToast = false) {
 // ── Published ─────────────────────────────────────────────────────────────────
 
 export async function getPublishedList(params: GetPublishedListParams) {
-  const query = params.searchParams
-    ? new URLSearchParams(params.searchParams as Record<string, string>).toString()
-    : "";
-  const url = `published/list/${params.status}/${params.type}/${params.pageNumber}/${params.pageSize}${query ? `?${query}` : ""}`;
+  // API: instance/list/publish/all
+  const searchKey = (params.searchParams as any)?.searchKey;
+  const query = searchKey ? `?search=${encodeURIComponent(searchKey)}` : "";
+  const url = `instance/list/publish/all${query}`;
   return apiRequest({ url, withToast: params.withToast });
 }
 
@@ -214,10 +215,11 @@ export async function getInstanceTargetList(params: GetInstanceTargetListParams)
 }
 
 export async function getInstanceList(params: GetInstanceListParams) {
-  const query = params.searchParams
-    ? new URLSearchParams(params.searchParams as Record<string, string>).toString()
-    : "";
-  const url = `instance/list/${params.category_seq}/${params.pageNumber}/${params.pageSize}${query ? `?${query}` : ""}`;
+  // API: instance/list/instance/{category_seq|all}
+  const categorySeq = params.category_seq || "all";
+  const searchKey = (params.searchParams as any)?.searchKey;
+  const query = searchKey ? `?search=${encodeURIComponent(searchKey)}` : "";
+  const url = `instance/list/instance/${categorySeq}${query}`;
   return apiRequest({ url, withToast: params.withToast });
 }
 
@@ -260,10 +262,10 @@ export async function getInstanceDetail(params: GetInstanceParams) {
 // ── User ──────────────────────────────────────────────────────────────────────
 
 export async function getUserList(params: GetUserListParams) {
-  const query = params.searchParams
-    ? new URLSearchParams(params.searchParams as Record<string, string>).toString()
-    : "";
-  const url = `user/list/${params.pageNumber}/${params.pageSize}${query ? `?${query}` : ""}`;
+  // API: user/info/list  — DataTables 형식 응답 { draw, recordsTotal, recordsFiltered, data }
+  const searchKey = (params.searchParams as any)?.searchKey;
+  const query = searchKey ? `?search=${encodeURIComponent(searchKey)}` : "";
+  const url = `user/info/list${query}`;
   return apiRequest({ url, withToast: params.withToast });
 }
 

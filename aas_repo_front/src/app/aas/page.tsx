@@ -70,7 +70,7 @@ export default function AASPage() {
       })
   );
 
-  const models: any[] = modelData?.list ?? modelData ?? [];
+  const models: any[] = Array.isArray(modelData) ? modelData : (Array.isArray(modelData?.list) ? modelData.list : []);
   const totalCount: number = modelData?.totalCount ?? modelData?.total ?? models.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 

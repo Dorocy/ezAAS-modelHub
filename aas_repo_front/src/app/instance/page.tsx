@@ -67,7 +67,7 @@ export default function InstancePage() {
       })
   );
 
-  const instances: any[] = instanceData?.list ?? instanceData ?? [];
+  const instances: any[] = Array.isArray(instanceData) ? instanceData : (Array.isArray(instanceData?.list) ? instanceData.list : []);
   const totalCount: number = instanceData?.totalCount ?? instanceData?.total ?? instances.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
