@@ -25,17 +25,21 @@ export async function apiRequest({
 }: ApiRequestParams): Promise<any> {
   const isServer = typeof window === "undefined";
 
-  const BASE_URL = isServer
-    ? `${process.env.NEXT_PUBLIC_AAS_API_BASE_SERVER}:${process.env.NEXT_PUBLIC_AAS_API_PORT_SERVER}`
-    : process.env.NEXT_PUBLIC_AAS_API_PORT
-      ? `${process.env.NEXT_PUBLIC_AAS_API_BASE}:${process.env.NEXT_PUBLIC_AAS_API_PORT}`
-      : process.env.NEXT_PUBLIC_AAS_API_BASE;
+  let fullUrl: string;
 
-  const fullUrl = `${BASE_URL}/${url}`;
+  if (isServer) {
+    // 서버사이드: ngrok으로 직접 요청 (CORS 없음)
+    const base = process.env.NEXT_PUBLIC_AAS_API_PORT_SERVER
+      ? `${process.env.NEXT_PUBLIC_AAS_API_BASE_SERVER}:${process.env.NEXT_PUBLIC_AAS_API_PORT_SERVER}`
+      : process.env.NEXT_PUBLIC_AAS_API_BASE_SERVER || process.env.NEXT_PUBLIC_AAS_API_BASE || "";
+    fullUrl = `${base}/${url}`;
+  } else {
+    // 클라이언트사이드: Next.js 프록시를 경유 (CORS / ngrok 경고 페이지 우회)
+    fullUrl = `/api/proxy/${url}`;
+  }
 
   options.headers = {
     ...(options.headers || {}),
-    // ngrok 무료 플랜의 브라우저 경고 페이지를 건너뜀
     "ngrok-skip-browser-warning": "true",
   };
 
@@ -51,24 +55,7 @@ export async function apiRequest({
       console.warn("Unable to attach Authorization header on server", err);
     }
   } else {
-    try {
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token_message="))
-        ?.split("=")[1];
-
-      if (token) {
-        const decodedToken = decodeURIComponent(token);
-        try {
-          const tokenData = JSON.parse(decodedToken);
-          (options.headers as Record<string, string>)["Authorization"] = `Bearer ${JSON.stringify(tokenData)}`;
-        } catch {
-          (options.headers as Record<string, string>)["Authorization"] = `Bearer ${decodedToken}`;
-        }
-      }
-    } catch (err) {
-      console.warn("Unable to extract token from cookies", err);
-    }
+    // 클라이언트: 프록시가 쿠키를 읽어서 토큰을 붙여주므로 별도 처리 불필요
     options.credentials = "include";
   }
 
