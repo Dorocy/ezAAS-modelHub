@@ -1541,7 +1541,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                                     </div>
                                   )}
                                 </CardHeader>
-                                <CardContent className="flex-1 overflow-y-auto p-4">
+                                <CardContent className="flex-1 overflow-y-auto p-4 aas-details-panel">
                                   {selectedNode ? (
                                     <RenderObject
                                       obj={selectedNode.node}
@@ -1627,7 +1627,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                                     <Button size="sm" onClick={handleCDDetailSave}>저장</Button>
                                   )}
                                 </CardHeader>
-                                <CardContent className="flex-1 overflow-y-auto p-4">
+                                <CardContent className="flex-1 overflow-y-auto p-4 aas-details-panel">
                                   {selectedCDNode ? (
                                     <RenderObject
                                       obj={{ idShort: selectedCDNode.idShort, id: selectedCDNode.id, description: selectedCDNode.description }}

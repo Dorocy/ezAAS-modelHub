@@ -155,3 +155,119 @@
   border-radius: 0 0 4px 4px !important;
   background-color: #f3f4f6 !important;
 }
+
+/* ── AAS Details Panel: override Mantine styles to match design system ── */
+.aas-details-panel {
+  font-family: 'Pretendard', 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Flatten Mantine Group/Flex wrappers */
+.aas-details-panel .mantine-Group-root,
+.aas-details-panel .mantine-Flex-root {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  padding: 0;
+}
+
+/* Label pill */
+.aas-details-panel > div > [style*="backgroundColor: \"#f9f9f9\""],
+.aas-details-panel div > [style*="backgroundColor: rgb(249, 249, 249)"] {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 4px !important;
+  padding: 3px 8px 3px 10px !important;
+  margin-right: 8px !important;
+}
+
+/* Mantine Text inside label pill */
+.aas-details-panel .mantine-Text-root {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #475569 !important;
+  min-width: 100px !important;
+}
+
+/* Section headers (Title order=3 — semanticId, description, arrays) */
+.aas-details-panel .mantine-Title-root {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #334155 !important;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 5px !important;
+  padding: 5px 12px !important;
+  margin-bottom: 4px !important;
+  letter-spacing: 0.01em !important;
+}
+
+/* Collapsible icon overrides (Font Awesome inside Title) */
+.aas-details-panel .mantine-Title-root i {
+  color: #94a3b8 !important;
+}
+
+/* Row spacing */
+.aas-details-panel .mantine-Group-root {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 4px 0 !important;
+}
+.aas-details-panel .mantine-Group-root:last-child {
+  border-bottom: none;
+}
+
+/* Native input (form-control) */
+.aas-details-panel input.form-control {
+  height: 30px !important;
+  font-size: 12px !important;
+  padding: 2px 8px !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 5px !important;
+  background: #fff !important;
+  color: #0f172a !important;
+  outline: none !important;
+  box-shadow: none !important;
+  transition: border-color 120ms !important;
+}
+.aas-details-panel input.form-control:focus {
+  border-color: #0070f3 !important;
+  box-shadow: 0 0 0 2px #bfdbfe60 !important;
+}
+.aas-details-panel input.form-control[readonly] {
+  background: #f8fafc !important;
+  color: #94a3b8 !important;
+  cursor: default !important;
+}
+
+/* Value display (view mode fw=600 Text) */
+.aas-details-panel span[style*="fontWeight: 600"],
+.aas-details-panel .mantine-Text-root[style*="fw"] {
+  font-size: 13px !important;
+  color: #0f172a !important;
+}
+
+/* Mantine TextInput (MLP lang/text fields) */
+.aas-details-panel .mantine-TextInput-input {
+  height: 28px !important;
+  font-size: 12px !important;
+  border-color: #e2e8f0 !important;
+  border-radius: 4px !important;
+  background: #fff !important;
+}
+.aas-details-panel .mantine-TextInput-input:focus {
+  border-color: #0070f3 !important;
+}
+
+/* Mantine Button (미리보기) */
+.aas-details-panel .mantine-Button-root {
+  height: 28px !important;
+  font-size: 12px !important;
+  padding: 0 10px !important;
+  border-radius: 5px !important;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #334155 !important;
+}
+.aas-details-panel .mantine-Button-root:hover {
+  background: #f1f5f9 !important;
+}

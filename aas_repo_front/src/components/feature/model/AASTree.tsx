@@ -754,7 +754,7 @@ export const RenderObject = memo(
 
 
 // RenderNodeDetails: 노드의 상세 정보를 카드로 표시 (내부에서 RenderObject에 editMode 전달)
-const RenderNodeDetails = memo(
+  const RenderNodeDetails = memo(
   ({
     level,
     node,
@@ -772,42 +772,43 @@ const RenderNodeDetails = memo(
     isInstance?: boolean;
     instanceSeq?: string;
   }) => (
-    <Card
+    <div
       key={`${node.value}-${level}`}
-      ml={`calc(3rem * ${level - 1})`}
-      mb=""
-      radius="md"
-      padding="md"
-      withBorder
       style={{
-        borderColor: "#e6e6e6",
-        borderWidth: "1px",
-        backgroundColor: "#f1f1f1",
+        marginLeft: `calc(2rem * ${Math.max(0, level - 1)})`,
+        marginTop: 6,
+        border: "1px solid #e2e8f0",
+        borderRadius: 8,
+        background: "#fff",
+        overflow: "hidden",
       }}
     >
-      <Title
-        order={3}
-        mb={"sm"}
-        style={{
-          backgroundColor: "#fefefe",
-          border: "1px solid #efefef",
-          borderRadius: "5px",
-          padding: "5px 15px",
-          color: "#043b5fff",
-          fontSize:'14px'
-        }}
-      >
-        <i className="fa-regular fa-rectangle-list me-2"></i> {node.modelType}
-      </Title>
-      <RenderObject
-        obj={node}
-        state={state}
-        editMode={editMode}
-        onValueChange={onValueChange}
-        isInstance={isInstance}
-        instanceSeq={instanceSeq}
-      />
-    </Card>
+      {/* mini header */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 6,
+        padding: "6px 12px",
+        background: "#f8fafc",
+        borderBottom: "1px solid #e2e8f0",
+      }}>
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+          <rect x="1" y="1" width="14" height="14" rx="3" fill="#334155"/>
+          <path d="M4 6h8M4 9h6M4 12h4" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
+        </svg>
+        <span style={{ fontSize: 11, fontWeight: 600, color: "#334155", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+          {node.modelType}
+        </span>
+      </div>
+      <div className="aas-details-panel" style={{ padding: "10px 12px" }}>
+        <RenderObject
+          obj={node}
+          state={state}
+          editMode={editMode}
+          onValueChange={onValueChange}
+          isInstance={isInstance}
+          instanceSeq={instanceSeq}
+        />
+      </div>
+    </div>
   )
 );
 
@@ -1061,40 +1062,47 @@ const RenderTreeNode = memo(
 
     const childCount = Array.isArray(node.children) ? node.children.length : 0;
 
+    /* ── shared style tokens ── */
+    const BASE_ROW: React.CSSProperties = {
+      display: "flex", alignItems: "center", gap: 7,
+      cursor: "pointer", userSelect: "none",
+      transition: "background 100ms",
+    };
+    const CHEVRON = (
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ flexShrink: 0, transition: "transform 120ms", transform: expanded ? "rotate(90deg)" : "rotate(0deg)" }}>
+        <path d="M3 2l4 3-4 3" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    );
+
     // ── AAS 최상위 노드 ──────────────────────────────────────────
     if (node.modelType === "AssetAdministrationShell") {
       return (
         <Box mb={6}>
           <div
             style={{
-              display: "flex", alignItems: "center", gap: 10,
-              padding: "10px 14px",
-              background: "#eff6ff",
-              border: "1.5px solid #bfdbfe",
-              borderRadius: 10,
-              cursor: "pointer",
-              userSelect: "none",
-              transition: "box-shadow 120ms",
+              ...BASE_ROW,
+              padding: "9px 12px",
+              background: "#f8fafc",
+              border: "1.5px solid #e2e8f0",
+              borderLeft: "3px solid #0070f3",
+              borderRadius: 8,
             }}
             {...elementProps}
             onClick={(e) => { if (isExpandable) elementProps.onClick(e); if (onNodeClick) onNodeClick(node); }}
           >
-            {tm.icon}
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+              <rect x="1" y="1" width="14" height="14" rx="3" fill="#0070f3"/>
+              <path d="M5 8h6M8 5v6" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#1e40af", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#64748b", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 1 }}>
                 Asset Administration Shell
               </div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#1e3a8a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {node.idShort}
               </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              {isExpandable && (
-                <div style={{ color: "#60a5fa", fontSize: 11 }}>
-                  {expanded ? "▲" : "▼"}
-                </div>
-              )}
-            </div>
+            {isExpandable && CHEVRON}
           </div>
           {expanded && !simpleView && (
             <RenderNodeDetails key={`${node.valuePath}-details`} level={level} node={node} state={state} editMode={editMode} onValueChange={onValueChange} isInstance={isInstance} instanceSeq={instanceSeq} />
@@ -1106,38 +1114,38 @@ const RenderTreeNode = memo(
     // ── Submodel 노드 ─────────────────────────────────────────────
     if (node.modelType === "Submodel") {
       return (
-        <Box mb={4} style={{ paddingLeft: indentPx }}>
+        <Box mb={3} style={{ paddingLeft: indentPx }}>
           <div
             style={{
-              display: "flex", alignItems: "center", gap: 8,
-              padding: "8px 12px",
-              background: "#ecfdf5",
-              border: `1.5px solid #a7f3d0`,
-              borderLeft: `4px solid ${tm.accent}`,
-              borderRadius: 8,
-              cursor: "pointer",
-              userSelect: "none",
-              transition: "background 100ms",
+              ...BASE_ROW,
+              padding: "7px 11px",
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderLeft: "3px solid #0070f3",
+              borderRadius: 7,
             }}
             {...elementProps}
             onClick={(e) => { if (isExpandable) elementProps.onClick(e); if (onNodeClick) onNodeClick(node); }}
           >
-            {tm.icon}
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+              <rect x="1" y="1" width="14" height="14" rx="3" fill="#334155"/>
+              <path d="M4 6h8M4 8h6M4 10h4" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
+            </svg>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: tm.textColor, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 1 }}>
-                Submodel · {tm.humanLabel}
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#64748b", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 1 }}>
+                Submodel
               </div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#064e3b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {node.idShort}
               </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
               {childCount > 0 && (
-                <span style={{ fontSize: 10, color: "#6ee7b7", background: "#064e3b", borderRadius: 99, padding: "1px 7px", fontWeight: 600 }}>
+                <span style={{ fontSize: 10, color: "#64748b", background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 99, padding: "1px 6px", fontWeight: 600 }}>
                   {childCount}
                 </span>
               )}
-              <span style={{ color: "#6ee7b7", fontSize: 10 }}>{expanded ? "▲" : "▼"}</span>
+              {CHEVRON}
               {editMode && onDelete && isDeletable && (
                 <ActionIcon variant="subtle" color="red" size="xs"
                   onClick={async (e) => {
@@ -1163,41 +1171,44 @@ const RenderTreeNode = memo(
 
     // ── Collection / List (컨테이너 노드) ─────────────────────────
     if (node.modelType === "SubmodelElementCollection" || node.modelType === "SubmodelElementList") {
+      const isCollection = node.modelType === "SubmodelElementCollection";
       return (
-        <Box mb={2} style={{ paddingLeft: indentPx }}>
-          {/* 왼쪽 세로 연결선 */}
+        <Box mb={1} style={{ paddingLeft: indentPx }}>
           <div style={{ display: "flex", gap: 0 }}>
-            {level > 3 && <div style={{ width: 2, background: `${tm.accent}30`, borderRadius: 2, marginRight: 10, flexShrink: 0 }} />}
+            {level > 3 && <div style={{ width: 1, background: "#e2e8f0", marginRight: 8, flexShrink: 0 }} />}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div
                 style={{
-                  display: "flex", alignItems: "center", gap: 7,
-                  padding: "6px 10px",
-                  background: tm.bgLight,
-                  border: `1px solid ${tm.accent}40`,
-                  borderLeft: `3px solid ${tm.accent}`,
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  userSelect: "none",
+                  ...BASE_ROW,
+                  padding: "5px 9px",
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderLeft: `2px solid ${isCollection ? "#334155" : "#64748b"}`,
+                  borderRadius: 5,
                 }}
                 {...elementProps}
                 onClick={(e) => { if (isExpandable) elementProps.onClick(e); if (onNodeClick) onNodeClick(node); }}
               >
-                {tm.icon}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: tm.textColor, marginRight: 6, letterSpacing: "0.04em" }}>
-                    {tm.humanLabel}
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                  {isCollection
+                    ? <><rect x="1" y="1" width="14" height="14" rx="3" fill="#334155"/><path d="M4 5h8M4 8h8M4 11h5" stroke="white" strokeWidth="1.6" strokeLinecap="round"/></>
+                    : <><rect x="1" y="1" width="14" height="14" rx="3" fill="#64748b"/><circle cx="4.5" cy="5.5" r="1" fill="white"/><circle cx="4.5" cy="8" r="1" fill="white"/><circle cx="4.5" cy="10.5" r="1" fill="white"/><path d="M7 5.5h5M7 8h5M7 10.5h3" stroke="white" strokeWidth="1.4" strokeLinecap="round"/></>
+                  }
+                </svg>
+                <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.04em", flexShrink: 0 }}>
+                    {isCollection ? "SMC" : "SML"}
                   </span>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 500, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {node.idShort}
                   </span>
                 </div>
                 {childCount > 0 && (
-                  <span style={{ fontSize: 10, color: tm.textColor, background: `${tm.accent}18`, borderRadius: 99, padding: "1px 6px", fontWeight: 600, flexShrink: 0 }}>
-                    {childCount}개
+                  <span style={{ fontSize: 9, color: "#94a3b8", background: "#f1f5f9", borderRadius: 99, padding: "0 5px", flexShrink: 0 }}>
+                    {childCount}
                   </span>
                 )}
-                <span style={{ color: tm.accent, fontSize: 9, flexShrink: 0 }}>{expanded ? "▲" : "▼"}</span>
+                {CHEVRON}
                 {editMode && onDelete && isDeletable && (
                   <ActionIcon variant="subtle" color="red" size="xs"
                     onClick={async (e) => {
@@ -1226,32 +1237,26 @@ const RenderTreeNode = memo(
     if (isLeaf) {
       const hasValue = inlineValue && inlineValue.trim() !== "";
       return (
-        <Box mb={1} style={{ paddingLeft: indentPx + 8 }}>
+        <Box mb={0.5} style={{ paddingLeft: indentPx + 6 }}>
           <div
             style={{
-              display: "flex", alignItems: "center", gap: 8,
-              padding: "5px 10px",
-              background: hasValue ? "#fffbeb" : "#fafafa",
-              border: `1px solid ${hasValue ? "#fde68a" : "#e2e8f0"}`,
-              borderLeft: `3px solid ${tm.accent}`,
-              borderRadius: 6,
-              cursor: "pointer",
-              userSelect: "none",
-              transition: "background 100ms",
+              ...BASE_ROW,
+              padding: "4px 9px",
+              background: hasValue ? "#fafafa" : "#fafafa",
+              border: "1px solid #f1f5f9",
+              borderLeft: `2px solid ${hasValue ? "#0070f3" : "#cbd5e1"}`,
+              borderRadius: 5,
             }}
             {...elementProps}
             onClick={(e) => { if (isExpandable) elementProps.onClick(e); if (onNodeClick) onNodeClick(node); }}
           >
             {/* 타입 뱃지 */}
-            <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: tm.accent }} />
-              <span style={{ fontSize: 9, fontWeight: 700, color: tm.textColor, background: tm.bgLight, border: `1px solid ${tm.accent}30`, borderRadius: 4, padding: "0 4px", letterSpacing: "0.04em" }}>
-                {tm.abbr}
-              </span>
-            </div>
+            <span style={{ fontSize: 9, fontWeight: 700, color: "#94a3b8", background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 3, padding: "0 4px", flexShrink: 0, letterSpacing: "0.03em" }}>
+              {tm.abbr}
+            </span>
 
             {/* 이름 */}
-            <span style={{ fontSize: 12.5, fontWeight: 500, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}
+            <span style={{ fontSize: 12, fontWeight: 500, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}
               title={node.idShort}>
               {node.idShort}
             </span>
@@ -1259,26 +1264,21 @@ const RenderTreeNode = memo(
             {/* 값 미리보기 */}
             {hasValue ? (
               <span style={{
-                fontSize: 11.5, color: "#1e293b", background: "#fef3c7",
-                border: "1px solid #fde68a", borderRadius: 4,
-                padding: "1px 7px", fontFamily: "monospace",
-                maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                fontSize: 11, color: "#0070f3", background: "#eff6ff",
+                border: "1px solid #bfdbfe", borderRadius: 4,
+                padding: "1px 6px", fontFamily: "monospace",
+                maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                 flexShrink: 0,
               }} title={inlineValue}>
                 {inlineValue}
               </span>
             ) : (
-              <span style={{ fontSize: 10, color: "#94a3b8", flexShrink: 0, fontStyle: "italic" }}>
-                미입력
+              <span style={{ fontSize: 10, color: "#cbd5e1", flexShrink: 0 }}>
+                —
               </span>
             )}
 
-            {/* 상세보기 화살표 */}
-            {isExpandable && (
-              <span style={{ color: "#cbd5e1", fontSize: 9, flexShrink: 0 }}>
-                {expanded ? "▲" : "▼"}
-              </span>
-            )}
+            {isExpandable && CHEVRON}
 
             {/* 삭제 */}
             {editMode && onDelete && isDeletable && (
@@ -1301,27 +1301,28 @@ const RenderTreeNode = memo(
 
     // ── 기타 노드 (Entity, ConceptDescription 등) ─────────────────
     return (
-      <Box mb={2} style={{ paddingLeft: indentPx }}>
+      <Box mb={1} style={{ paddingLeft: indentPx }}>
         <div
           style={{
-            display: "flex", alignItems: "center", gap: 7,
-            padding: "6px 10px",
-            background: tm.bgLight,
-            border: `1px solid ${tm.accent}35`,
-            borderLeft: `3px solid ${tm.accent}`,
-            borderRadius: 6,
-            cursor: "pointer",
-            userSelect: "none",
+            ...BASE_ROW,
+            padding: "5px 9px",
+            background: "#f8fafc",
+            border: "1px solid #e2e8f0",
+            borderLeft: "2px solid #94a3b8",
+            borderRadius: 5,
           }}
           {...elementProps}
           onClick={(e) => { if (isExpandable) elementProps.onClick(e); if (onNodeClick) onNodeClick(node); }}
         >
-          {tm.icon}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 10, fontWeight: 600, color: tm.textColor, marginRight: 6 }}>{tm.humanLabel}</span>
-            <span style={{ fontSize: 13, fontWeight: 500, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{node.idShort}</span>
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+            <rect x="1" y="1" width="14" height="14" rx="3" fill="#94a3b8"/>
+            <path d="M5 8l2 2 4-4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ fontSize: 9, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.04em", flexShrink: 0 }}>{tm.abbr}</span>
+            <span style={{ fontSize: 12.5, fontWeight: 500, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{node.idShort}</span>
           </div>
-          {isExpandable && <span style={{ color: tm.accent, fontSize: 9, flexShrink: 0 }}>{expanded ? "▲" : "▼"}</span>}
+          {isExpandable && CHEVRON}
           {editMode && onDelete && isDeletable && (
             <ActionIcon variant="subtle" color="red" size="xs"
               onClick={async (e) => {
