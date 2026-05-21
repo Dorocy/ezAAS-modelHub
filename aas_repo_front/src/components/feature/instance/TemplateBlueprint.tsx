@@ -41,34 +41,38 @@ function LeafRow({ node, depth, showValues }: { node: any; depth: number; showVa
   const c = getColor(node.modelType);
   const typeLabel = vt(node.valueType);
 
-  const preview = (() => {
-    if (node.modelType === "MultiLanguageProperty" && Array.isArray(node.originalValue)) {
-      return node.originalValue.map((v: any) => `[${v.language}] ${v.text}`).join("  ·  ") || null;
-    }
-    if (node.modelType === "File" && typeof node.originalValue === "string") {
-      return node.originalValue.split("/").pop() || null;
-    }
-    if (node.originalValue !== undefined && node.originalValue !== null && node.originalValue !== "") {
-      return String(node.originalValue);
-    }
-    return null;
-  })();
+  // 인스턴스 뷰에서만 실제 값을 읽음 — 템플릿 모드에선 값을 숨김
+  const instanceValue = showValues
+    ? (() => {
+        if (node.modelType === "MultiLanguageProperty" && Array.isArray(node.originalValue)) {
+          return node.originalValue.map((v: any) => `[${v.language}] ${v.text}`).join("  ·  ") || null;
+        }
+        if (node.modelType === "File" && typeof node.originalValue === "string") {
+          return node.originalValue.split("/").pop() || null;
+        }
+        if (node.originalValue !== undefined && node.originalValue !== null && node.originalValue !== "") {
+          return String(node.originalValue);
+        }
+        return null;
+      })()
+    : null; // 템플릿 모드 — 값 없음으로 고정
 
-  const hasValue = Boolean(preview);
+  const hasValue = Boolean(instanceValue);
 
   return (
     <div
       className={cn(
-        "flex items-center gap-3 py-2 px-3 rounded-md hover:bg-muted/50 transition-colors group",
-        showValues && hasValue && "bg-amber-50/40 hover:bg-amber-50/70",
+        "flex items-center gap-2.5 py-[7px] px-3 rounded-md transition-colors",
+        // 인스턴스: 값 있으면 연한 녹색 행 강조, 없으면 빨간 배경으로 미입력 표시
+        showValues && hasValue  && "bg-emerald-50/50 hover:bg-emerald-50/80",
+        showValues && !hasValue && "hover:bg-muted/40",
+        // 템플릿: 일반 호버
+        !showValues && "hover:bg-muted/40",
       )}
       style={{ paddingLeft: `${depth * 20 + 12}px` }}
     >
       {/* connector dot */}
-      <div
-        className="w-1.5 h-1.5 rounded-full shrink-0 opacity-60"
-        style={{ background: c.dot }}
-      />
+      <div className="w-1.5 h-1.5 rounded-full shrink-0 opacity-50" style={{ background: c.dot }} />
 
       {/* name */}
       <span className="text-sm text-foreground flex-1 min-w-0 truncate font-medium" title={node.idShort}>
@@ -76,49 +80,39 @@ function LeafRow({ node, depth, showValues }: { node: any; depth: number; showVa
       </span>
 
       {/* type badge */}
-      <span
-        className={cn(
-          "shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded border leading-none",
-          c.badge
-        )}
-      >
+      <span className={cn("shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded border leading-none", c.badge)}>
         {c.text}
       </span>
 
       {/* valueType chip */}
       {typeLabel && (
-        <span className="shrink-0 text-[10px] text-muted-foreground/60 font-mono bg-muted/60 px-1.5 py-0.5 rounded hidden sm:block">
+        <span className="shrink-0 text-[10px] text-muted-foreground/50 font-mono bg-muted/50 px-1.5 py-0.5 rounded hidden sm:block">
           {typeLabel}
         </span>
       )}
 
-      {/* value or empty slot */}
+      {/* 오른쪽 끝: 값 영역 */}
       <div className="shrink-0 w-44 text-right">
-        {hasValue ? (
-          <span
-            className={cn(
-              "text-xs font-mono truncate block max-w-full",
-              showValues
-                ? "text-foreground font-semibold bg-amber-100/70 border border-amber-200/60 px-2 py-0.5 rounded"
-                : "text-foreground/70"
-            )}
-            title={preview!}
-          >
-            {preview}
-          </span>
-        ) : (
-          showValues ? (
-            /* 인스턴스 뷰에서 빈 값 — 미입력 상태 명확히 표시 */
-            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/40 bg-muted/40 px-2 py-0.5 rounded border border-dashed border-border/50">
-              미입력
+        {showValues ? (
+          /* ── 인스턴스 모드 ── */
+          hasValue ? (
+            <span
+              className="text-xs font-mono bg-emerald-100/80 text-emerald-800 border border-emerald-200/70 px-2 py-0.5 rounded inline-block max-w-full truncate"
+              title={instanceValue!}
+            >
+              {instanceValue}
             </span>
           ) : (
-            /* 템플릿 미리보기 — 채워야 할 슬롯 */
-            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/40 italic">
-              <span className="h-px w-10 bg-border inline-block" />
-              empty
+            <span className="text-[11px] text-muted-foreground/40 bg-muted/30 border border-dashed border-border/40 px-2 py-0.5 rounded">
+              미입력
             </span>
           )
+        ) : (
+          /* ── 템플릿 모드 — 항상 "입력 슬롯"으로 표시 ── */
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground/35">
+            <span className="h-px w-12 bg-border/60 inline-block" />
+            <span className="italic">입력 필요</span>
+          </span>
         )}
       </div>
     </div>
@@ -192,12 +186,24 @@ function SubmodelCard({ node, index, showValues }: { node: any; index: number; s
   const [open, setOpen] = useState(true);
   const childCount = Array.isArray(node.children) ? node.children.length : 0;
 
-  // count leaf nodes (Properties)
+  // 재귀적으로 리프 노드 수 집계
   const countLeaves = (n: any): number => {
     if (!Array.isArray(n.children) || n.children.length === 0) return 1;
     return n.children.reduce((sum: number, c: any) => sum + countLeaves(c), 0);
   };
+  const countFilledLeaves = (n: any): number => {
+    if (!Array.isArray(n.children) || n.children.length === 0) {
+      const v = n.originalValue;
+      return v !== undefined && v !== null && v !== "" ? 1 : 0;
+    }
+    return n.children.reduce((sum: number, c: any) => sum + countFilledLeaves(c), 0);
+  };
+
   const totalFields = node.children ? node.children.reduce((s: number, c: any) => s + countLeaves(c), 0) : 0;
+  const filledFields = showValues && node.children
+    ? node.children.reduce((s: number, c: any) => s + countFilledLeaves(c), 0)
+    : 0;
+  const fillPct = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
 
   const c = getColor("Submodel");
 
@@ -233,7 +239,22 @@ function SubmodelCard({ node, index, showValues }: { node: any; index: number; s
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[10px] text-muted-foreground/50 tabular-nums">{totalFields} fields</span>
+          {showValues ? (
+            /* 인스턴스 모드 — 필드 완성도 */
+            <span className={cn(
+              "text-[10px] font-semibold px-2 py-0.5 rounded-full tabular-nums border",
+              fillPct === 100
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                : fillPct > 0
+                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                  : "bg-muted/60 text-muted-foreground border-border/60"
+            )}>
+              {filledFields}/{totalFields} filled
+            </span>
+          ) : (
+            /* 템플릿 모드 — 단순 필드 수 */
+            <span className="text-[10px] text-muted-foreground/50 tabular-nums">{totalFields} fields</span>
+          )}
           <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded border", c.badge)}>SM</span>
           <svg
             width="14" height="14" viewBox="0 0 14 14" fill="none"
@@ -323,16 +344,21 @@ export default function TemplateBlueprint({ treeData, showValues = false }: Temp
             <span><span className="font-bold">{submodels.length}</span> submodels</span>
             <span className={showValues ? "text-slate-300" : "text-blue-300"}>|</span>
             {showValues ? (
+              /* 인스턴스 모드 — 전체 완성도 */
               <span className="flex items-center gap-1.5">
                 <span className="font-bold text-emerald-600">{filledFields}</span>
-                <span className="text-muted-foreground">/ {totalFields} filled</span>
+                <span className="text-muted-foreground/70">/ {totalFields} filled</span>
                 <span className={cn(
                   "text-[10px] font-bold px-1.5 py-0.5 rounded-full",
                   fillPct === 100 ? "bg-emerald-100 text-emerald-700" : fillPct > 50 ? "bg-amber-100 text-amber-700" : "bg-red-50 text-red-500"
                 )}>{fillPct}%</span>
               </span>
             ) : (
-              <span><span className="font-bold">{totalFields}</span> fields</span>
+              /* 템플릿 모드 — 입력해야 할 필드 수 안내 */
+              <span className="flex items-center gap-1 text-blue-500/80">
+                <span className="font-bold">{totalFields}</span>
+                <span>개 항목 입력 필요</span>
+              </span>
             )}
           </div>
         </div>
