@@ -774,8 +774,8 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             </TabsContent>
             {collectionNodes.map((cn: any, i: number) => (
               <TabsContent key={i} value={`col-${i}`}>
-                <div className="p-2">
-                  <AASTree data={[cn]} editMode={false} mb="sm" />
+                <div className="p-3">
+                  <TemplateBlueprint treeData={[cn]} />
                 </div>
               </TabsContent>
             ))}
@@ -956,17 +956,29 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
       {activeTab === "treeView" && (
         <div className="space-y-4">
           <Card>
-            <CardHeader><CardTitle>AAS Tree View</CardTitle></CardHeader>
-            <CardContent>
-              {Array.isArray(treeData) && <AASTree data={treeData} editMode={false} isInstance={!!instance} instanceSeq={instance?.instance_seq} />}
+            <CardHeader>
+              <CardTitle>AAS Structure</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {Array.isArray(treeData) && (
+                <div className="px-4 py-4">
+                  <TemplateBlueprint treeData={treeData} showValues />
+                </div>
+              )}
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader><CardTitle>ConceptDescription Tree View</CardTitle></CardHeader>
-            <CardContent>
-              {Array.isArray(conceptDescriptionTreeData) && <AASTree data={conceptDescriptionTreeData} editMode={false} />}
-            </CardContent>
-          </Card>
+          {Array.isArray(conceptDescriptionTreeData) && conceptDescriptionTreeData.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Concept Descriptions</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="px-4 py-4">
+                  <TemplateBlueprint treeData={conceptDescriptionTreeData} showValues />
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
     </div>
@@ -980,16 +992,24 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         <div className="space-y-4">
           <Card>
             <CardHeader><CardTitle>Model</CardTitle></CardHeader>
-            <CardContent>
-              {Array.isArray(combinedAASTreeData) && <AASTree mb="sm" data={combinedAASTreeData} editMode={false} />}
+            <CardContent className="p-0">
+              {Array.isArray(combinedAASTreeData) && (
+                <div className="px-4 py-4">
+                  <TemplateBlueprint treeData={combinedAASTreeData} showValues />
+                </div>
+              )}
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader><CardTitle>ConceptDescription</CardTitle></CardHeader>
-            <CardContent>
-              {Array.isArray(combinedAASConceptDescriptionTreeData) && <AASTree mb="sm" data={combinedAASConceptDescriptionTreeData} editMode={false} />}
-            </CardContent>
-          </Card>
+          {Array.isArray(combinedAASConceptDescriptionTreeData) && combinedAASConceptDescriptionTreeData.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle>Concept Descriptions</CardTitle></CardHeader>
+              <CardContent className="p-0">
+                <div className="px-4 py-4">
+                  <TemplateBlueprint treeData={combinedAASConceptDescriptionTreeData} showValues />
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </DialogContent>
     </Dialog>
