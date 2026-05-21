@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { ROUTES } from "@/constants/routes";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -37,6 +37,7 @@ function Header() {
   const [widthMode, setWidthMode] = useState<"Normal" | "Wide">("Normal");
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   const { t, changeLanguage } = useAuth().language;
   const { isAuthenticated, authToken, logout, user: profile } = useAuth();
@@ -192,22 +193,20 @@ function Header() {
                     </div>
                   </div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href={profile?.user_seq ? ROUTES.USER.VIEW(String(profile.user_seq)) : ROUTES.USER.LIST}>
-                      {t("My Profile")}
-                    </Link>
+                  <DropdownMenuItem onClick={() => router.push(profile?.user_seq ? ROUTES.USER.VIEW(String(profile.user_seq)) : ROUTES.USER.LIST)}>
+                    {t("My Profile")}
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href={ROUTES.INSTANCE.LIST}>{t("My AAS Instance")}</Link>
+                  <DropdownMenuItem onClick={() => router.push(ROUTES.INSTANCE.LIST)}>
+                    {t("My AAS Instance")}
                   </DropdownMenuItem>
                   {isManager && (
-                    <DropdownMenuItem asChild>
-                      <Link href={ROUTES.DISTRIBUTE.LIST}>{t("Admin: Publish")}</Link>
+                    <DropdownMenuItem onClick={() => router.push(ROUTES.DISTRIBUTE.LIST)}>
+                      {t("Admin: Publish")}
                     </DropdownMenuItem>
                   )}
                   {isAdmin && (
-                    <DropdownMenuItem asChild>
-                      <Link href={ROUTES.USER.LIST}>{t("Admin: Authority")}</Link>
+                    <DropdownMenuItem onClick={() => router.push(ROUTES.USER.LIST)}>
+                      {t("Admin: Authority")}
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />

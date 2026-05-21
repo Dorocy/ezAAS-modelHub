@@ -17,6 +17,7 @@ import {
 } from "@/api";
 import { addValuePaths, parsingAAS } from "@/utils/aas";
 import AASTree, { RenderObject } from "@/components/feature/model/AASTree";
+import TemplateBlueprint from "@/components/feature/instance/TemplateBlueprint";
 import { InstanceSavePayload } from "@/types/api";
 import { confirmSave } from "@/utils/modal";
 import type { AASInstance, VerifyInstanceParams } from "@/types/api";
@@ -1218,16 +1219,28 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             </div>
           </div>
 
-          {/* ── 오른쪽: 미리보기 패널 (나머지 전체 공간) ── */}
+          {/* ── 오른쪽: 미리보기 패널 ── */}
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-            <div className="px-5 py-2.5 border-b bg-muted/5 shrink-0 flex items-center gap-3">
-              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Preview
-              </p>
+
+            {/* 패널 헤더 */}
+            <div className="shrink-0 border-b bg-muted/5 px-5 py-2.5 flex items-center gap-2">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Structure Preview</span>
               {previewModel && (
-                <span className="text-sm font-medium text-foreground truncate">
-                  {previewModel[`${modelType}_name`] ?? previewModel.aasmodel_name ?? previewModel.submodel_name}
-                </span>
+                <>
+                  <span className="text-muted-foreground/30 text-xs">—</span>
+                  <span className="text-sm font-medium text-foreground truncate">
+                    {previewModel[`${modelType}_name`] ?? previewModel.aasmodel_name ?? previewModel.submodel_name}
+                  </span>
+                  {modelSeq && (
+                    <span className="ml-auto shrink-0 flex items-center gap-1 text-[11px] text-emerald-600 font-medium bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                        <circle cx="5" cy="5" r="4.5" fill="#059669" opacity="0.15"/>
+                        <path d="M2.5 5l1.8 1.8L7.5 3.5" stroke="#059669" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      선택됨
+                    </span>
+                  )}
+                </>
               )}
             </div>
 
@@ -1238,44 +1251,61 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                   <span className="text-sm">모델 불러오는 중...</span>
                 </div>
               ) : !previewModel ? (
-                <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground select-none">
-                  <div className="w-14 h-14 rounded-xl bg-muted/60 flex items-center justify-center">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-40">
-                      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-                      <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                /* ── empty state ── */
+                <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground select-none px-8">
+                  <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.2" className="opacity-30">
+                      <rect x="4" y="4" width="10" height="10" rx="2"/>
+                      <rect x="18" y="4" width="10" height="10" rx="2"/>
+                      <rect x="4" y="18" width="10" height="10" rx="2"/>
+                      <rect x="18" y="18" width="10" height="10" rx="2"/>
                     </svg>
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm font-medium">템플릿을 선택하세요</p>
-                    <p className="text-xs text-muted-foreground mt-1">왼쪽에서 카테고리를 선택하고 템플릿을 클릭하면 구조를 미리볼 수 있습니다.</p>
+                  <div className="text-center space-y-1">
+                    <p className="text-sm font-medium text-foreground/70">구조를 미리 확인하세요</p>
+                    <p className="text-xs text-muted-foreground/60 leading-relaxed max-w-[260px]">
+                      왼쪽 목록에서 템플릿을 클릭하면 Submodel 구조와 입력 항목이 여기에 표시됩니다.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-6 text-[11px] text-muted-foreground/40 mt-2">
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 opacity-60" />Submodel</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-violet-400 opacity-60" />Collection</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400 opacity-60" />Property</span>
                   </div>
                 </div>
               ) : (
-                <div className="p-5">
-                  {/* 모델 메타 정보 */}
-                  <div className="mb-5 pb-4 border-b">
-                    <h3 className="font-semibold text-sm leading-snug">
-                      {previewModel[`${modelType}_name`] ?? previewModel.aasmodel_name ?? previewModel.submodel_name}
-                    </h3>
-                    {previewModel.description && (
-                      <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                        {previewModel.description}
-                      </p>
-                    )}
-                    <div className="flex gap-1.5 mt-2.5 flex-wrap">
-                      {previewModel.category_name && (
-                        <Badge variant="secondary" className="text-xs">{previewModel.category_name}</Badge>
+                /* ── blueprint ── */
+                <div className="p-5 space-y-4">
+                  {/* meta info bar */}
+                  <div className="flex items-start justify-between gap-4 pb-4 border-b">
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-[15px] leading-snug text-foreground truncate">
+                        {previewModel[`${modelType}_name`] ?? previewModel.aasmodel_name ?? previewModel.submodel_name}
+                      </h3>
+                      {previewModel.description && (
+                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">
+                          {previewModel.description}
+                        </p>
                       )}
-                      {previewModel.version && (
-                        <Badge variant="outline" className="text-xs">v{previewModel.version}</Badge>
-                      )}
+                      <div className="flex gap-1.5 mt-2 flex-wrap">
+                        {previewModel.category_name && (
+                          <Badge variant="secondary" className="text-[11px] h-5 px-2">{previewModel.category_name}</Badge>
+                        )}
+                        {previewModel.version && (
+                          <Badge variant="outline" className="text-[11px] h-5 px-2 font-mono">v{previewModel.version}</Badge>
+                        )}
+                        {previewModel.status_nm && (
+                          <Badge variant="outline" className="text-[11px] h-5 px-2">{previewModel.status_nm}</Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  {/* AAS 트리 */}
+
+                  {/* Blueprint */}
                   {previewTreeData ? (
-                    <AASTree data={previewTreeData} editMode={false} />
+                    <TemplateBlueprint treeData={previewTreeData} />
                   ) : (
-                    <p className="text-xs text-muted-foreground">트리 데이터가 없습니다.</p>
+                    <p className="text-xs text-muted-foreground text-center py-6">구조 데이터가 없습니다.</p>
                   )}
                 </div>
               )}
