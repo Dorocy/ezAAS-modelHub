@@ -811,34 +811,170 @@ const RenderNodeDetails = memo(
   )
 );
 
-// RenderTreeNode: 개별 트리 노드를 렌더링, editMode 전달
-const modelTypeToBadge = (
-  modelType: string
-): { label: string; color: string } => {
-  switch (modelType) {
-    case "AssetAdministrationShell":
-      return { label: "AAS", color: "blue" };
-    case "Submodel":
-      return { label: "Submodel", color: "green" };
-    case "Property":
-      return { label: "PRO", color: "grape" };
-    case "SubmodelElementCollection":
-      return { label: "SMC", color: "violet" };
-    case "SubmodelElementList":
-      return { label: "SML", color: "indigo" };
-    case "SubmodelElement":
-      return { label: "SME", color: "cyan" };
-    case "MultiLanguageProperty":
-      return { label: "MLPRO", color: "lime" };
-    case "ConceptDescription":
-      return { label: "CD", color: "yellow" };
-    case "Entity":
-      return { label: "Entity", color: "red" };
-    case "RelationshipElement":
-      return { label: "RE", color: "indigo" };
-    default:
-      return { label: modelType, color: "gray" };
-  }
+// ─── 타입 메타데이터 ─────────────────────────────────────────────
+const TYPE_META: Record<string, {
+  label: string;
+  abbr: string;
+  accent: string;       // tailwind hex
+  bgLight: string;
+  textColor: string;
+  icon: React.ReactNode;
+  humanLabel: string;   // 비전문가용 설명
+}> = {
+  AssetAdministrationShell: {
+    label: "AAS", abbr: "AAS",
+    accent: "#2563eb", bgLight: "#eff6ff", textColor: "#1e40af",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="14" height="14" rx="3" fill="#2563eb"/>
+        <path d="M5 8h6M8 5v6" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+      </svg>
+    ),
+    humanLabel: "디지털 자산",
+  },
+  Submodel: {
+    label: "Submodel", abbr: "SM",
+    accent: "#059669", bgLight: "#ecfdf5", textColor: "#065f46",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="14" height="14" rx="3" fill="#059669"/>
+        <path d="M4 6h8M4 8h6M4 10h4" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
+      </svg>
+    ),
+    humanLabel: "속성 그룹",
+  },
+  SubmodelElementCollection: {
+    label: "Collection", abbr: "SMC",
+    accent: "#7c3aed", bgLight: "#f5f3ff", textColor: "#5b21b6",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="14" height="14" rx="3" fill="#7c3aed"/>
+        <path d="M4 5h8M4 8h8M4 11h5" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
+      </svg>
+    ),
+    humanLabel: "항목 묶음",
+  },
+  SubmodelElementList: {
+    label: "List", abbr: "SML",
+    accent: "#4f46e5", bgLight: "#eef2ff", textColor: "#3730a3",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="14" height="14" rx="3" fill="#4f46e5"/>
+        <circle cx="4.5" cy="5.5" r="1" fill="white"/>
+        <circle cx="4.5" cy="8" r="1" fill="white"/>
+        <circle cx="4.5" cy="10.5" r="1" fill="white"/>
+        <path d="M7 5.5h5M7 8h5M7 10.5h3" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
+      </svg>
+    ),
+    humanLabel: "순서 목록",
+  },
+  Property: {
+    label: "Property", abbr: "Prop",
+    accent: "#d97706", bgLight: "#fffbeb", textColor: "#92400e",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="7" fill="#d97706"/>
+        <path d="M5.5 8h5M8 5.5v5" stroke="white" strokeWidth="1.6" strokeLinecap="round" opacity="0.4"/>
+        <circle cx="8" cy="8" r="2" fill="white"/>
+      </svg>
+    ),
+    humanLabel: "속성값",
+  },
+  MultiLanguageProperty: {
+    label: "Multilang", abbr: "MLP",
+    accent: "#0891b2", bgLight: "#ecfeff", textColor: "#155e75",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="7" fill="#0891b2"/>
+        <text x="4" y="11" fontSize="7" fill="white" fontWeight="bold">가A</text>
+      </svg>
+    ),
+    humanLabel: "다국어 텍스트",
+  },
+  File: {
+    label: "File", abbr: "File",
+    accent: "#0284c7", bgLight: "#f0f9ff", textColor: "#0c4a6e",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <rect x="3" y="1" width="10" height="14" rx="2" fill="#0284c7"/>
+        <path d="M6 5h4M6 8h4M6 11h2" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
+      </svg>
+    ),
+    humanLabel: "파일",
+  },
+  Range: {
+    label: "Range", abbr: "Range",
+    accent: "#ea580c", bgLight: "#fff7ed", textColor: "#7c2d12",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="7" fill="#ea580c"/>
+        <path d="M4 8h8" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
+        <circle cx="4" cy="8" r="1.5" fill="white"/>
+        <circle cx="12" cy="8" r="1.5" fill="white"/>
+      </svg>
+    ),
+    humanLabel: "범위값",
+  },
+  ReferenceElement: {
+    label: "Reference", abbr: "Ref",
+    accent: "#db2777", bgLight: "#fdf2f8", textColor: "#831843",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="7" fill="#db2777"/>
+        <path d="M6 8h4M9 6l2 2-2 2" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+    humanLabel: "참조",
+  },
+  Entity: {
+    label: "Entity", abbr: "Ent",
+    accent: "#dc2626", bgLight: "#fef2f2", textColor: "#7f1d1d",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="14" height="14" rx="3" fill="#dc2626"/>
+        <path d="M5 8l2 2 4-4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+    humanLabel: "개체",
+  },
+  ConceptDescription: {
+    label: "ConceptDesc", abbr: "CD",
+    accent: "#ca8a04", bgLight: "#fefce8", textColor: "#713f12",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="7" fill="#ca8a04"/>
+        <path d="M8 5v1M8 8v3" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    ),
+    humanLabel: "개념 정의",
+  },
+  RelationshipElement: {
+    label: "Relation", abbr: "Rel",
+    accent: "#64748b", bgLight: "#f8fafc", textColor: "#334155",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="7" fill="#64748b"/>
+        <circle cx="5" cy="8" r="1.5" fill="white"/>
+        <circle cx="11" cy="8" r="1.5" fill="white"/>
+        <path d="M6.5 8h3" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
+      </svg>
+    ),
+    humanLabel: "관계",
+  },
+};
+
+const getTypeMeta = (modelType: string) =>
+  TYPE_META[modelType] ?? {
+    label: modelType, abbr: modelType.slice(0, 4),
+    accent: "#94a3b8", bgLight: "#f8fafc", textColor: "#475569",
+    icon: null,
+    humanLabel: modelType,
+  };
+
+// modelTypeToBadge — 하위 호환성 유지
+const modelTypeToBadge = (modelType: string) => {
+  const m = getTypeMeta(modelType);
+  return { label: m.abbr, color: "gray" };
 };
 
 const RenderTreeNode = memo(
@@ -871,8 +1007,6 @@ const RenderTreeNode = memo(
     isInstance?: boolean;
     instanceSeq?: string;
   }) => {
-    const badgeProps = modelTypeToBadge(node.modelType);
-
     const canHaveChildren = [
       "Submodel",
       "SubmodelElementCollection",
@@ -903,63 +1037,16 @@ const RenderTreeNode = memo(
     const isExpandable = hasActualChildren || hasPropertiesToExpand;
 
 
-    // 노드 타입별 색상 도트 + 아이콘 정의
-    const typeConfig: Record<string, { dot: string; bg: string; text: string; icon: React.ReactNode }> = {
-      AssetAdministrationShell: {
-        dot: "#3b82f6", bg: "rgba(59,130,246,0.10)", text: "#1d4ed8",
-        icon: <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="1" width="10" height="10" rx="2" fill="#3b82f6" opacity="0.9"/></svg>,
-      },
-      Submodel: {
-        dot: "#10b981", bg: "rgba(16,185,129,0.10)", text: "#065f46",
-        icon: <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="1" width="10" height="10" rx="2" fill="#10b981" opacity="0.9"/></svg>,
-      },
-      SubmodelElementCollection: {
-        dot: "#8b5cf6", bg: "rgba(139,92,246,0.10)", text: "#5b21b6",
-        icon: <svg width="11" height="11" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" rx="2" fill="#8b5cf6" opacity="0.9"/></svg>,
-      },
-      SubmodelElementList: {
-        dot: "#6366f1", bg: "rgba(99,102,241,0.10)", text: "#3730a3",
-        icon: <svg width="11" height="11" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" rx="2" fill="#6366f1" opacity="0.9"/></svg>,
-      },
-      Property: {
-        dot: "#f59e0b", bg: "rgba(245,158,11,0.10)", text: "#92400e",
-        icon: <svg width="11" height="11" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="#f59e0b" opacity="0.9"/></svg>,
-      },
-      MultiLanguageProperty: {
-        dot: "#84cc16", bg: "rgba(132,204,22,0.10)", text: "#365314",
-        icon: <svg width="11" height="11" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="#84cc16" opacity="0.9"/></svg>,
-      },
-      File: {
-        dot: "#0ea5e9", bg: "rgba(14,165,233,0.10)", text: "#0c4a6e",
-        icon: <svg width="11" height="11" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="#0ea5e9" opacity="0.9"/></svg>,
-      },
-      Range: {
-        dot: "#f97316", bg: "rgba(249,115,22,0.10)", text: "#7c2d12",
-        icon: <svg width="11" height="11" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="#f97316" opacity="0.9"/></svg>,
-      },
-      ReferenceElement: {
-        dot: "#ec4899", bg: "rgba(236,72,153,0.10)", text: "#831843",
-        icon: <svg width="11" height="11" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="#ec4899" opacity="0.9"/></svg>,
-      },
-      Entity: {
-        dot: "#ef4444", bg: "rgba(239,68,68,0.10)", text: "#7f1d1d",
-        icon: <svg width="11" height="11" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" rx="2" fill="#ef4444" opacity="0.9"/></svg>,
-      },
-      ConceptDescription: {
-        dot: "#eab308", bg: "rgba(234,179,8,0.10)", text: "#713f12",
-        icon: <svg width="11" height="11" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="#eab308" opacity="0.9"/></svg>,
-      },
-      RelationshipElement: {
-        dot: "#64748b", bg: "rgba(100,116,139,0.10)", text: "#1e293b",
-        icon: <svg width="11" height="11" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="#64748b" opacity="0.9"/></svg>,
-      },
-    };
-    const tc = typeConfig[node.modelType] ?? { dot: "#94a3b8", bg: "rgba(148,163,184,0.10)", text: "#475569", icon: null };
+    const tm = getTypeMeta(node.modelType);
 
-    // 인라인 값 미리보기
+    // 레벨별 왼쪽 들여쓰기
+    const indentPx = Math.max(0, level - 2) * 18;
+
+    // Property 계열 인라인 값
     const inlineValue = (() => {
       if (node.modelType === "Property" || node.modelType === "RelationshipElement") {
-        return String(state?.[`${node.valuePath}.originalValue`] ?? node.originalValue ?? "");
+        const v = String(state?.[`${node.valuePath}.originalValue`] ?? node.originalValue ?? "");
+        return v;
       }
       if (node.modelType === "MultiLanguageProperty") {
         return Array.isArray(node.originalValue)
@@ -967,174 +1054,290 @@ const RenderTreeNode = memo(
           : String(node.originalValue ?? "");
       }
       if (node.modelType === "File") {
-        return typeof node.originalValue === "string" ? node.originalValue.split("/").pop() : "";
-      }
-      if (["SubmodelElementCollection","SubmodelElementList"].includes(node.modelType)) {
-        const cnt = Array.isArray(node.children) ? node.children.length : 0;
-        return `${cnt} item${cnt !== 1 ? "s" : ""}`;
+        return typeof node.originalValue === "string" ? node.originalValue.split("/").pop() ?? "" : "";
       }
       return "";
     })();
 
-    const indentPx = Math.max(0, (level - 2)) * 20;
+    const childCount = Array.isArray(node.children) ? node.children.length : 0;
 
-    return (
-      <Box style={{ position: "relative" }}>
-        {/* 들여쓰기 연결선 */}
-        {level > 2 && (
-          <div style={{
-            position: "absolute",
-            left: indentPx - 10,
-            top: 0,
-            bottom: 0,
-            width: 1,
-            background: "var(--mantine-color-gray-3)",
-            pointerEvents: "none",
-          }} />
-        )}
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 0,
-            paddingLeft: indentPx,
-            cursor: "pointer",
-            borderRadius: 6,
-            margin: "1px 0",
-            transition: "background 120ms ease",
-            minHeight: 32,
-            userSelect: "none",
-          }}
-          className={treeNodeClass.hover}
-          {...elementProps}
-          onClick={(e) => {
-            if (isExpandable) elementProps.onClick(e);
-            if (onNodeClick) onNodeClick(node);
-          }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "var(--mantine-color-gray-1)"; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
-        >
-          {/* 연결 꺾음선 */}
-          {level > 2 && (
-            <div style={{ width: 16, height: 1, background: "var(--mantine-color-gray-3)", flexShrink: 0, marginRight: 2 }} />
+    // ── AAS 최상위 노드 ──────────────────────────────────────────
+    if (node.modelType === "AssetAdministrationShell") {
+      return (
+        <Box mb={6}>
+          <div
+            style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "10px 14px",
+              background: "#eff6ff",
+              border: "1.5px solid #bfdbfe",
+              borderRadius: 10,
+              cursor: "pointer",
+              userSelect: "none",
+              transition: "box-shadow 120ms",
+            }}
+            {...elementProps}
+            onClick={(e) => { if (isExpandable) elementProps.onClick(e); if (onNodeClick) onNodeClick(node); }}
+          >
+            {tm.icon}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#1e40af", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                Asset Administration Shell
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#1e3a8a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {node.idShort}
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              {isExpandable && (
+                <div style={{ color: "#60a5fa", fontSize: 11 }}>
+                  {expanded ? "▲" : "▼"}
+                </div>
+              )}
+            </div>
+          </div>
+          {expanded && !simpleView && (
+            <RenderNodeDetails key={`${node.valuePath}-details`} level={level} node={node} state={state} editMode={editMode} onValueChange={onValueChange} isInstance={isInstance} instanceSeq={instanceSeq} />
           )}
+        </Box>
+      );
+    }
 
-          {/* 펼침/접힘 토글 */}
-          <div style={{ width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: 4, color: "var(--mantine-color-gray-6)" }}>
-            {isExpandable ? (
-              expanded ? (
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <rect x="0.5" y="0.5" width="11" height="11" rx="2.5" stroke="currentColor" strokeWidth="1"/>
-                  <path d="M3 6h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-              ) : (
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <rect x="0.5" y="0.5" width="11" height="11" rx="2.5" stroke="currentColor" strokeWidth="1"/>
-                  <path d="M6 3v6M3 6h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-              )
-            ) : (
-              <div style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--mantine-color-gray-4)" }} />
-            )}
+    // ── Submodel 노드 ─────────────────────────────────────────────
+    if (node.modelType === "Submodel") {
+      return (
+        <Box mb={4} style={{ paddingLeft: indentPx }}>
+          <div
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "8px 12px",
+              background: "#ecfdf5",
+              border: `1.5px solid #a7f3d0`,
+              borderLeft: `4px solid ${tm.accent}`,
+              borderRadius: 8,
+              cursor: "pointer",
+              userSelect: "none",
+              transition: "background 100ms",
+            }}
+            {...elementProps}
+            onClick={(e) => { if (isExpandable) elementProps.onClick(e); if (onNodeClick) onNodeClick(node); }}
+          >
+            {tm.icon}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: tm.textColor, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 1 }}>
+                Submodel · {tm.humanLabel}
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#064e3b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {node.idShort}
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+              {childCount > 0 && (
+                <span style={{ fontSize: 10, color: "#6ee7b7", background: "#064e3b", borderRadius: 99, padding: "1px 7px", fontWeight: 600 }}>
+                  {childCount}
+                </span>
+              )}
+              <span style={{ color: "#6ee7b7", fontSize: 10 }}>{expanded ? "▲" : "▼"}</span>
+              {editMode && onDelete && isDeletable && (
+                <ActionIcon variant="subtle" color="red" size="xs"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    const confirmed = await confirmSave(`'${node.idShort}' 을(를) 삭제하시겠습니까?`, { labels: { confirm: "삭제", cancel: "취소" }, confirmProps: { color: "red" } });
+                    if (confirmed) onDelete(node);
+                  }}>
+                  <IconTrash size={11} />
+                </ActionIcon>
+              )}
+              {editMode && onAdd && canHaveChildren && (
+                <ElementAdd onAdd={(elementType, idShort) => onAdd(node, elementType, idShort)}
+                  allowedTypes={["SubmodelElementCollection", "SubmodelElementList", "Property"]} />
+              )}
+            </div>
           </div>
+          {expanded && !simpleView && (
+            <RenderNodeDetails key={`${node.valuePath}-details`} level={level} node={node} state={state} editMode={editMode} onValueChange={onValueChange} isInstance={isInstance} instanceSeq={instanceSeq} />
+          )}
+        </Box>
+      );
+    }
 
-          {/* 타입 도트 */}
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: tc.dot, flexShrink: 0, marginRight: 6 }} />
-
-          {/* 타입 배지 */}
-          <div style={{
-            fontSize: 10,
-            fontWeight: 600,
-            letterSpacing: "0.03em",
-            color: tc.text,
-            background: tc.bg,
-            borderRadius: 4,
-            padding: "1px 5px",
-            flexShrink: 0,
-            minWidth: 34,
-            textAlign: "center",
-            marginRight: 7,
-          }}>
-            {badgeProps.label}
+    // ── Collection / List (컨테이너 노드) ─────────────────────────
+    if (node.modelType === "SubmodelElementCollection" || node.modelType === "SubmodelElementList") {
+      return (
+        <Box mb={2} style={{ paddingLeft: indentPx }}>
+          {/* 왼쪽 세로 연결선 */}
+          <div style={{ display: "flex", gap: 0 }}>
+            {level > 3 && <div style={{ width: 2, background: `${tm.accent}30`, borderRadius: 2, marginRight: 10, flexShrink: 0 }} />}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  display: "flex", alignItems: "center", gap: 7,
+                  padding: "6px 10px",
+                  background: tm.bgLight,
+                  border: `1px solid ${tm.accent}40`,
+                  borderLeft: `3px solid ${tm.accent}`,
+                  borderRadius: 6,
+                  cursor: "pointer",
+                  userSelect: "none",
+                }}
+                {...elementProps}
+                onClick={(e) => { if (isExpandable) elementProps.onClick(e); if (onNodeClick) onNodeClick(node); }}
+              >
+                {tm.icon}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: tm.textColor, marginRight: 6, letterSpacing: "0.04em" }}>
+                    {tm.humanLabel}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {node.idShort}
+                  </span>
+                </div>
+                {childCount > 0 && (
+                  <span style={{ fontSize: 10, color: tm.textColor, background: `${tm.accent}18`, borderRadius: 99, padding: "1px 6px", fontWeight: 600, flexShrink: 0 }}>
+                    {childCount}개
+                  </span>
+                )}
+                <span style={{ color: tm.accent, fontSize: 9, flexShrink: 0 }}>{expanded ? "▲" : "▼"}</span>
+                {editMode && onDelete && isDeletable && (
+                  <ActionIcon variant="subtle" color="red" size="xs"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      const confirmed = await confirmSave(`'${node.idShort}' 을(를) 삭제하시겠습니까?`, { labels: { confirm: "삭제", cancel: "취소" }, confirmProps: { color: "red" } });
+                      if (confirmed) onDelete(node);
+                    }}>
+                    <IconTrash size={11} />
+                  </ActionIcon>
+                )}
+                {editMode && onAdd && canHaveChildren && (
+                  <ElementAdd onAdd={(elementType, idShort) => onAdd(node, elementType, idShort)} />
+                )}
+              </div>
+              {expanded && !simpleView && (
+                <RenderNodeDetails key={`${node.valuePath}-details`} level={level} node={node} state={state} editMode={editMode} onValueChange={onValueChange} isInstance={isInstance} instanceSeq={instanceSeq} />
+              )}
+            </div>
           </div>
+        </Box>
+      );
+    }
 
-          {/* idShort */}
-          <span style={{
-            fontSize: 13,
-            fontWeight: level <= 3 ? 600 : 400,
-            color: "var(--mantine-color-dark-6)",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            flex: 1,
-            minWidth: 0,
-          }} title={node.idShort}>
-            {node.idShort}
-          </span>
+    // ── Property / 리프 노드 ──────────────────────────────────────
+    const isLeaf = ["Property", "MultiLanguageProperty", "File", "Range", "ReferenceElement", "RelationshipElement"].includes(node.modelType);
+    if (isLeaf) {
+      const hasValue = inlineValue && inlineValue.trim() !== "";
+      return (
+        <Box mb={1} style={{ paddingLeft: indentPx + 8 }}>
+          <div
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "5px 10px",
+              background: hasValue ? "#fffbeb" : "#fafafa",
+              border: `1px solid ${hasValue ? "#fde68a" : "#e2e8f0"}`,
+              borderLeft: `3px solid ${tm.accent}`,
+              borderRadius: 6,
+              cursor: "pointer",
+              userSelect: "none",
+              transition: "background 100ms",
+            }}
+            {...elementProps}
+            onClick={(e) => { if (isExpandable) elementProps.onClick(e); if (onNodeClick) onNodeClick(node); }}
+          >
+            {/* 타입 뱃지 */}
+            <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: tm.accent }} />
+              <span style={{ fontSize: 9, fontWeight: 700, color: tm.textColor, background: tm.bgLight, border: `1px solid ${tm.accent}30`, borderRadius: 4, padding: "0 4px", letterSpacing: "0.04em" }}>
+                {tm.abbr}
+              </span>
+            </div>
 
-          {/* 인라인 값 미리보기 */}
-          {inlineValue && (
-            <span style={{
-              fontSize: 11,
-              color: "var(--mantine-color-gray-6)",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              maxWidth: 130,
-              flexShrink: 0,
-              marginLeft: 8,
-              fontFamily: "monospace",
-            }} title={inlineValue}>
-              {inlineValue}
+            {/* 이름 */}
+            <span style={{ fontSize: 12.5, fontWeight: 500, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}
+              title={node.idShort}>
+              {node.idShort}
             </span>
-          )}
 
-          {/* 액션 버튼들 (hover 시만 표시) */}
-          <div style={{ display: "flex", alignItems: "center", gap: 2, marginLeft: 4, flexShrink: 0 }}>
+            {/* 값 미리보기 */}
+            {hasValue ? (
+              <span style={{
+                fontSize: 11.5, color: "#1e293b", background: "#fef3c7",
+                border: "1px solid #fde68a", borderRadius: 4,
+                padding: "1px 7px", fontFamily: "monospace",
+                maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                flexShrink: 0,
+              }} title={inlineValue}>
+                {inlineValue}
+              </span>
+            ) : (
+              <span style={{ fontSize: 10, color: "#94a3b8", flexShrink: 0, fontStyle: "italic" }}>
+                미입력
+              </span>
+            )}
+
+            {/* 상세보기 화살표 */}
+            {isExpandable && (
+              <span style={{ color: "#cbd5e1", fontSize: 9, flexShrink: 0 }}>
+                {expanded ? "▲" : "▼"}
+              </span>
+            )}
+
+            {/* 삭제 */}
             {editMode && onDelete && isDeletable && (
-              <ActionIcon
-                variant="subtle"
-                color="red"
-                size="xs"
-                style={{ opacity: 0.7 }}
+              <ActionIcon variant="subtle" color="red" size="xs"
                 onClick={async (e) => {
                   e.stopPropagation();
-                  const confirmed = await confirmSave(`'${node.idShort}' 항목을 삭제하시겠습니까?`, {
-                    labels: { confirm: "삭제", cancel: "취소" },
-                    confirmProps: { color: "red" },
-                  });
+                  const confirmed = await confirmSave(`'${node.idShort}' 을(를) 삭제하시겠습니까?`, { labels: { confirm: "삭제", cancel: "취소" }, confirmProps: { color: "red" } });
                   if (confirmed) onDelete(node);
-                }}
-              >
-                <IconTrash size={12} />
+                }}>
+                <IconTrash size={11} />
               </ActionIcon>
             )}
-            {editMode && onAdd && canHaveChildren && (
-              <ElementAdd
-                onAdd={(elementType, idShort) => onAdd(node, elementType, idShort)}
-                allowedTypes={
-                  node.modelType === "Submodel"
-                    ? ["SubmodelElementCollection", "SubmodelElementList", "Property"]
-                    : undefined
-                }
-              />
-            )}
           </div>
-        </div>
+          {expanded && !simpleView && (
+            <RenderNodeDetails key={`${node.valuePath}-details`} level={level} node={node} state={state} editMode={editMode} onValueChange={onValueChange} isInstance={isInstance} instanceSeq={instanceSeq} />
+          )}
+        </Box>
+      );
+    }
 
-        {/* simpleView가 아닐 때: 노드 상세 인라인 펼침 */}
+    // ── 기타 노드 (Entity, ConceptDescription 등) ─────────────────
+    return (
+      <Box mb={2} style={{ paddingLeft: indentPx }}>
+        <div
+          style={{
+            display: "flex", alignItems: "center", gap: 7,
+            padding: "6px 10px",
+            background: tm.bgLight,
+            border: `1px solid ${tm.accent}35`,
+            borderLeft: `3px solid ${tm.accent}`,
+            borderRadius: 6,
+            cursor: "pointer",
+            userSelect: "none",
+          }}
+          {...elementProps}
+          onClick={(e) => { if (isExpandable) elementProps.onClick(e); if (onNodeClick) onNodeClick(node); }}
+        >
+          {tm.icon}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color: tm.textColor, marginRight: 6 }}>{tm.humanLabel}</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{node.idShort}</span>
+          </div>
+          {isExpandable && <span style={{ color: tm.accent, fontSize: 9, flexShrink: 0 }}>{expanded ? "▲" : "▼"}</span>}
+          {editMode && onDelete && isDeletable && (
+            <ActionIcon variant="subtle" color="red" size="xs"
+              onClick={async (e) => {
+                e.stopPropagation();
+                const confirmed = await confirmSave(`'${node.idShort}' 을(를) 삭제하시겠습니까?`, { labels: { confirm: "삭제", cancel: "취소" }, confirmProps: { color: "red" } });
+                if (confirmed) onDelete(node);
+              }}>
+              <IconTrash size={11} />
+            </ActionIcon>
+          )}
+          {editMode && onAdd && canHaveChildren && (
+            <ElementAdd onAdd={(elementType, idShort) => onAdd(node, elementType, idShort)} />
+          )}
+        </div>
         {expanded && !simpleView && (
-          <RenderNodeDetails
-            key={`${node.valuePath}-details`}
-            level={level}
-            node={node}
-            state={state}
-            editMode={editMode}
-            onValueChange={onValueChange}
-            isInstance={isInstance}
-            instanceSeq={instanceSeq}
-          />
+          <RenderNodeDetails key={`${node.valuePath}-details`} level={level} node={node} state={state} editMode={editMode} onValueChange={onValueChange} isInstance={isInstance} instanceSeq={instanceSeq} />
         )}
       </Box>
     );
