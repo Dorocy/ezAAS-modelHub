@@ -27,7 +27,7 @@ import _ from "lodash";
 import AASTreeModal from "@/components/AASTreeModal";
 import { showToast } from "@/utils/toast";
 import VerifyDetailView from "@/components/VerifyDetailView";
-import CategoryCombobox from "@/components/CategoryCombobox";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/constants/roles";
 
@@ -1076,6 +1076,12 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     }
   }, [previewModel]);
 
+  /* 카테고리 목록 (lv:1 만 표시) */
+  const categoryItems = useMemo(() => {
+    const list = Array.isArray(categorys) ? categorys : [];
+    return list.filter((c: any) => c.lv === 1);
+  }, [categorys]);
+
   const templateSelectDialog = (
     <Dialog
       open={modalOpen}
@@ -1084,20 +1090,14 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         if (!open) { setModelSeq(""); setPreviewModel(null); }
       }}
     >
-      {/* 화면 전체를 최대한 활용하는 wide dialog */}
-      <DialogContent className="max-w-[95vw] w-[95vw] h-[92vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-[96vw] w-[96vw] h-[92vh] flex flex-col p-0 gap-0 overflow-hidden">
 
         {/* ── Header ── */}
-        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0 bg-muted/30">
-          <div>
-            <DialogTitle className="text-base font-semibold">
-              {modelType === "aasmodel" ? "AAS" : "Submodel"} Template 선택
-            </DialogTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              왼쪽 목록에서 템플릿을 선택하면 오른쪽에서 미리볼 수 있습니다.
-            </p>
-          </div>
-          <div className="flex gap-2">
+        <div className="flex items-center justify-between px-6 py-3.5 border-b shrink-0">
+          <DialogTitle className="text-base font-semibold">
+            {modelType === "aasmodel" ? "AAS" : "Submodel"} Template 선택
+          </DialogTitle>
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -1111,132 +1111,158 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
           </div>
         </div>
 
-        {/* ── Body: 3-column layout ── */}
+        {/* ── Body: 왼쪽 패널 + 오른쪽 프리뷰 ── */}
         <div className="flex flex-1 overflow-hidden min-h-0">
 
-          {/* 1. 카테고리 필터 사이드바 */}
-          <div className="w-56 shrink-0 border-r flex flex-col bg-muted/10">
-            <div className="px-4 py-3 border-b">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                Category
-              </p>
-              <CategoryCombobox
-                code={modelType === "aasmodel" ? "aas_category" : "sm_category"}
-                value={searchState.category_seq === "all" ? undefined : searchState.category_seq}
-                setValue={(value) => {
-                  setModelSeq("");
-                  setPreviewModel(null);
-                  setSearchState({ category_seq: value ?? "all" });
-                }}
-              />
-            </div>
-            {/* 카테고리 선택 상태 */}
-            <div className="px-4 py-3 flex-1">
-              <p className="text-xs text-muted-foreground">
-                {isFetchingModels
-                  ? "목록 불러오는 중..."
-                  : `${templateListItems.length}개의 템플릿`}
-              </p>
-            </div>
-          </div>
+          {/* ── 왼쪽: 카테고리 탭 + 템플릿 목록 ── */}
+          <div className="w-80 shrink-0 border-r flex flex-col bg-muted/5">
 
-          {/* 2. 템플릿 목록 */}
-          <div className="w-72 shrink-0 border-r flex flex-col">
-            <div className="px-4 py-3 border-b bg-muted/10 shrink-0">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Template 목록
-              </p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto">
-              {isFetchingModels ? (
-                <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
-                  Loading...
-                </div>
-              ) : templateListItems.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-32 gap-1 text-sm text-muted-foreground">
-                  <span>템플릿이 없습니다.</span>
-                </div>
-              ) : (
-                templateListItems.map((item: any) => (
+            {/* 카테고리 버튼 목록 */}
+            <div className="shrink-0 border-b">
+              <div className="px-3 pt-3 pb-1">
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  Category
+                </p>
+              </div>
+              <div className="px-2 pb-2 flex flex-col gap-0.5 max-h-48 overflow-y-auto">
+                {/* 전체 버튼 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModelSeq("");
+                    setPreviewModel(null);
+                    setSearchState({ category_seq: "all" });
+                  }}
+                  className={cn(
+                    "w-full text-left px-3 py-1.5 rounded text-sm transition-colors",
+                    searchState.category_seq === "all"
+                      ? "bg-primary text-primary-foreground font-medium"
+                      : "hover:bg-accent text-foreground"
+                  )}
+                >
+                  전체
+                </button>
+                {categoryItems.map((cat: any) => (
                   <button
-                    key={item.value}
+                    key={cat.seq}
                     type="button"
-                    onClick={() => handleTemplateItemSelect(item.value)}
+                    onClick={() => {
+                      setModelSeq("");
+                      setPreviewModel(null);
+                      setSearchState({ category_seq: String(cat.seq) });
+                    }}
                     className={cn(
-                      "w-full text-left px-4 py-3 border-b text-sm transition-colors hover:bg-accent",
-                      modelSeq === item.value
-                        ? "bg-primary/10 border-l-2 border-l-primary"
-                        : "border-l-2 border-l-transparent"
+                      "w-full text-left px-3 py-1.5 rounded text-sm transition-colors",
+                      searchState.category_seq === String(cat.seq)
+                        ? "bg-primary text-primary-foreground font-medium"
+                        : "hover:bg-accent text-foreground"
                     )}
                   >
-                    <div className="font-medium truncate leading-snug">{item.label}</div>
-                    <div className="flex gap-1.5 mt-1.5 flex-wrap">
-                      {item.category_name && (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                          {item.category_name}
-                        </Badge>
-                      )}
-                      {item.version && (
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
-                          v{item.version}
-                        </Badge>
-                      )}
-                    </div>
+                    {cat.title}
                   </button>
-                ))
-              )}
+                ))}
+              </div>
+            </div>
+
+            {/* 템플릿 목록 */}
+            <div className="flex flex-col flex-1 min-h-0">
+              <div className="px-3 py-2 shrink-0 flex items-center justify-between border-b bg-muted/10">
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Templates
+                </p>
+                {!isFetchingModels && (
+                  <span className="text-[11px] text-muted-foreground">{templateListItems.length}개</span>
+                )}
+              </div>
+
+              <div className="flex-1 overflow-y-auto">
+                {isFetchingModels ? (
+                  <div className="flex items-center justify-center h-24 gap-2 text-sm text-muted-foreground">
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <span>불러오는 중...</span>
+                  </div>
+                ) : templateListItems.length === 0 ? (
+                  <div className="flex items-center justify-center h-24 text-sm text-muted-foreground">
+                    템플릿이 없습니다.
+                  </div>
+                ) : (
+                  templateListItems.map((item: any) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => handleTemplateItemSelect(item.value)}
+                      className={cn(
+                        "w-full text-left px-3 py-2.5 border-b last:border-b-0 text-sm transition-colors",
+                        modelSeq === item.value
+                          ? "bg-primary/10 border-l-[3px] border-l-primary pl-[9px]"
+                          : "hover:bg-accent border-l-[3px] border-l-transparent pl-[9px]"
+                      )}
+                    >
+                      <div className="font-medium leading-snug line-clamp-2 text-[13px]">{item.label}</div>
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        {item.category_name && (
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
+                            {item.category_name}
+                          </Badge>
+                        )}
+                        {item.version && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal">
+                            v{item.version}
+                          </Badge>
+                        )}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
           </div>
 
-          {/* 3. 미리보기 패널 — 나머지 전체 공간 */}
+          {/* ── 오른쪽: 미리보기 패널 (나머지 전체 공간) ── */}
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-            {/* Preview 헤더 */}
-            <div className="px-5 py-3 border-b bg-muted/10 shrink-0 flex items-center justify-between">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            <div className="px-5 py-2.5 border-b bg-muted/5 shrink-0 flex items-center gap-3">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                 Preview
               </p>
               {previewModel && (
-                <Badge variant="secondary" className="text-xs">
+                <span className="text-sm font-medium text-foreground truncate">
                   {previewModel[`${modelType}_name`] ?? previewModel.aasmodel_name ?? previewModel.submodel_name}
-                </Badge>
+                </span>
               )}
             </div>
 
-            {/* Preview 본문 */}
             <div className="flex-1 overflow-y-auto">
               {isPreviewLoading ? (
-                <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    <span>모델 불러오는 중...</span>
-                  </div>
+                <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
+                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm">모델 불러오는 중...</span>
                 </div>
               ) : !previewModel ? (
                 <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground select-none">
-                  <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-40">
-                      <path d="M4 6h16M4 10h16M4 14h10M4 18h7" strokeLinecap="round"/>
+                  <div className="w-14 h-14 rounded-xl bg-muted/60 flex items-center justify-center">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-40">
+                      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                      <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
                     </svg>
                   </div>
                   <div className="text-center">
                     <p className="text-sm font-medium">템플릿을 선택하세요</p>
-                    <p className="text-xs mt-1 opacity-70">왼쪽 목록에서 템플릿을 클릭하면 여기에 구조가 표시됩니다.</p>
+                    <p className="text-xs text-muted-foreground mt-1">왼쪽에서 카테고리를 선택하고 템플릿을 클릭하면 구조를 미리볼 수 있습니다.</p>
                   </div>
                 </div>
               ) : (
                 <div className="p-5">
                   {/* 모델 메타 정보 */}
-                  <div className="mb-4 pb-4 border-b">
-                    <h3 className="font-semibold text-sm">
+                  <div className="mb-5 pb-4 border-b">
+                    <h3 className="font-semibold text-sm leading-snug">
                       {previewModel[`${modelType}_name`] ?? previewModel.aasmodel_name ?? previewModel.submodel_name}
                     </h3>
                     {previewModel.description && (
-                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
                         {previewModel.description}
                       </p>
                     )}
-                    <div className="flex gap-2 mt-2 flex-wrap">
+                    <div className="flex gap-1.5 mt-2.5 flex-wrap">
                       {previewModel.category_name && (
                         <Badge variant="secondary" className="text-xs">{previewModel.category_name}</Badge>
                       )}
@@ -1245,7 +1271,6 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       )}
                     </div>
                   </div>
-
                   {/* AAS 트리 */}
                   {previewTreeData ? (
                     <AASTree data={previewTreeData} editMode={false} />
