@@ -6,6 +6,13 @@ const BACKEND =
   "";
 
 async function handler(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  if (!BACKEND) {
+    return NextResponse.json(
+      { result: "error", msg: "NEXT_PUBLIC_AAS_API_BASE 환경변수가 설정되지 않았습니다. 백엔드 서버 URL을 설정해 주세요." },
+      { status: 503 }
+    );
+  }
+
   const { path } = await params;
   const pathStr = path.join("/");
 
