@@ -1481,50 +1481,57 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                     </Card>
                   ) : (
                     <>
-                      {/* ── 템플릿 선택됨: 상단 정보 바 + 탭 통합 ── */}
+                      {/* ── 상단 정보 바 ── */}
+                      <Card>
+                        <CardContent className="py-2 px-4 flex items-center justify-between gap-3 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap min-w-0">
+                            <div className="flex items-center gap-1.5 text-sm font-semibold text-primary">
+                              <FilePlus className="size-4 shrink-0" />
+                              <span className="truncate max-w-[200px]">
+                                {mode === "create" ? (aasmodel as any).aasmodel_name : instance?.aasmodel_name}
+                              </span>
+                            </div>
+                            <Separator orientation="vertical" className="h-4" />
+                            <Badge variant="secondary" className="font-mono text-[10px]">{treeData[0].id}</Badge>
+                            {(aasmodel as any).version && <Badge variant="outline">v{mode === "create" ? (aasmodel as any).version : instance?.aasmodel_version}</Badge>}
+                            {(aasmodel as any).status && <Badge variant="outline">{mode === "create" ? (aasmodel as any).status : instance?.status}</Badge>}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <AASTreeModal
+                              treeData={treeData}
+                              treeDataRefCurrent={treeDataRef.current[treeData?.[0]?.id]}
+                              metadata={(aasmodel as any).aasmodel_metadata}
+                              setMetaData={(metadata) => setAasmodel((prev) => ({ ...prev, aasmodel_metadata: metadata }))}
+                              mode={mode}
+                            />
+                            {mode === "create" && (
+                              <Button variant="outline" size="sm" onClick={removeAASModel} className="text-destructive border-destructive/40 hover:bg-destructive/10">
+                                <Trash2 className="size-3.5 mr-1" />템플릿 변경
+                              </Button>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* ── 탭 + 콘텐츠 ── */}
                       <Tabs value={activeDetailTab} onValueChange={setActiveDetailTab}>
-                        <Card>
-                          <CardContent className="py-0 px-4 flex items-center justify-between gap-3">
-                            {/* 왼쪽: 템플릿 정보 */}
-                            <div className="flex items-center gap-2 flex-wrap min-w-0 py-3">
-                              <div className="flex items-center gap-1.5 text-sm font-semibold text-primary">
-                                <FilePlus className="size-4 shrink-0" />
-                                <span className="truncate max-w-[200px]">
-                                  {mode === "create" ? (aasmodel as any).aasmodel_name : instance?.aasmodel_name}
-                                </span>
-                              </div>
-                              <Separator orientation="vertical" className="h-4" />
-                              <Badge variant="secondary" className="font-mono text-[10px]">{treeData[0].id}</Badge>
-                              {(aasmodel as any).version && <Badge variant="outline">v{mode === "create" ? (aasmodel as any).version : instance?.aasmodel_version}</Badge>}
-                              {(aasmodel as any).status && <Badge variant="outline">{mode === "create" ? (aasmodel as any).status : instance?.status}</Badge>}
-                            </div>
-
-                            {/* 가운데: 탭 */}
-                            <TabsList className="h-8 shrink-0">
-                              <TabsTrigger value="aasTree" className="text-xs px-4">데이터 입력</TabsTrigger>
-                              <TabsTrigger value="cdTree" className="text-xs px-4">개념 사전</TabsTrigger>
-                            </TabsList>
-
-                            {/* 오른쪽: 액션 버튼 */}
-                            <div className="flex items-center gap-2 shrink-0 py-3">
-                              <AASTreeModal
-                                treeData={treeData}
-                                treeDataRefCurrent={treeDataRef.current[treeData?.[0]?.id]}
-                                metadata={(aasmodel as any).aasmodel_metadata}
-                                setMetaData={(metadata) => setAasmodel((prev) => ({ ...prev, aasmodel_metadata: metadata }))}
-                                mode={mode}
-                              />
-                              {mode === "create" && (
-                                <Button variant="outline" size="sm" onClick={removeAASModel} className="text-destructive border-destructive/40 hover:bg-destructive/10">
-                                  <Trash2 className="size-3.5 mr-1" />템플릿 변경
-                                </Button>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
+                        <TabsList className="w-full justify-start rounded-none border-b bg-transparent px-0 h-10">
+                          <TabsTrigger
+                            value="aasTree"
+                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 text-sm font-medium"
+                          >
+                            데이터 입력
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="cdTree"
+                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 text-sm font-medium"
+                          >
+                            개념 사전
+                          </TabsTrigger>
+                        </TabsList>
 
                         {/* AAS Tree 탭 */}
-                        <TabsContent value="aasTree" className="mt-2">
+                        <TabsContent value="aasTree" className="mt-0">
                           <div className="h-[calc(100vh-320px)] min-h-[600px]">
                             {showAdvancedTree ? (
                               /* ── Advanced: 기존 트리 + Details 2분할 ── */
@@ -1636,7 +1643,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                         </TabsContent>
 
                         {/* CD Tree 탭 */}
-                        <TabsContent value="cdTree" className="mt-2">
+                        <TabsContent value="cdTree" className="mt-0">
                           <div className="h-[calc(100vh-320px)] min-h-[600px] border border-zinc-200 rounded-xl overflow-hidden bg-white">
                             <ConceptDescriptionPanel
                               conceptDescriptionTreeData={conceptDescriptionTreeData}
