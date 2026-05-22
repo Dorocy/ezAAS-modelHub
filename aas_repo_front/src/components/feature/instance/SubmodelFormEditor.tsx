@@ -352,9 +352,6 @@ function GroupSection({
           ? <ChevronDown size={13} className="text-zinc-400 shrink-0" />
           : <ChevronRight size={13} className="text-zinc-400 shrink-0" />
         }
-        <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider shrink-0">
-          {node.modelType === "SubmodelElementCollection" ? "SMC" : node.modelType === "SubmodelElementList" ? "SML" : "GRP"}
-        </span>
         <span className="text-sm font-semibold text-zinc-800 truncate flex-1">
           {getDisplayLabel(node.idShort)}
         </span>
