@@ -1480,7 +1480,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       </CardContent>
                     </Card>
                   ) : (
-                    <>
+                    <div className="flex flex-col gap-3 w-full">
                       {/* ── 상단 정보 바 ── */}
                       <Card>
                         <CardContent className="py-2 px-4 flex items-center justify-between gap-3 flex-wrap">
@@ -1654,7 +1654,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                           </div>
                         </TabsContent>
                       </Tabs>
-                    </>
+                    </div>
                   )}
                 </>
               )}
