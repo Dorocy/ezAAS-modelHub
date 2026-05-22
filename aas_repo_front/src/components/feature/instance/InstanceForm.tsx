@@ -1607,6 +1607,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                                 treeData={treeData}
                                 state={formEditorState}
                                 editMode={mode !== "view"}
+                                conceptDescriptions={(aasmodel as any).aasmodel_metadata?.conceptDescriptions ?? []}
                                 onValueChange={(path, value, file) => {
                                   const rootId = treeData[0]?.id;
                                   if (!treeDataRef.current[rootId]) treeDataRef.current[rootId] = {};

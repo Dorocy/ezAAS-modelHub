@@ -17,6 +17,27 @@ interface SubmodelFormEditorProps {
   onSave: () => void;
   onToggleAdvanced: () => void;
   showAdvanced: boolean;
+  conceptDescriptions?: any[];                  // aasmodel_metadata.conceptDescriptions
+}
+
+/* semanticId key[0].value → { idShort, description } 맵 */
+type CDMap = Map<string, { idShort: string; description: string }>;
+
+function buildCDMap(cds: any[]): CDMap {
+  const map: CDMap = new Map();
+  if (!Array.isArray(cds)) return map;
+  cds.forEach((cd) => {
+    if (!cd?.id) return;
+    const desc = Array.isArray(cd.description)
+      ? cd.description.find((d: any) => d.language === "en")?.text || cd.description[0]?.text || ""
+      : typeof cd.description === "string" ? cd.description : "";
+    map.set(cd.id, { idShort: cd.idShort ?? cd.id, description: desc });
+  });
+  return map;
+}
+
+function getSemanticKey(node: any): string | null {
+  return node?.semanticId?.keys?.[0]?.value || null;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -63,13 +84,72 @@ function countFilledLeaves(node: any, state: Record<string, any>): number {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
+   FieldLabelWithHint — label + CD 설명 tooltip
+───────────────────────────────────────────────────────────────────────────*/
+function FieldLabelWithHint({
+  label, idShort, filled, typeLabel, cdHint,
+}: {
+  label: string;
+  idShort: string;
+  filled: boolean;
+  typeLabel?: string;
+  cdHint?: { idShort: string; description: string } | null;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="flex items-center gap-2 min-w-0 pt-0.5">
+      <div className={cn("w-1.5 h-1.5 rounded-full shrink-0 mt-px", filled ? "bg-blue-500" : "bg-zinc-300")} />
+      <label className="text-sm text-zinc-700 font-medium truncate leading-tight" title={idShort}>
+        {label}
+      </label>
+      {typeLabel && (
+        <span className="shrink-0 text-[10px] text-zinc-400 font-mono bg-zinc-100 px-1.5 py-0.5 rounded hidden lg:block">
+          {typeLabel}
+        </span>
+      )}
+      {cdHint && (
+        <div className="relative shrink-0">
+          <button
+            type="button"
+            onMouseEnter={() => setOpen(true)}
+            onMouseLeave={() => setOpen(false)}
+            onFocus={() => setOpen(true)}
+            onBlur={() => setOpen(false)}
+            className="w-4 h-4 rounded-full border border-zinc-300 text-zinc-400 hover:border-blue-400 hover:text-blue-500 flex items-center justify-center text-[10px] font-bold transition-colors focus:outline-none"
+            aria-label={`${cdHint.idShort} 설명 보기`}
+          >
+            ?
+          </button>
+          {open && (
+            <div className="absolute left-6 top-1/2 -translate-y-1/2 z-50 w-72 bg-white border border-zinc-200 rounded-lg shadow-lg p-3 pointer-events-none">
+              {/* 화살표 */}
+              <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-white border-l border-b border-zinc-200 rotate-45" />
+              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-1">
+                {cdHint.idShort}
+              </p>
+              {cdHint.description ? (
+                <p className="text-xs text-zinc-700 leading-relaxed">{cdHint.description}</p>
+              ) : (
+                <p className="text-xs text-zinc-400 italic">설명 없음</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
    FileFieldInput — separate component so useRef is always at the top level
 ───────────────────────────────────────────────────────────────────────────*/
 function FileFieldInput({
-  node, state, editMode, onValueChange, depth = 0,
+  node, state, editMode, onValueChange, depth = 0, cdHint,
 }: {
   node: any; state: Record<string, any>; editMode: boolean;
   onValueChange: SubmodelFormEditorProps["onValueChange"]; depth?: number;
+  cdHint?: { idShort: string; description: string } | null;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const label = getDisplayLabel(node.idShort);
@@ -79,11 +159,7 @@ function FileFieldInput({
 
   return (
     <div className={cn("grid grid-cols-[240px_1fr] items-start gap-4 py-3 px-4 border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50/60", depth > 0 && "pl-6")}>
-      <div className="flex items-center gap-2 pt-0.5">
-        <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", filled ? "bg-blue-500" : "bg-zinc-300")} />
-        <label className="text-sm text-zinc-700 font-medium truncate">{label}</label>
-        <span className="text-[10px] text-zinc-400 font-mono bg-zinc-100 px-1.5 py-0.5 rounded hidden lg:block">File</span>
-      </div>
+      <FieldLabelWithHint label={label} idShort={node.idShort} filled={filled} typeLabel="File" cdHint={cdHint} />
       {editMode ? (
         <div className="flex gap-2 items-center">
           <Input
@@ -125,12 +201,14 @@ function FieldInput({
   editMode,
   onValueChange,
   depth = 0,
+  cdHint,
 }: {
   node: any;
   state: Record<string, any>;
   editMode: boolean;
   onValueChange: SubmodelFormEditorProps["onValueChange"];
   depth?: number;
+  cdHint?: { idShort: string; description: string } | null;
 }) {
   const label = getDisplayLabel(node.idShort);
   const valuePath = node.valuePath;
@@ -148,17 +226,11 @@ function FieldInput({
           depth > 0 && "pl-6",
         )}
       >
-        <div className="flex items-center gap-2 min-w-0 pt-0.5">
-          <div className={cn("w-1.5 h-1.5 rounded-full shrink-0 mt-px", filled ? "bg-blue-500" : "bg-zinc-300")} />
-          <label className="text-sm text-zinc-700 font-medium truncate leading-tight" title={node.idShort}>
-            {label}
-          </label>
-          {node.valueType && (
-            <span className="shrink-0 text-[10px] text-zinc-400 font-mono bg-zinc-100 px-1.5 py-0.5 rounded hidden lg:block">
-              {node.valueType?.replace("xs:", "")}
-            </span>
-          )}
-        </div>
+        <FieldLabelWithHint
+          label={label} idShort={node.idShort} filled={filled}
+          typeLabel={node.valueType?.replace("xs:", "")}
+          cdHint={cdHint}
+        />
         {editMode ? (
           <Input
             value={val}
@@ -187,11 +259,7 @@ function FieldInput({
     return (
       <div className={cn("py-3 px-4 border-b border-zinc-100 last:border-b-0", depth > 0 && "pl-6")}>
         <div className="grid grid-cols-[240px_1fr] items-start gap-4">
-          <div className="flex items-center gap-2 pt-0.5">
-            <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", filled ? "bg-blue-500" : "bg-zinc-300")} />
-            <label className="text-sm text-zinc-700 font-medium truncate">{label}</label>
-            <span className="text-[10px] text-zinc-400 font-mono bg-zinc-100 px-1.5 py-0.5 rounded hidden lg:block">MLP</span>
-          </div>
+          <FieldLabelWithHint label={label} idShort={node.idShort} filled={filled} typeLabel="MLP" cdHint={cdHint} />
           <div className="space-y-2">
             {mlp.length === 0 && !editMode && (
               <span className="text-sm text-zinc-400 italic py-1 inline-block">—</span>
@@ -243,19 +311,6 @@ function FieldInput({
     );
   }
 
-  /* ── File: delegated to a proper sub-component so useRef is at the top level ── */
-  if (node.modelType === "File") {
-    return (
-      <FileFieldInput
-        node={node}
-        state={state}
-        editMode={editMode}
-        onValueChange={onValueChange}
-        depth={depth}
-      />
-    );
-  }
-
   /* ── Range ── */
   if (node.modelType === "Range") {
     const minKey = `${valuePath}.min`;
@@ -266,11 +321,7 @@ function FieldInput({
 
     return (
       <div className={cn("grid grid-cols-[240px_1fr] items-start gap-4 py-3 px-4 border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50/60", depth > 0 && "pl-6")}>
-        <div className="flex items-center gap-2 pt-0.5">
-          <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", filled ? "bg-blue-500" : "bg-zinc-300")} />
-          <label className="text-sm text-zinc-700 font-medium truncate">{label}</label>
-          <span className="text-[10px] text-zinc-400 font-mono bg-zinc-100 px-1.5 py-0.5 rounded hidden lg:block">Range</span>
-        </div>
+        <FieldLabelWithHint label={label} idShort={node.idShort} filled={filled} typeLabel="Range" cdHint={cdHint} />
         <div className="flex gap-2 items-center">
           {editMode ? (
             <>
@@ -295,11 +346,7 @@ function FieldInput({
 
   return (
     <div className={cn("grid grid-cols-[240px_1fr] items-start gap-4 py-3 px-4 border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50/60", depth > 0 && "pl-6")}>
-      <div className="flex items-center gap-2 pt-0.5">
-        <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", fallbackFilled ? "bg-blue-500" : "bg-zinc-300")} />
-        <label className="text-sm text-zinc-700 font-medium truncate">{label}</label>
-        <span className="text-[10px] text-zinc-400 font-mono bg-zinc-100 px-1.5 py-0.5 rounded hidden lg:block">{node.modelType}</span>
-      </div>
+      <FieldLabelWithHint label={label} idShort={node.idShort} filled={fallbackFilled} typeLabel={node.modelType} cdHint={cdHint} />
       {editMode ? (
         <Input
           value={fallbackVal}
@@ -320,19 +367,11 @@ function FieldInput({
    GroupSection — renders a collapsible SMC / SML section
 ───────────────────────────────────────────────────────────────────────────*/
 function GroupSection({
-  node,
-  state,
-  editMode,
-  onValueChange,
-  depth = 0,
-  defaultOpen = true,
+  node, state, editMode, onValueChange, depth = 0, defaultOpen = true, cdMap,
 }: {
-  node: any;
-  state: Record<string, any>;
-  editMode: boolean;
+  node: any; state: Record<string, any>; editMode: boolean;
   onValueChange: SubmodelFormEditorProps["onValueChange"];
-  depth?: number;
-  defaultOpen?: boolean;
+  depth?: number; defaultOpen?: boolean; cdMap: CDMap;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const children: any[] = Array.isArray(node.children) ? node.children : [];
@@ -342,7 +381,6 @@ function GroupSection({
 
   return (
     <div className={cn("border-b border-zinc-100 last:border-b-0", depth > 0 && "border-l-2 border-l-zinc-100 ml-4")}>
-      {/* Section header */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -368,19 +406,11 @@ function GroupSection({
           )}
         </div>
       </button>
-
-      {/* Children */}
       {open && children.length > 0 && (
         <div className={cn(depth > 0 ? "bg-white" : "bg-zinc-50/30")}>
           {children.map((child, i) => (
-            <NodeRenderer
-              key={child.valuePath ?? i}
-              node={child}
-              state={state}
-              editMode={editMode}
-              onValueChange={onValueChange}
-              depth={depth + 1}
-            />
+            <NodeRenderer key={child.valuePath ?? i} node={child} state={state}
+              editMode={editMode} onValueChange={onValueChange} depth={depth + 1} cdMap={cdMap} />
           ))}
         </div>
       )}
@@ -392,16 +422,22 @@ function GroupSection({
    NodeRenderer — dispatches to FieldInput or GroupSection
 ───────────────────────────────────────────────────────────────────────────*/
 function NodeRenderer({
-  node, state, editMode, onValueChange, depth = 0,
+  node, state, editMode, onValueChange, depth = 0, cdMap,
 }: {
   node: any; state: Record<string, any>; editMode: boolean;
-  onValueChange: SubmodelFormEditorProps["onValueChange"]; depth?: number;
+  onValueChange: SubmodelFormEditorProps["onValueChange"]; depth?: number; cdMap: CDMap;
 }) {
+  const semanticKey = getSemanticKey(node);
+  const cdHint = semanticKey ? (cdMap.get(semanticKey) ?? null) : null;
+
   if (LEAF_TYPES.has(node.modelType)) {
-    return <FieldInput node={node} state={state} editMode={editMode} onValueChange={onValueChange} depth={depth} />;
+    if (node.modelType === "File") {
+      return <FileFieldInput node={node} state={state} editMode={editMode} onValueChange={onValueChange} depth={depth} cdHint={cdHint} />;
+    }
+    return <FieldInput node={node} state={state} editMode={editMode} onValueChange={onValueChange} depth={depth} cdHint={cdHint} />;
   }
   if (GROUP_TYPES.has(node.modelType)) {
-    return <GroupSection node={node} state={state} editMode={editMode} onValueChange={onValueChange} depth={depth} defaultOpen={depth < 2} />;
+    return <GroupSection node={node} state={state} editMode={editMode} onValueChange={onValueChange} depth={depth} defaultOpen={depth < 2} cdMap={cdMap} />;
   }
   return null;
 }
@@ -410,10 +446,10 @@ function NodeRenderer({
    SubmodelPanel — right content area for one Submodel
 ───────────────────────────────────────────────────────────────────────────*/
 function SubmodelPanel({
-  submodel, state, editMode, onValueChange, onSave,
+  submodel, state, editMode, onValueChange, onSave, cdMap,
 }: {
   submodel: any; state: Record<string, any>; editMode: boolean;
-  onValueChange: SubmodelFormEditorProps["onValueChange"]; onSave: () => void;
+  onValueChange: SubmodelFormEditorProps["onValueChange"]; onSave: () => void; cdMap: CDMap;
 }) {
   const children: any[] = Array.isArray(submodel.children) ? submodel.children : [];
   const total = children.reduce((s, c) => s + countLeaves(c), 0);
@@ -511,6 +547,7 @@ function SubmodelPanel({
                 editMode={editMode}
                 onValueChange={onValueChange}
                 depth={0}
+                cdMap={cdMap}
               />
             ))}
           </div>
@@ -522,7 +559,7 @@ function SubmodelPanel({
 
 /* ──────��──────────────────────────────────────────────────────────────────
    SubmodelFormEditor — main export
-───────────────────────────────────────────────────────────────────────────*/
+──────────────────────────────���────────────────────────────────────────────*/
 export default function SubmodelFormEditor({
   treeData,
   state,
@@ -531,8 +568,13 @@ export default function SubmodelFormEditor({
   onSave,
   onToggleAdvanced,
   showAdvanced,
+  conceptDescriptions,
 }: SubmodelFormEditorProps) {
   const root = treeData[0];
+
+  /* semanticId → CD description 맵 */
+  const cdMap = useMemo(() => buildCDMap(conceptDescriptions ?? []), [conceptDescriptions]);
+
   const submodels: any[] = useMemo(() => {
     if (!root) return [];
     if (root.modelType === "AssetAdministrationShell") {
@@ -661,6 +703,7 @@ export default function SubmodelFormEditor({
             editMode={editMode}
             onValueChange={onValueChange}
             onSave={onSave}
+            cdMap={cdMap}
           />
         ) : (
           <div className="flex items-center justify-center h-full text-sm text-zinc-400">
