@@ -79,12 +79,12 @@ function CopyButton({ text, size = 12 }: { text: string; size?: number }) {
 ───────────────────────────────────────────────────────────────────────────*/
 function DetailRow({ icon, label, children }: { icon?: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[140px_1fr] gap-3 py-2.5 border-b border-zinc-100 last:border-b-0 items-start">
-      <div className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-400 uppercase tracking-wide pt-0.5">
-        {icon && <span className="text-zinc-300">{icon}</span>}
+    <div className="flex flex-col gap-1.5 py-3.5 px-4 border-b border-zinc-100 last:border-b-0">
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-400">
+        {icon && <span className="text-zinc-400">{icon}</span>}
         {label}
       </div>
-      <div className="text-sm text-zinc-800 min-w-0">{children}</div>
+      <div className="text-sm text-zinc-800 leading-relaxed min-w-0">{children}</div>
     </div>
   );
 }
@@ -151,14 +151,14 @@ function CDDetailPanel({ cd, onClose }: { cd: any; onClose: () => void }) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-5 py-3">
+      <div className="flex-1 overflow-y-auto">
 
         {/* ID 섹션 */}
-        <div className="mb-4">
-          <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-2">식별자</p>
-          <div className="bg-zinc-50 rounded-lg p-3 flex flex-col gap-2">
+        <div className="px-5 py-4 border-b border-zinc-100">
+          <p className="text-xs font-semibold text-zinc-500 mb-3">식별자</p>
+          <div className="flex flex-col gap-2.5">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-[10px] font-mono text-zinc-400 shrink-0 w-12">ID</span>
+              <span className="text-[11px] text-zinc-400 shrink-0 w-14">ID</span>
               <span className="text-xs font-mono text-zinc-700 truncate flex-1 min-w-0" title={cd.id}>{cd.id}</span>
               <CopyButton text={cd.id} />
               {isIri(cd.id) && (
@@ -170,7 +170,7 @@ function CDDetailPanel({ cd, onClose }: { cd: any; onClose: () => void }) {
             </div>
             {cd.idShort && (
               <div className="flex items-center gap-2 min-w-0">
-                <span className="text-[10px] font-mono text-zinc-400 shrink-0 w-12">idShort</span>
+                <span className="text-[11px] text-zinc-400 shrink-0 w-14">idShort</span>
                 <span className="text-xs font-mono text-zinc-700">{cd.idShort}</span>
               </div>
             )}
@@ -179,9 +179,9 @@ function CDDetailPanel({ cd, onClose }: { cd: any; onClose: () => void }) {
 
         {/* 이름/설명 섹션 */}
         {(preferredName.length > 0 || shortName.length > 0 || definition.length > 0 || cd.description) && (
-          <div className="mb-4">
-            <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-2">개념 정보</p>
-            <div className="border border-zinc-100 rounded-lg overflow-hidden">
+          <div className="border-b border-zinc-100">
+            <p className="text-xs font-semibold text-zinc-500 px-5 pt-4 pb-1">개념 정보</p>
+            <div>
               {preferredName.length > 0 && (
                 <DetailRow icon={<Languages size={11} />} label="선호 이름">
                   <MultiLangBlock entries={preferredName} />
@@ -208,12 +208,12 @@ function CDDetailPanel({ cd, onClose }: { cd: any; onClose: () => void }) {
 
         {/* 데이터 속성 섹션 */}
         {(unit || unitId || dataType || levelType) && (
-          <div className="mb-4">
-            <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-2">데이터 속성</p>
-            <div className="border border-zinc-100 rounded-lg overflow-hidden">
+          <div className="border-b border-zinc-100">
+            <p className="text-xs font-semibold text-zinc-500 px-5 pt-4 pb-1">데이터 속성</p>
+            <div>
               {unit && (
                 <DetailRow icon={<Ruler size={11} />} label="단위">
-                  <span className="font-medium text-zinc-900">{unit}</span>
+                  <span className="font-semibold text-zinc-900">{unit}</span>
                 </DetailRow>
               )}
               {unitId && (
@@ -235,7 +235,7 @@ function CDDetailPanel({ cd, onClose }: { cd: any; onClose: () => void }) {
                     {Object.entries(levelType)
                       .filter(([, v]) => v)
                       .map(([k]) => (
-                        <span key={k} className="text-[10px] font-semibold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full uppercase">
+                        <span key={k} className="text-[10px] font-semibold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
                           {k}
                         </span>
                       ))}
@@ -248,11 +248,11 @@ function CDDetailPanel({ cd, onClose }: { cd: any; onClose: () => void }) {
 
         {/* Value List */}
         {valueList.length > 0 && (
-          <div className="mb-4">
-            <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-2">허용 값 목록</p>
-            <div className="border border-zinc-100 rounded-lg overflow-hidden divide-y divide-zinc-100">
+          <div className="border-b border-zinc-100">
+            <p className="text-xs font-semibold text-zinc-500 px-5 pt-4 pb-1">허용 값 목록</p>
+            <div className="divide-y divide-zinc-100 px-5 pb-2">
               {valueList.map((vp: any, i: number) => (
-                <div key={i} className="px-3 py-2 flex items-center gap-2">
+                <div key={i} className="py-2 flex items-center gap-2">
                   <ArrowRight size={11} className="text-zinc-300 shrink-0" />
                   <span className="text-xs font-mono text-zinc-700 truncate">
                     {vp?.value ?? vp?.valueId?.keys?.[0]?.value ?? JSON.stringify(vp)}
@@ -265,9 +265,9 @@ function CDDetailPanel({ cd, onClose }: { cd: any; onClose: () => void }) {
 
         {/* isCaseOf */}
         {isCaseOf.length > 0 && (
-          <div className="mb-4">
-            <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-2">표준 참조 (isCaseOf)</p>
-            <div className="flex flex-col gap-1.5">
+          <div className="border-b border-zinc-100">
+            <p className="text-xs font-semibold text-zinc-500 px-5 pt-4 pb-1">표준 참조</p>
+            <div className="flex flex-col gap-1.5 px-5 pb-3">
               {isCaseOf.map((ref: any, i: number) => {
                 const val = ref?.keys?.[0]?.value ?? "";
                 return (
@@ -287,6 +287,9 @@ function CDDetailPanel({ cd, onClose }: { cd: any; onClose: () => void }) {
             </div>
           </div>
         )}
+
+        {/* 하단 여백 */}
+        <div className="h-6" />
       </div>
     </div>
   );

@@ -1516,8 +1516,8 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       {/* ── 트리 + Details 2분할 고정 레이아웃 ── */}
                       <Tabs value={activeDetailTab} onValueChange={setActiveDetailTab}>
                         <TabsList className="mb-0">
-                          <TabsTrigger value="aasTree">AAS Tree</TabsTrigger>
-                          <TabsTrigger value="cdTree">CD Tree</TabsTrigger>
+                          <TabsTrigger value="aasTree">데이터 입력</TabsTrigger>
+                          <TabsTrigger value="cdTree">개념 사전</TabsTrigger>
                         </TabsList>
 
                         {/* AAS Tree 탭 */}
