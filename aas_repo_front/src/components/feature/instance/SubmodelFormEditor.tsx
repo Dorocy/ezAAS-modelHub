@@ -52,7 +52,8 @@ const GROUP_TYPES = new Set([
   "SubmodelElementCollection", "SubmodelElementList", "Entity",
 ]);
 
-function getDisplayLabel(idShort: string): string {
+function getDisplayLabel(idShort: string | undefined | null): string {
+  if (!idShort) return "—";
   // camelCase / PascalCase → 사람이 읽기 쉬운 이름
   return idShort
     .replace(/([A-Z])/g, " $1")
