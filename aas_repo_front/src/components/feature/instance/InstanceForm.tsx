@@ -202,6 +202,8 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
   const [activeTab, setActiveTab] = useState("templateInfo");
   const [activeDetailTab, setActiveDetailTab] = useState("aasTree");
   const [showAdvancedTree, setShowAdvancedTree] = useState(false);
+  // SubmodelFormEditor용 reactive state — treeDataRef는 ref라 렌더 트리거가 안되므로 별도 관리
+  const [formEditorState, setFormEditorState] = useState<Record<string, any>>({});
   const [modalOpen, setModalOpen] = useState(false);
   const [combinedModalOpen, setCombinedModalOpen] = useState(false);
 
@@ -368,6 +370,24 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     }
     setTreeData(convertToTreeData("aasmodel", aasmodel.aasmodel_metadata));
   }, [aasmodel]);
+
+  // treeData가 바뀌면 formEditorState를 트리의 현재 값으로 초기화
+  useEffect(() => {
+    if (!treeData) return;
+    const flat: Record<string, any> = {};
+    function extractValues(node: any) {
+      if (!node.valuePath) return;
+      if (node.modelType === "Range") {
+        if (node.min !== undefined) flat[`${node.valuePath}.min`] = node.min;
+        if (node.max !== undefined) flat[`${node.valuePath}.max`] = node.max;
+      } else if (node.originalValue !== undefined && node.originalValue !== null) {
+        flat[`${node.valuePath}.originalValue`] = node.originalValue;
+      }
+      if (Array.isArray(node.children)) node.children.forEach(extractValues);
+    }
+    treeData.forEach(extractValues);
+    setFormEditorState(flat);
+  }, [treeData]);
 
   const componentCounts = useMemo(() => (!treeData ? {} : countModelTypes(treeData)), [treeData]);
 
@@ -1585,7 +1605,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                               /* ── Form-first: SubmodelFormEditor ── */
                               <SubmodelFormEditor
                                 treeData={treeData}
-                                state={treeDataRef.current[treeData[0]?.id] ?? {}}
+                                state={formEditorState}
                                 editMode={mode !== "view"}
                                 onValueChange={(path, value, file) => {
                                   const rootId = treeData[0]?.id;
@@ -1599,6 +1619,8 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                                       treeDataRef.current[rootId][path.replace(/\.originalValue$/, ".value")] = value;
                                     }
                                   }
+                                  // reactive update so SubmodelFormEditor re-renders with new value
+                                  setFormEditorState((prev) => ({ ...prev, [path]: value }));
                                 }}
                                 onSave={handleFormEditorSave}
                                 onToggleAdvanced={() => setShowAdvancedTree(true)}

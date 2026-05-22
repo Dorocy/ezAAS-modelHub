@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useRef } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { ChevronRight, ChevronDown, CheckCircle2, Circle, AlertCircle, Eye, EyeOff, Plus, Trash2, Code2 } from "lucide-react";
+import { ChevronRight, ChevronDown, CheckCircle2, Circle, AlertCircle, Plus, Trash2, Code2 } from "lucide-react";
 
 /* ─────────────────────────────────────────────────────────────────────────
    Types
@@ -524,7 +523,7 @@ function SubmodelPanel({
   );
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
+/* ──────��──────────────────────────────────────────────────────────────────
    SubmodelFormEditor — main export
 ───────────────────────────────────────────────────────────────────────────*/
 export default function SubmodelFormEditor({
