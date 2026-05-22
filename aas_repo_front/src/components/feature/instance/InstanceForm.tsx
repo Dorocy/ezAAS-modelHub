@@ -18,6 +18,7 @@ import {
 import { addValuePaths, parsingAAS } from "@/utils/aas";
 import AASTree, { RenderObject } from "@/components/feature/model/AASTree";
 import TemplateBlueprint from "@/components/feature/instance/TemplateBlueprint";
+import SubmodelFormEditor from "@/components/feature/instance/SubmodelFormEditor";
 import { InstanceSavePayload } from "@/types/api";
 import { confirmSave } from "@/utils/modal";
 import type { AASInstance, VerifyInstanceParams } from "@/types/api";
@@ -200,6 +201,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
   const [activeStep, setActiveStep] = useState(0);
   const [activeTab, setActiveTab] = useState("templateInfo");
   const [activeDetailTab, setActiveDetailTab] = useState("aasTree");
+  const [showAdvancedTree, setShowAdvancedTree] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [combinedModalOpen, setCombinedModalOpen] = useState(false);
 
@@ -598,6 +600,20 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     const newTreeData = convertToTreeData("aasmodel", newMetadata);
     setTreeData(newTreeData);
     showToast.success(`Changes for '${node.idShort}' have been saved and applied.`);
+  };
+
+  /* Form editor의 Save 버튼 — selectedNode 없이 rootId 기반으로 저장 */
+  const handleFormEditorSave = () => {
+    const rootId = treeData?.[0]?.id;
+    if (!rootId) return;
+    const changes = treeDataRef.current[rootId];
+    if (!changes || Object.keys(changes).length === 0) { showToast.warning("No changes to save."); return; }
+    const newMetadata = _.cloneDeep((aasmodel as any).aasmodel_metadata);
+    for (const key in changes) _.set(newMetadata, key, changes[key]);
+    setAasmodel((prev) => ({ ...prev, aasmodel_metadata: newMetadata }));
+    const newTreeData = convertToTreeData("aasmodel", newMetadata);
+    setTreeData(newTreeData);
+    showToast.success("Changes saved.");
   };
 
   const handleAddElement = (parentNode: any, elementType: string, idShort: string) => {
@@ -1485,89 +1501,110 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
 
                         {/* AAS Tree 탭 */}
                         <TabsContent value="aasTree" className="mt-2">
-                          <div className="flex gap-3 h-[calc(100vh-320px)] min-h-[600px]">
-                            {/* 왼쪽: 트리 */}
-                            <div className="w-[380px] shrink-0 flex flex-col">
-                              <Card className="flex flex-col flex-1 overflow-hidden">
-                                <CardHeader className="flex-row items-center justify-between pb-2 shrink-0 px-4 py-3 border-b">
-                                  <CardTitle className="text-sm font-semibold text-primary">AAS Tree</CardTitle>
-                                  <Button size="sm" variant="outline" onClick={() => { setModalOpen(true); setModelType("submodel"); }}>
-                                    <Plus className="size-3.5 mr-1" />Submodel 추가
-                                  </Button>
-                                </CardHeader>
-                                <CardContent className="flex-1 overflow-y-auto p-2">
-                                  <AASTree
-                                    mb="sm"
-                                    data={treeData}
-                                    treeDataRefCurrent={treeDataRef.current[treeData[0].id]}
-                                    editMode={mode !== "view"}
-                                    onNodeClick={(node) => setSelectedNode({ node, rootId: treeData[0].id })}
-                                    simpleView={true}
-                                    onAdd={handleAddElement}
-                                    onDelete={handleDeleteElement}
-                                  />
-                                </CardContent>
-                              </Card>
-                            </div>
-
-                            {/* 오른쪽: Details 입력 패널 */}
-                            <div className="flex-1 min-w-0 flex flex-col">
-                              <Card className="flex flex-col flex-1 overflow-hidden">
-                                <CardHeader className="flex-row items-center justify-between shrink-0 px-4 py-3 border-b">
-                                  <div className="min-w-0">
-                                    <CardTitle className="text-sm font-semibold">
+                          <div className="h-[calc(100vh-320px)] min-h-[600px]">
+                            {showAdvancedTree ? (
+                              /* ── Advanced: 기존 트리 + Details 2분할 ── */
+                              <div className="flex gap-3 h-full">
+                                <div className="w-[380px] shrink-0 flex flex-col">
+                                  <Card className="flex flex-col flex-1 overflow-hidden">
+                                    <CardHeader className="flex-row items-center justify-between pb-2 shrink-0 px-4 py-3 border-b">
+                                      <CardTitle className="text-sm font-semibold text-primary">AAS Tree</CardTitle>
+                                      <div className="flex items-center gap-2">
+                                        <Button size="sm" variant="outline" onClick={() => { setModalOpen(true); setModelType("submodel"); }}>
+                                          <Plus className="size-3.5 mr-1" />Submodel 추가
+                                        </Button>
+                                        <Button size="sm" variant="ghost" onClick={() => setShowAdvancedTree(false)} className="text-xs text-muted-foreground">
+                                          Simple view
+                                        </Button>
+                                      </div>
+                                    </CardHeader>
+                                    <CardContent className="flex-1 overflow-y-auto p-2">
+                                      <AASTree
+                                        mb="sm"
+                                        data={treeData}
+                                        treeDataRefCurrent={treeDataRef.current[treeData[0].id]}
+                                        editMode={mode !== "view"}
+                                        onNodeClick={(node) => setSelectedNode({ node, rootId: treeData[0].id })}
+                                        simpleView={true}
+                                        onAdd={handleAddElement}
+                                        onDelete={handleDeleteElement}
+                                      />
+                                    </CardContent>
+                                  </Card>
+                                </div>
+                                <div className="flex-1 min-w-0 flex flex-col">
+                                  <Card className="flex flex-col flex-1 overflow-hidden">
+                                    <CardHeader className="flex-row items-center justify-between shrink-0 px-4 py-3 border-b">
+                                      <div className="min-w-0">
+                                        <CardTitle className="text-sm font-semibold">
+                                          {selectedNode ? (
+                                            <span className="flex items-center gap-2">
+                                              <span>Details</span>
+                                              <Badge variant="secondary" className="font-mono text-xs font-normal truncate max-w-[260px]">
+                                                {selectedNode.node.idShort}
+                                              </Badge>
+                                            </span>
+                                          ) : "Details"}
+                                        </CardTitle>
+                                        {!selectedNode && (
+                                          <p className="text-xs text-muted-foreground mt-0.5">
+                                            왼쪽 트리에서 항목을 클릭하면 여기서 값을 입력할 수 있습니다.
+                                          </p>
+                                        )}
+                                      </div>
+                                      {selectedNode && (
+                                        <div className="flex gap-2 shrink-0">
+                                          <Button size="sm" onClick={handleDetailSave}>저장</Button>
+                                          <Button size="sm" variant="destructive" onClick={handleDelete}
+                                            disabled={selectedNode.node.modelType !== "Submodel"}>
+                                            삭제
+                                          </Button>
+                                        </div>
+                                      )}
+                                    </CardHeader>
+                                    <CardContent className="flex-1 overflow-y-auto p-4 aas-details-panel">
                                       {selectedNode ? (
-                                        <span className="flex items-center gap-2">
-                                          <span>Details</span>
-                                          <Badge variant="secondary" className="font-mono text-xs font-normal truncate max-w-[260px]">
-                                            {selectedNode.node.idShort}
-                                          </Badge>
-                                        </span>
-                                      ) : "Details"}
-                                    </CardTitle>
-                                    {!selectedNode && (
-                                      <p className="text-xs text-muted-foreground mt-0.5">
-                                        왼쪽 트리에서 항목을 클릭하면 여기서 값을 입력할 수 있습니다.
-                                      </p>
-                                    )}
-                                  </div>
-                                  {selectedNode && (
-                                    <div className="flex gap-2 shrink-0">
-                                      <Button size="sm" onClick={handleDetailSave}>저장</Button>
-                                      <Button size="sm" variant="destructive" onClick={handleDelete}
-                                        disabled={selectedNode.node.modelType !== "Submodel"}>
-                                        삭제
-                                      </Button>
-                                    </div>
-                                  )}
-                                </CardHeader>
-                                <CardContent className="flex-1 overflow-y-auto p-4 aas-details-panel">
-                                  {selectedNode ? (
-                                    <RenderObject
-                                      obj={selectedNode.node}
-                                      state={treeDataRef.current[selectedNode.rootId] ?? {}}
-                                      onValueChange={handleDetailChange}
-                                      editMode={mode !== "view"}
-                                      isInstance={!!instance}
-                                      instanceSeq={instance?.instance_seq}
-                                    />
-                                  ) : (
-                                    <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
-                                      <div className="w-12 h-12 rounded-xl bg-muted/60 flex items-center justify-center">
-                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-40">
-                                          <path d="M9 12h6M9 16h4M7 4H4a1 1 0 00-1 1v14a1 1 0 001 1h16a1 1 0 001-1V9l-5-5H7z" strokeLinecap="round" strokeLinejoin="round"/>
-                                          <path d="M14 4v5h5" strokeLinecap="round" strokeLinejoin="round"/>
-                                        </svg>
-                                      </div>
-                                      <div className="text-center">
-                                        <p className="text-sm font-medium">항목을 선택하세요</p>
-                                        <p className="text-xs mt-1">왼쪽 트리에서 항목을 클릭하면 여기서 값을 입력할 수 있습니다.</p>
-                                      </div>
-                                    </div>
-                                  )}
-                                </CardContent>
-                              </Card>
-                            </div>
+                                        <RenderObject
+                                          obj={selectedNode.node}
+                                          state={treeDataRef.current[selectedNode.rootId] ?? {}}
+                                          onValueChange={handleDetailChange}
+                                          editMode={mode !== "view"}
+                                          isInstance={!!instance}
+                                          instanceSeq={instance?.instance_seq}
+                                        />
+                                      ) : (
+                                        <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
+                                          <p className="text-sm font-medium">항목을 선택하세요</p>
+                                        </div>
+                                      )}
+                                    </CardContent>
+                                  </Card>
+                                </div>
+                              </div>
+                            ) : (
+                              /* ── Form-first: SubmodelFormEditor ── */
+                              <SubmodelFormEditor
+                                treeData={treeData}
+                                state={treeDataRef.current[treeData[0]?.id] ?? {}}
+                                editMode={mode !== "view"}
+                                onValueChange={(path, value, file) => {
+                                  const rootId = treeData[0]?.id;
+                                  if (!treeDataRef.current[rootId]) treeDataRef.current[rootId] = {};
+                                  if (file) {
+                                    treeDataRef.current[rootId][path] = file;
+                                    treeDataRef.current[rootId][`${path.substring(0, path.lastIndexOf("."))}.value`] = value;
+                                  } else {
+                                    treeDataRef.current[rootId][path] = value;
+                                    if (path.endsWith(".originalValue")) {
+                                      treeDataRef.current[rootId][path.replace(/\.originalValue$/, ".value")] = value;
+                                    }
+                                  }
+                                }}
+                                onSave={handleFormEditorSave}
+                                onToggleAdvanced={() => setShowAdvancedTree(true)}
+                                showAdvanced={showAdvancedTree}
+                              />
+                            )}
                           </div>
                         </TabsContent>
 
