@@ -19,6 +19,7 @@ import { addValuePaths, parsingAAS } from "@/utils/aas";
 import AASTree, { RenderObject } from "@/components/feature/model/AASTree";
 import TemplateBlueprint from "@/components/feature/instance/TemplateBlueprint";
 import SubmodelFormEditor from "@/components/feature/instance/SubmodelFormEditor";
+import ConceptDescriptionPanel from "@/components/feature/instance/ConceptDescriptionPanel";
 import { InstanceSavePayload } from "@/types/api";
 import { confirmSave } from "@/utils/modal";
 import type { AASInstance, VerifyInstanceParams } from "@/types/api";
@@ -1221,7 +1222,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
               </div>
             </div>
 
-            {/* 템플릿 목록 */}
+            {/* ���플릿 목록 */}
             <div className="flex flex-col flex-1 min-h-0">
               <div className="px-3 py-2 shrink-0 flex items-center justify-between border-b bg-muted/10">
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
@@ -1633,91 +1634,13 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
 
                         {/* CD Tree 탭 */}
                         <TabsContent value="cdTree" className="mt-2">
-                          <div className="flex gap-3 h-[calc(100vh-320px)] min-h-[600px]">
-                            <div className="w-[380px] shrink-0 flex flex-col">
-                              <Card className="flex flex-col flex-1 overflow-hidden">
-                                <CardHeader className="flex-row items-center justify-between pb-2 shrink-0 px-4 py-3 border-b">
-                                  <CardTitle className="text-sm font-semibold text-primary">CD Tree</CardTitle>
-                                  {mode !== "view" && (
-                                    <Button size="sm" variant="outline" onClick={() => handleAddConceptDescription(null, "ConceptDescription", "NewConceptDescription")}>
-                                      <Plus className="size-3.5 mr-1" />CD 추가
-                                    </Button>
-                                  )}
-                                </CardHeader>
-                                <CardContent className="flex-1 overflow-y-auto p-2">
-                                  {Array.isArray(conceptDescriptionTreeData) && (
-                                    <AASTree
-                                      mb="sm"
-                                      data={conceptDescriptionTreeData}
-                                      editMode={mode !== "view"}
-                                      simpleView={true}
-                                      onNodeClick={(node) => {
-                                        if (node.modelType !== "ConceptDescriptions") setSelectedCDNode(node);
-                                        else setSelectedCDNode(null);
-                                      }}
-                                      onAdd={handleAddConceptDescription}
-                                      onDelete={handleDeleteConceptDescription}
-                                    />
-                                  )}
-                                </CardContent>
-                              </Card>
-                            </div>
-
-                            <div className="flex-1 min-w-0 flex flex-col">
-                              <Card className="flex flex-col flex-1 overflow-hidden">
-                                <CardHeader className="flex-row items-center justify-between shrink-0 px-4 py-3 border-b">
-                                  <div className="min-w-0">
-                                    <CardTitle className="text-sm font-semibold">
-                                      {selectedCDNode ? (
-                                        <span className="flex items-center gap-2">
-                                          <span>Details</span>
-                                          <Badge variant="secondary" className="font-mono text-xs font-normal truncate max-w-[260px]">
-                                            {selectedCDNode.idShort}
-                                          </Badge>
-                                        </span>
-                                      ) : "Details"}
-                                    </CardTitle>
-                                    {!selectedCDNode && (
-                                      <p className="text-xs text-muted-foreground mt-0.5">
-                                        왼쪽 트리에서 항목을 클릭하면 여기서 값을 입력할 수 있습니다.
-                                      </p>
-                                    )}
-                                  </div>
-                                  {selectedCDNode && (
-                                    <Button size="sm" onClick={handleCDDetailSave}>저장</Button>
-                                  )}
-                                </CardHeader>
-                                <CardContent className="flex-1 overflow-y-auto p-4 aas-details-panel">
-                                  {selectedCDNode ? (
-                                    <RenderObject
-                                      obj={{ idShort: selectedCDNode.idShort, id: selectedCDNode.id, description: selectedCDNode.description }}
-                                      state={treeDataRef.current["conceptDescriptions"] ?? {}}
-                                      onValueChange={(path, value) => {
-                                        if (!treeDataRef.current["conceptDescriptions"]) treeDataRef.current["conceptDescriptions"] = {};
-                                        const cdIndex = ((aasmodel as any).aasmodel_metadata?.conceptDescriptions || []).findIndex((cd: any) => cd.id === selectedCDNode.id);
-                                        if (cdIndex === -1) return;
-                                        treeDataRef.current["conceptDescriptions"][`[${cdIndex}].${path}`] = value;
-                                        setSelectedCDNode((prev: any) => prev ? { ...prev } : null);
-                                      }}
-                                      editMode={mode !== "view"}
-                                    />
-                                  ) : (
-                                    <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
-                                      <div className="w-12 h-12 rounded-xl bg-muted/60 flex items-center justify-center">
-                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-40">
-                                          <path d="M9 12h6M9 16h4M7 4H4a1 1 0 00-1 1v14a1 1 0 001 1h16a1 1 0 001-1V9l-5-5H7z" strokeLinecap="round" strokeLinejoin="round"/>
-                                          <path d="M14 4v5h5" strokeLinecap="round" strokeLinejoin="round"/>
-                                        </svg>
-                                      </div>
-                                      <div className="text-center">
-                                        <p className="text-sm font-medium">항목을 선택하세요</p>
-                                        <p className="text-xs mt-1">왼쪽 트리에서 항목을 클릭하면 여기서 값을 입력할 수 있습니다.</p>
-                                      </div>
-                                    </div>
-                                  )}
-                                </CardContent>
-                              </Card>
-                            </div>
+                          <div className="h-[calc(100vh-320px)] min-h-[600px] border border-zinc-200 rounded-xl overflow-hidden bg-white">
+                            <ConceptDescriptionPanel
+                              conceptDescriptionTreeData={conceptDescriptionTreeData}
+                              editMode={mode !== "view"}
+                              onAdd={() => handleAddConceptDescription(null, "ConceptDescription", "NewConceptDescription")}
+                              onDelete={handleDeleteConceptDescription}
+                            />
                           </div>
                         </TabsContent>
                       </Tabs>
