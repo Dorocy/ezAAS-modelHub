@@ -1,14 +1,15 @@
 import { getPublishedCount } from "@/api";
 import AASSearchBar from "@/components/feature/app/AASSearchBar";
+import VideoEmbed from "@/components/feature/app/VideoEmbed";
 import Link from "next/link";
 import {
   LayoutTemplate,
   Puzzle,
   Layers,
   ArrowRight,
-  Cpu,
   FileStack,
   Activity,
+  Cpu,
 } from "lucide-react";
 
 export const metadata = { title: "KETI ezAAS Model Hub" };
@@ -35,16 +36,14 @@ export default async function Home() {
       {/* ─── Hero ────────────────────────────────────────────────── */}
       <section className="border-b border-border bg-white">
         <div className="mx-auto max-w-screen-xl px-6 lg:px-10 py-14 lg:py-20">
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-10">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-10 lg:gap-14">
 
-            {/* 왼쪽: 제목 + 설명 + CTA */}
-            <div className="flex flex-col gap-6 max-w-xl">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-semibold text-blue-600 tracking-wide">
-                  <span className="size-1.5 rounded-full bg-blue-500 animate-pulse" />
-                  IEC 63278 · AAS Part 1&amp;2 준수
-                </span>
-              </div>
+            {/* 왼쪽: 제목 + 설명 + stat + CTA */}
+            <div className="flex flex-col gap-6 lg:w-[44%] shrink-0">
+              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-semibold text-blue-600 tracking-wide">
+                <span className="size-1.5 rounded-full bg-blue-500 animate-pulse" />
+                IEC 63278 · AAS Part 1&amp;2 준수
+              </span>
 
               <div>
                 <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-zinc-900 leading-[1.12]">
@@ -53,9 +52,29 @@ export default async function Home() {
                   <span className="text-blue-600">Shell</span> Model Hub
                 </h1>
                 <p className="mt-4 text-base text-zinc-500 leading-relaxed">
-                  AAS 템플릿과 서브모델을 중앙에서 관리하고,<br className="hidden lg:block" />
+                  AAS 템플릿과 서브모델을 중앙에서 관리하고,
                   노코드 방식으로 디지털 트윈 인스턴스를 생성합니다.
                 </p>
+              </div>
+
+              {/* stat 숫자 */}
+              <div className="flex gap-px rounded-xl overflow-hidden border border-zinc-200 w-fit">
+                {[
+                  { label: "AAS 템플릿",     value: aasCount,  href: "/aas" },
+                  { label: "서브모델 템플릿", value: smCount,   href: "/submodel" },
+                  { label: "인스턴스",        value: insCount,  href: "/instance" },
+                ].map((s, i) => (
+                  <Link
+                    key={i}
+                    href={s.href}
+                    className="group flex flex-col items-center gap-0.5 px-5 py-3.5 bg-white hover:bg-zinc-50 transition-colors"
+                  >
+                    <span className="text-2xl font-bold tabular-nums text-zinc-900 group-hover:text-blue-600 transition-colors">
+                      {s.value.toLocaleString()}
+                    </span>
+                    <span className="text-[10px] font-medium text-zinc-400 whitespace-nowrap">{s.label}</span>
+                  </Link>
+                ))}
               </div>
 
               <div className="flex items-center gap-3 flex-wrap">
@@ -65,35 +84,18 @@ export default async function Home() {
                 >
                   템플릿 탐색 <ArrowRight className="size-4" />
                 </Link>
-                <a
-                  href="https://www.youtube.com/embed/n4IDBR2C1CY"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  href="/instance/create"
                   className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-5 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors"
                 >
-                  소개 영상 <Cpu className="size-4" />
-                </a>
+                  인스턴스 만들기
+                </Link>
               </div>
             </div>
 
-            {/* 오른쪽: stat 숫자 3개 */}
-            <div className="flex gap-px rounded-2xl overflow-hidden border border-zinc-200 shrink-0 self-start lg:self-auto">
-              {[
-                { label: "AAS 템플릿",     value: aasCount,  href: "/aas" },
-                { label: "서브모델 템플릿", value: smCount,   href: "/submodel" },
-                { label: "AAS 인스턴스",   value: insCount,  href: "/instance" },
-              ].map((s, i) => (
-                <Link
-                  key={i}
-                  href={s.href}
-                  className="group flex flex-col items-center gap-1 px-8 py-6 bg-white hover:bg-zinc-50 transition-colors min-w-[100px] lg:min-w-[120px]"
-                >
-                  <span className="text-3xl lg:text-4xl font-bold tabular-nums text-zinc-900 group-hover:text-blue-600 transition-colors">
-                    {s.value.toLocaleString()}
-                  </span>
-                  <span className="text-[11px] font-medium text-zinc-400 whitespace-nowrap">{s.label}</span>
-                </Link>
-              ))}
+            {/* 오른쪽: 소개 영상 */}
+            <div className="flex-1 min-w-0">
+              <VideoEmbed src="https://www.youtube.com/embed/n4IDBR2C1CY" />
             </div>
           </div>
         </div>
