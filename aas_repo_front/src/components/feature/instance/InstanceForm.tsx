@@ -1514,21 +1514,23 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       </Card>
 
                       {/* ── 탭 + 콘텐츠 ── */}
-                      <Tabs value={activeDetailTab} onValueChange={setActiveDetailTab}>
-                        <TabsList className="w-full justify-start rounded-none border-b bg-transparent px-0 h-10">
-                          <TabsTrigger
-                            value="aasTree"
-                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 text-sm font-medium"
-                          >
-                            데이터 입력
-                          </TabsTrigger>
-                          <TabsTrigger
-                            value="cdTree"
-                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 text-sm font-medium"
-                          >
-                            개념 사전
-                          </TabsTrigger>
-                        </TabsList>
+                      <Tabs value={activeDetailTab} onValueChange={setActiveDetailTab} className="flex flex-col w-full">
+                        <div className="border-b border-border">
+                          <TabsList className="h-10 bg-transparent p-0 gap-0 rounded-none">
+                            <TabsTrigger
+                              value="aasTree"
+                              className="h-10 rounded-none px-5 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                            >
+                              데이터 입력
+                            </TabsTrigger>
+                            <TabsTrigger
+                              value="cdTree"
+                              className="h-10 rounded-none px-5 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                            >
+                              개념 사전
+                            </TabsTrigger>
+                          </TabsList>
+                        </div>
 
                         {/* AAS Tree 탭 */}
                         <TabsContent value="aasTree" className="mt-0">
