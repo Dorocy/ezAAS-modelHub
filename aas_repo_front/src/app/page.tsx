@@ -108,114 +108,134 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ─── 3개 섹션 카드 ───────────────────────────────────────── */}
-      <section className="mx-auto max-w-screen-xl px-6 lg:px-10 py-10 lg:py-14">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-
-          {/* AAS 템플릿 */}
-          <Link
-            href="/aas"
-            className="group relative flex flex-col gap-5 rounded-2xl border border-zinc-200 bg-white p-6 hover:border-zinc-300 hover:shadow-md transition-all overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="relative flex items-center justify-between">
-              <div className="flex size-11 items-center justify-center rounded-xl bg-blue-100">
-                <LayoutTemplate className="size-5 text-blue-600" />
-              </div>
-              <span className="text-xs font-semibold tabular-nums text-zinc-400">{aasCount.toLocaleString()}개</span>
-            </div>
-            <div className="relative flex flex-col gap-1.5">
-              <h2 className="text-base font-bold text-zinc-900">AAS 템플릿</h2>
-              <p className="text-sm text-zinc-500 leading-relaxed">
-                Asset Administration Shell 구조를 정의하는 표준 템플릿입니다. 서브모델과 개념 설명이 포함됩니다.
-              </p>
-            </div>
-            <div className="relative flex items-center gap-1 text-xs font-semibold text-blue-600 group-hover:gap-2 transition-all">
-              탐색하기 <ArrowRight className="size-3.5" />
-            </div>
-          </Link>
-
-          {/* 서브모델 템플릿 */}
-          <Link
-            href="/submodel"
-            className="group relative flex flex-col gap-5 rounded-2xl border border-zinc-200 bg-white p-6 hover:border-zinc-300 hover:shadow-md transition-all overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-50/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="relative flex items-center justify-between">
-              <div className="flex size-11 items-center justify-center rounded-xl bg-purple-100">
-                <Puzzle className="size-5 text-purple-600" />
-              </div>
-              <span className="text-xs font-semibold tabular-nums text-zinc-400">{smCount.toLocaleString()}개</span>
-            </div>
-            <div className="relative flex flex-col gap-1.5">
-              <h2 className="text-base font-bold text-zinc-900">서브모델 템플릿</h2>
-              <p className="text-sm text-zinc-500 leading-relaxed">
-                재사용 가능한 서브모델 구조를 탐색하고 AAS 템플릿에 조합해 활용합니다.
-              </p>
-            </div>
-            <div className="relative flex items-center gap-1 text-xs font-semibold text-purple-600 group-hover:gap-2 transition-all">
-              탐색하기 <ArrowRight className="size-3.5" />
-            </div>
-          </Link>
-
-          {/* AAS 인스턴스 */}
-          <Link
-            href="/instance"
-            className="group relative flex flex-col gap-5 rounded-2xl border border-zinc-200 bg-white p-6 hover:border-zinc-300 hover:shadow-md transition-all overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="relative flex items-center justify-between">
-              <div className="flex size-11 items-center justify-center rounded-xl bg-emerald-100">
-                <Layers className="size-5 text-emerald-600" />
-              </div>
-              <span className="text-xs font-semibold tabular-nums text-zinc-400">{insCount.toLocaleString()}개</span>
-            </div>
-            <div className="relative flex flex-col gap-1.5">
-              <h2 className="text-base font-bold text-zinc-900">AAS 인스턴스</h2>
-              <p className="text-sm text-zinc-500 leading-relaxed">
-                실제 자산에 대한 AAS 인스턴스를 생성하고 값을 입력해 디지털 트윈을 완성합니다.
-              </p>
-            </div>
-            <div className="relative flex items-center gap-1 text-xs font-semibold text-emerald-600 group-hover:gap-2 transition-all">
-              관리하기 <ArrowRight className="size-3.5" />
-            </div>
-          </Link>
+      {/* ─── 섹션 네비게이션 ─────────────────────────────────────── */}
+      <section className="mx-auto max-w-screen-xl px-6 lg:px-10 py-12 lg:py-16">
+        <div className="mb-8">
+          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-2">시작하기</p>
+          <h2 className="text-2xl lg:text-3xl font-bold text-zinc-900">무엇을 하고 싶으신가요?</h2>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-zinc-200 border border-zinc-200 rounded-2xl overflow-hidden bg-white">
+          {[
+            {
+              num: "01",
+              href: "/aas",
+              icon: LayoutTemplate,
+              title: "AAS 템플릿 탐색",
+              desc: "Asset Administration Shell의 전체 구조를 정의합니다. 서브모델·개념 사전이 포함된 표준 기반 템플릿을 탐색하세요.",
+              count: aasCount,
+              countLabel: "개 템플릿",
+              cta: "탐색하기",
+              accent: "group-hover:text-blue-600",
+              bg: "group-hover:bg-blue-50/40",
+              dot: "bg-blue-500",
+            },
+            {
+              num: "02",
+              href: "/submodel",
+              icon: Puzzle,
+              title: "서브모델 탐색",
+              desc: "재사용 가능한 서브모델 블록을 탐색하고 AAS 템플릿에 조합해 나만의 구조를 만드세요.",
+              count: smCount,
+              countLabel: "개 서브모델",
+              cta: "탐색하기",
+              accent: "group-hover:text-indigo-600",
+              bg: "group-hover:bg-indigo-50/40",
+              dot: "bg-indigo-500",
+            },
+            {
+              num: "03",
+              href: "/instance/create",
+              icon: Layers,
+              title: "인스턴스 생성",
+              desc: "템플릿을 골라 필드를 채우기만 하면 완성됩니다. 코드 없이 실제 자산의 디지털 트윈을 만드세요.",
+              count: insCount,
+              countLabel: "개 인스턴스",
+              cta: "만들기",
+              accent: "group-hover:text-emerald-600",
+              bg: "group-hover:bg-emerald-50/40",
+              dot: "bg-emerald-500",
+            },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.num}
+                href={item.href}
+                className={`group flex flex-col gap-6 p-8 transition-colors ${item.bg}`}
+              >
+                <div className="flex items-start justify-between">
+                  <span className="text-[11px] font-mono font-bold text-zinc-300">{item.num}</span>
+                  <Icon className={`size-5 text-zinc-300 transition-colors ${item.accent}`} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <h3 className={`text-lg font-bold text-zinc-900 transition-colors ${item.accent}`}>{item.title}</h3>
+                  <p className="text-sm text-zinc-500 leading-relaxed">{item.desc}</p>
+                </div>
+                <div className="flex items-end justify-between mt-auto pt-2 border-t border-zinc-100">
+                  <span className="flex items-center gap-1.5 text-xs text-zinc-400">
+                    <span className={`size-1.5 rounded-full ${item.dot}`} />
+                    {item.count.toLocaleString()}{item.countLabel}
+                  </span>
+                  <span className={`flex items-center gap-1 text-xs font-semibold text-zinc-400 transition-all ${item.accent} group-hover:gap-2`}>
+                    {item.cta} <ArrowRight className="size-3" />
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
-      {/* ─── 플랫폼 특징 ─────────────────────────────────────────── */}
-      <section className="border-t border-border bg-zinc-50/60">
-        <div className="mx-auto max-w-screen-xl px-6 lg:px-10 py-10 lg:py-14">
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+      {/* ─── 짙은 배경 특징 섹션 ────────────────────────────────── */}
+      <section className="bg-zinc-900">
+        <div className="mx-auto max-w-screen-xl px-6 lg:px-10 py-14 lg:py-20">
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 mb-12">
+            <div>
+              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-2">플랫폼 특징</p>
+              <h2 className="text-2xl lg:text-3xl font-bold text-white">
+                디지털 트윈 구축을<br />더 쉽게
+              </h2>
+            </div>
+            <p className="text-sm text-zinc-400 leading-relaxed max-w-sm">
+              복잡한 AAS 표준 구조를 누구나 쉽게 다룰 수 있도록 설계된 플랫폼입니다.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-px bg-zinc-700/50 rounded-2xl overflow-hidden">
             {[
               {
                 icon: FileStack,
-                color: "text-blue-500 bg-blue-50",
                 title: "표준 기반 템플릿",
                 body: "IEC 63278 AAS 표준을 준수하는 템플릿을 제공합니다. 자산 유형별로 분류되어 빠르게 원하는 구조를 찾을 수 있습니다.",
+                tag: "IEC 63278",
               },
               {
                 icon: Activity,
-                color: "text-emerald-500 bg-emerald-50",
                 title: "노코드 인스턴스 생성",
-                body: "템플릿을 선택하고 필드를 채우기만 하면 완성된 AAS 인스턴스가 만들어집니다. 코드 없이 디지털 트윈을 구성하세요.",
+                body: "템플릿을 선택하고 필드를 채우기만 하면 완성된 AAS 인스턴스가 만들어집니다. 개념 사전으로 각 필드를 바로 이해하세요.",
+                tag: "No-Code",
               },
               {
                 icon: Cpu,
-                color: "text-purple-500 bg-purple-50",
                 title: "REST API 연동",
                 body: "생성된 인스턴스는 REST API로 외부 시스템과 자유롭게 연동할 수 있습니다. 표준 포맷으로 데이터를 주고받습니다.",
+                tag: "REST API",
               },
             ].map((f, i) => {
               const Icon = f.icon;
               return (
-                <div key={i} className="flex gap-4 rounded-2xl bg-white border border-zinc-200 p-6">
-                  <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${f.color}`}>
-                    <Icon className="size-4" />
+                <div key={i} className="flex flex-col gap-6 bg-zinc-800/60 p-8">
+                  <div className="flex items-center justify-between">
+                    <div className="flex size-10 items-center justify-center rounded-xl bg-zinc-700">
+                      <Icon className="size-4 text-zinc-300" />
+                    </div>
+                    <span className="text-[10px] font-mono font-semibold text-zinc-500 border border-zinc-700 px-2 py-0.5 rounded-full">
+                      {f.tag}
+                    </span>
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <p className="text-sm font-semibold text-zinc-900">{f.title}</p>
-                    <p className="text-sm text-zinc-500 leading-relaxed">{f.body}</p>
+                  <div className="flex flex-col gap-2">
+                    <p className="text-sm font-bold text-white">{f.title}</p>
+                    <p className="text-sm text-zinc-400 leading-relaxed">{f.body}</p>
                   </div>
                 </div>
               );
