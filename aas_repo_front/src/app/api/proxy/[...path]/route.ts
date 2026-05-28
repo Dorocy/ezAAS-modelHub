@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND =
+const BACKEND = (
+  process.env.AAS_API_BASE ||
   process.env.NEXT_PUBLIC_AAS_API_BASE_SERVER ||
   process.env.NEXT_PUBLIC_AAS_API_BASE ||
-  "";
+  ""
+).trim();
 
 async function handler(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   if (!BACKEND) {
