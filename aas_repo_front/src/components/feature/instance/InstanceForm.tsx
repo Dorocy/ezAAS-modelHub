@@ -842,22 +842,15 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
   const originalForm = (() => {
     const submodels = treeData?.[0]?.children?.filter((c: any) => c.modelType === "Submodel") ?? [];
 
-    const smColors = ["bg-blue-500","bg-indigo-500","bg-violet-500","bg-cyan-500","bg-teal-500","bg-emerald-500"];
-    const smBgLight = ["bg-blue-50","bg-indigo-50","bg-violet-50","bg-cyan-50","bg-teal-50","bg-emerald-50"];
-    const smTextColor = ["text-blue-700","text-indigo-700","text-violet-700","text-cyan-700","text-teal-700","text-emerald-700"];
-
-    const smMeta: Record<string, { label: string; desc: string }> = {
-      Nameplate:             { label: "명판 정보",   desc: "제조사, 제품명, 시리얼 번호 등 자산의 기본 신원 정보" },
-      TechnicalData:         { label: "기술 데이터", desc: "기술 사양, 성능 파라미터, 정격값 등 엔지니어링 데이터" },
-      HandoverDocumentation: { label: "인도 문서",   desc: "운영 매뉴얼, 안전 지침, 시험 성적서 등 인도 문서" },
-      CarbonFootprint:       { label: "탄소 발자국", desc: "생산·운송·사용 단계별 탄소 배출량 및 환경 영향 데이터" },
-      ContactInformation:    { label: "연락처",      desc: "제조사, 공급사, 유지보수 담당자 연락처 정보" },
-      Documentation:         { label: "문서",        desc: "기술 문서, 인증서, 도면 등 관련 문서" },
-      Identification:        { label: "식별 정보",   desc: "고유 식별자, 배치 번호, 추적 코드 등 식별 데이터" },
-    };
-    const getSmMeta = (idShort: string) => {
-      const key = Object.keys(smMeta).find(k => idShort?.includes(k));
-      return key ? smMeta[key] : null;
+    // 서브모델 description 배열에서 텍스트 추출 (한국어 우선, 없으면 영어, 없으면 첫번째)
+    const getSmDescription = (sm: any): string => {
+      if (!Array.isArray(sm.description) || sm.description.length === 0) return "";
+      return (
+        sm.description.find((d: any) => d.language === "ko")?.text ||
+        sm.description.find((d: any) => d.language === "en")?.text ||
+        sm.description[0]?.text ||
+        ""
+      );
     };
 
     const collectProps = (nodes: any[]): any[] => {
@@ -893,7 +886,6 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
       ? new Intl.DateTimeFormat("ko-KR").format(new Date(instance.create_date)) : null;
 
     const totalMissing = totalProps - totalFilled;
-    const accentColors = ["bg-blue-500","bg-violet-500","bg-cyan-500","bg-teal-500","bg-emerald-500","bg-indigo-500"];
 
     return (
       <div key={mode === "view" ? instance?.instance_seq : "create-preview"} className="flex flex-col gap-4">
@@ -940,14 +932,11 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
           <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
             <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
             <p className="text-sm text-amber-700">
-              <span className="font-semibold">{totalMissing}개 항목</span>이 아직 입력되지 않았습니다.
-              {submodels.filter((sm: any) => {
-                const p = collectProps(sm.children ?? []);
-                return p.some((x: any) => !resolveValue(x));
-              }).map((sm: any) => {
-                const meta = getSmMeta(sm.idShort);
-                return meta?.label ?? sm.idShort;
-              }).join(", ")} 서브모델을 확인하세요.
+              <span className="font-semibold">{totalMissing}개 항목</span>이 아직 입력되지 않았습니다.{" "}
+              {submodels
+                .filter((sm: any) => collectProps(sm.children ?? []).some((x: any) => !resolveValue(x)))
+                .map((sm: any) => sm.idShort)
+                .join(", ")} 서브모델을 확인하세요.
             </p>
           </div>
         )}
@@ -955,13 +944,11 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         {/* ── 서브모델 accordion ── */}
         <Accordion type="multiple" defaultValue={submodels.map((_: any, i: number) => `sm-${i}`)}>
           {submodels.map((sm: any, si: number) => {
-            const meta       = getSmMeta(sm.idShort);
-            const smDesc     = (Array.isArray(sm.description) && (sm.description.find((d: any) => d.language === "en")?.text || sm.description[0]?.text)) || meta?.desc || "";
+            const smDesc     = getSmDescription(sm);
             const props      = collectProps(sm.children ?? []);
             const filled     = props.filter(p => resolveValue(p)).length;
             const missing    = props.length - filled;
             const isComplete = missing === 0;
-            const accent     = accentColors[si % accentColors.length];
 
             // 그룹(Collection) 단위 또는 flat props
             const groups: { label: string | null; items: any[] }[] = [];
@@ -978,31 +965,23 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
 
             return (
               <AccordionItem key={si} value={`sm-${si}`} className="border border-zinc-200 rounded-lg overflow-hidden mb-2 last:mb-0">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-zinc-50 [&[data-state=open]]:bg-zinc-50 group">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-zinc-50 [&[data-state=open]]:bg-zinc-50">
                   <div className="flex items-center justify-between gap-3 w-full pr-2">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {/* 색상 도트 */}
-                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${accent}`} />
-                      <div className="min-w-0 text-left">
-                        <p className="text-sm font-semibold text-zinc-800 leading-none">{meta?.label ?? sm.idShort}</p>
-                        {smDesc && <p className="text-[11px] text-zinc-400 mt-1 leading-snug line-clamp-1">{smDesc}</p>}
-                      </div>
+                    <div className="min-w-0 text-left">
+                      <p className="text-sm font-semibold text-zinc-800 leading-none">{sm.idShort}</p>
+                      {smDesc && <p className="text-[11px] text-zinc-400 mt-1 leading-snug line-clamp-1">{smDesc}</p>}
                     </div>
-                    {/* 상태 배지 */}
+                    {/* 완료 / 미완료 배지 */}
                     <div className="shrink-0 flex items-center gap-2">
+                      <span className="text-[11px] text-zinc-400">{filled}/{props.length}</span>
                       {isComplete ? (
-                        <span className="text-[11px] font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2.5 py-0.5">
-                          완료 {props.length}개
+                        <span className="text-[11px] font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full px-2.5 py-0.5">
+                          완료
                         </span>
                       ) : (
-                        <>
-                          <span className="text-[11px] font-medium text-zinc-500 bg-zinc-100 rounded-full px-2.5 py-0.5">
-                            {filled}/{props.length}
-                          </span>
-                          <span className="text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
-                            {missing}개 미입력
-                          </span>
-                        </>
+                        <span className="text-[11px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded-full px-2.5 py-0.5">
+                          미완료
+                        </span>
                       )}
                     </div>
                   </div>
