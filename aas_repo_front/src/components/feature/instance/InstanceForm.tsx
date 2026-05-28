@@ -116,11 +116,31 @@ const initialState = { aasmodel: { aasmodel: "", aasmodel_metadata: {} } };
 
 /* ─────────────────────── Stepper component ─────────────────────── */
 const STEPS = [
-  { label: "기본정보 입력", desc: "Basic Information" },
-  { label: "세부 설정", desc: "Detailed Settings" },
-  { label: "미리보기", desc: "Preview" },
-  { label: "검증", desc: "Validation" },
-  { label: "완료", desc: "Complete" },
+  {
+    label: "기본 정보",
+    desc: "인스턴스 이름과 설명을 입력합니다.",
+    hint: "AAS 인스턴스를 구분할 이름과 간단한 설명을 입력하세요. 이름은 필수 항목입니다.",
+  },
+  {
+    label: "데이터 입력",
+    desc: "템플릿을 선택하고 값을 입력합니다.",
+    hint: "AAS 템플릿을 선택한 뒤 각 서브모델의 프로퍼티 값을 입력하세요. 서브모델별로 폼이 구성됩니다.",
+  },
+  {
+    label: "미리보기",
+    desc: "입력한 데이터를 확인합니다.",
+    hint: "지금까지 입력한 데이터를 서브모델별로 확인하세요. 미입력 항목이 표시되며, 이전 단계로 돌아가 수정할 수 있습니다.",
+  },
+  {
+    label: "검증",
+    desc: "AAS 구조와 데이터를 검증합니다.",
+    hint: "검증 실행 버튼을 눌러 AAS 데이터의 유효성을 확인하세요. 검증에 실패해도 저장은 가능합니다.",
+  },
+  {
+    label: "저장",
+    desc: "인스턴스를 저장하고 완료합니다.",
+    hint: "모든 설정이 완료됐습니다. 아래 저장 버튼을 눌러 AAS 인스턴스를 생성하세요.",
+  },
 ];
 
 function StepIndicator({
@@ -131,7 +151,7 @@ function StepIndicator({
   onStepClick: (i: number) => void;
 }) {
   return (
-    <div className="flex items-center gap-0 overflow-x-auto pb-1">
+    <div className="flex items-center overflow-x-auto">
       {STEPS.map((step, i) => {
         const done = i < active;
         const current = i === active;
@@ -140,40 +160,59 @@ function StepIndicator({
             <button
               onClick={() => onStepClick(i)}
               className={cn(
-                "flex flex-col items-center min-w-[80px] px-2 py-1 rounded transition-colors",
-                current && "text-primary",
-                done && "text-muted-foreground",
-                !current && !done && "text-muted-foreground/50"
+                "flex items-center gap-2.5 min-w-fit px-1 py-1 rounded transition-colors group",
               )}
             >
+              {/* 번호 원 */}
               <div
                 className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border-2 mb-1",
-                  current && "border-primary bg-primary text-primary-foreground",
-                  done && "border-primary bg-primary/10 text-primary",
-                  !current && !done && "border-border bg-muted text-muted-foreground"
+                  "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all",
+                  current && "bg-zinc-900 text-white ring-2 ring-zinc-900 ring-offset-2",
+                  done && "bg-zinc-900 text-white",
+                  !current && !done && "bg-zinc-100 text-zinc-400 border border-zinc-200"
                 )}
               >
-                {done ? "✓" : i + 1}
+                {done ? (
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                ) : i + 1}
               </div>
-              <span className="text-xs font-medium text-center leading-tight">
-                {step.label}
-              </span>
-              <span className="text-[10px] text-muted-foreground text-center">
-                {step.desc}
-              </span>
+              {/* 레이블 */}
+              <div className="text-left hidden sm:block">
+                <p className={cn(
+                  "text-xs font-semibold leading-none whitespace-nowrap",
+                  current && "text-zinc-900",
+                  done && "text-zinc-600",
+                  !current && !done && "text-zinc-400"
+                )}>{step.label}</p>
+              </div>
             </button>
             {i < STEPS.length - 1 && (
-              <div
-                className={cn(
-                  "flex-1 h-0.5 mx-1 min-w-[16px]",
-                  i < active ? "bg-primary" : "bg-border"
-                )}
-              />
+              <div className={cn(
+                "flex-1 h-px mx-2 min-w-[20px]",
+                i < active ? "bg-zinc-900" : "bg-zinc-200"
+              )} />
             )}
           </React.Fragment>
         );
       })}
+    </div>
+  );
+}
+
+function StepHintBar({ active }: { active: number }) {
+  const step = STEPS[active];
+  if (!step) return null;
+  return (
+    <div className="flex items-start gap-3 rounded-lg bg-zinc-50 border border-zinc-200 px-4 py-3">
+      <div className="w-5 h-5 rounded-full bg-zinc-900 text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+        {active + 1}
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs font-semibold text-zinc-700">{step.label}</p>
+        <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">{step.hint}</p>
+      </div>
     </div>
   );
 }
@@ -1434,21 +1473,23 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         <div className="container-xxl mx-auto px-4 flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-lg font-bold text-foreground">
-              My AAS Instance — {mode === "create" ? "Create" : mode.toUpperCase()}
+              {mode === "create" ? "AAS 인스턴스 생성" : mode === "edit" ? "AAS 인스턴스 수정" : "AAS 인스턴스 상세"}
             </h1>
             <nav className="text-xs text-muted-foreground flex gap-1">
-              <Link href="/" className="hover:text-foreground">Home</Link>
+              <Link href="/" className="hover:text-foreground">홈</Link>
               <span>/</span>
-              <span>My AAS Instance — {mode === "create" ? "Create" : mode.toUpperCase()}</span>
+              <Link href="/instance" className="hover:text-foreground">인스턴스 목록</Link>
+              <span>/</span>
+              <span>{mode === "create" ? "생성" : mode === "edit" ? "수정" : "상세"}</span>
             </nav>
           </div>
           <div className="flex gap-2 items-center">
             <Link href="/instance">
-              <Button variant="outline" size="sm"><List className="size-3.5 mr-1" />List</Button>
+              <Button variant="outline" size="sm"><List className="size-3.5 mr-1" />목록</Button>
             </Link>
             {mode === "create" && activeStep === 1 && (
               <Button size="sm" onClick={() => { setModalOpen(true); setModelType("aasmodel"); }}>
-                <FilePlus className="size-3.5 mr-1" />Select AAS Template
+                <FilePlus className="size-3.5 mr-1" />AAS 템플릿 선택
               </Button>
             )}
           </div>
@@ -1488,27 +1529,45 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
           <>
             {templateSelectDialog}
             {/* Stepper */}
-            <Card className="mb-6 p-4">
+            <div className="mb-4 rounded-xl border border-zinc-200 bg-white px-5 py-4">
               <StepIndicator active={activeStep} onStepClick={setActiveStep} />
-            </Card>
+            </div>
+
+            {/* Step hint */}
+            <div className="mb-4">
+              <StepHintBar active={activeStep} />
+            </div>
 
             {/* Step content */}
             <div className="space-y-4">
               {/* Step 0: Basic info */}
               {activeStep === 0 && (
-                <Card>
-                  <CardHeader><CardTitle>Instance info</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                      <label className="text-sm font-semibold">Instance name <span className="text-destructive">*</span></label>
-                      <Input value={inputState.instance_name ?? ""} placeholder="Please enter" onChange={(e) => setInputState((prev) => ({ ...prev, instance_name: e.target.value }))} />
+                <div className="rounded-xl border border-zinc-200 bg-white p-6 max-w-2xl">
+                  <div className="flex flex-col gap-5">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-sm font-semibold text-zinc-800">
+                        인스턴스 이름 <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        value={inputState.instance_name ?? ""}
+                        placeholder="예: 로봇암_라인A_001"
+                        onChange={(e) => setInputState((prev) => ({ ...prev, instance_name: e.target.value }))}
+                        className="h-10"
+                      />
+                      <p className="text-[11px] text-zinc-400">이 AAS 인스턴스를 구분할 고유한 이름을 입력하세요.</p>
                     </div>
-                    <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                      <label className="text-sm font-semibold">Description</label>
-                      <Input value={inputState.description ?? ""} placeholder="Please enter" onChange={(e) => setInputState((prev) => ({ ...prev, description: e.target.value }))} />
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-sm font-semibold text-zinc-800">설명</label>
+                      <Input
+                        value={inputState.description ?? ""}
+                        placeholder="예: A라인 1번 로봇암 — 2024년 도입"
+                        onChange={(e) => setInputState((prev) => ({ ...prev, description: e.target.value }))}
+                        className="h-10"
+                      />
+                      <p className="text-[11px] text-zinc-400">이 인스턴스가 어떤 자산을 나타내는지 간단히 설명하세요. (선택)</p>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               )}
 
               {/* Step 1: Detailed settings — template select + tree + details */}
@@ -1830,21 +1889,36 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             </div>
 
             {/* Footer nav */}
-            <Card className="mt-6">
-              <CardContent className="flex justify-end gap-2 py-4">
-                <CancelButton />
-                {activeStep > 0 && (
-                  <Button variant="outline" onClick={() => setActiveStep(activeStep - 1)}>Back</Button>
-                )}
-                {activeStep < 4 && (
-                  <Button onClick={() => {
-                    if (activeStep === 0 && !inputState.instance_name) return showToast.error("Please enter an instance name.");
-                    if (activeStep === 1 && !Array.isArray(treeData)) return showToast.error("Please select an AAS Template.");
-                    setActiveStep(activeStep + 1);
-                  }}>Next</Button>
-                )}
-              </CardContent>
-            </Card>
+            <div className="sticky bottom-0 z-10 mt-6 border-t border-zinc-200 bg-white/95 backdrop-blur-sm px-0 py-3">
+              <div className="flex items-center justify-between gap-3">
+                {/* 왼쪽: 단계 표시 */}
+                <p className="text-xs text-zinc-400">
+                  <span className="font-semibold text-zinc-700">{activeStep + 1} / {STEPS.length}</span>
+                  {" "}— {STEPS[activeStep]?.label}
+                </p>
+                {/* 오른쪽: 버튼 */}
+                <div className="flex items-center gap-2">
+                  <CancelButton />
+                  {activeStep > 0 && (
+                    <Button variant="outline" size="sm" onClick={() => setActiveStep(activeStep - 1)}>
+                      이전
+                    </Button>
+                  )}
+                  {activeStep < STEPS.length - 1 && (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (activeStep === 0 && !inputState.instance_name) return showToast.error("인스턴스 이름을 입력해주세요.");
+                        if (activeStep === 1 && !Array.isArray(treeData)) return showToast.error("AAS 템플릿을 선택해주세요.");
+                        setActiveStep(activeStep + 1);
+                      }}
+                    >
+                      다음 단계
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
           </>
         )}
       </div>
