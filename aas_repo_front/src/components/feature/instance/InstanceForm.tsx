@@ -897,141 +897,96 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
               </div>
             )}
           </div>
-          {/* Nav Tabs */}
-          <div className="flex gap-1 border-b">
-            {[
-              { key: "templateInfo", label: "개요" },
-              { key: "submodel", label: "서브모델" },
-              { key: "treeView", label: "트리 구조" },
-            ].map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setActiveTab(key)}
-                className={cn(
-                  "px-4 pb-2.5 pt-1 text-sm font-medium border-b-2 transition-colors",
-                  activeTab === key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
         </CardContent>
       </Card>
 
-      {/* Tab: 개요 */}
-      {activeTab === "templateInfo" && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Asset 정보 */}
-          <Card>
-            <CardHeader className="pb-3 pt-5 px-5">
-              <CardTitle className="text-sm font-semibold text-zinc-700">Asset 정보</CardTitle>
-            </CardHeader>
-            <CardContent className="px-5 pb-5">
-              <div className="flex flex-col divide-y divide-zinc-100">
-                {[
-                  { label: "Asset Kind", value: treeData?.[0]?.AssetAdministrationShell?.assetInformation?.assetKind },
-                  { label: "Global Asset ID", value: treeData?.[0]?.id, mono: true },
-                  { label: "Instance Seq", value: mode === "view" ? instance?.instance_seq : "(자동 부여)" },
-                  { label: "마지막 수정", value: mode === "view" && instance?.last_mod_date ? new Intl.DateTimeFormat("ko-KR").format(new Date(instance.last_mod_date)) : "—" },
-                ].map(({ label, value, mono }) => (
-                  <div key={label} className="flex items-start justify-between gap-4 py-2.5">
-                    <span className="text-xs text-zinc-400 shrink-0 w-28">{label}</span>
-                    <span className={cn("text-xs text-zinc-800 font-medium text-right break-all", mono && "font-mono")}>{value ?? "—"}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+      {/* ── 서브모델 값 요약 (단일 뷰) ── */}
+      {(() => {
+        const submodels = treeData?.[0]?.children?.filter((c: any) => c.modelType === "Submodel") ?? [];
 
-          {/* 서브모델 구성 */}
-          <Card>
-            <CardHeader className="pb-3 pt-5 px-5">
-              <CardTitle className="text-sm font-semibold text-zinc-700">서브모델 구성</CardTitle>
-            </CardHeader>
-            <CardContent className="px-5 pb-5">
-              {(() => {
-                const submodels = treeData?.[0]?.children?.filter((c: any) => c.modelType === "Submodel") ?? [];
-                if (submodels.length === 0) return <p className="text-xs text-zinc-400">서브모델 없음</p>;
-                return (
-                  <div className="flex flex-col gap-2">
-                    {submodels.map((sm: any, i: number) => {
-                      const leafCount = sm.children?.length ?? 0;
-                      return (
-                        <div key={i} className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2.5">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                            <span className="text-sm font-medium text-zinc-800 truncate">{sm.idShort || `Submodel ${i + 1}`}</span>
-                          </div>
-                          <span className="text-[10px] font-semibold text-zinc-400 bg-white border border-zinc-200 rounded-full px-2 py-0.5 shrink-0">
-                            {leafCount}개 요소
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </CardContent>
-          </Card>
-        </div>
-      )}
+        // 노드에서 Property 재귀 수집
+        const collectProps = (nodes: any[]): any[] => {
+          let result: any[] = [];
+          for (const n of nodes ?? []) {
+            if (["Property", "MultiLanguageProperty", "File", "Range"].includes(n.modelType)) result.push(n);
+            else if (n.children?.length) result = result.concat(collectProps(n.children));
+          }
+          return result;
+        };
 
-      {/* Tab: Submodel */}
-      {activeTab === "submodel" && (() => {
-        const aasNode = treeData?.[0];
-        if (!aasNode?.children) return <Card><CardContent className="pt-6 text-center text-muted-foreground">AAS Template not loaded.</CardContent></Card>;
-        const submodelTreeNodes = aasNode.children.filter((c: any) => c.modelType === "Submodel");
+        // valuePath로 실제 값 추출
+        const resolveValue = (node: any): string => {
+          const data = _.get((aasmodel as any).aasmodel_metadata, node.valuePath);
+          if (!data) return "";
+          if (data.modelType === "MultiLanguageProperty" && Array.isArray(data.value)) {
+            const en = data.value.find((v: any) => v.language === "en") ?? data.value[0];
+            return en?.text ?? "";
+          }
+          return String(data?.value ?? "");
+        };
+
+        if (submodels.length === 0) return null;
+
         return (
-          <Card>
-            <CardHeader><CardTitle>Submodels</CardTitle></CardHeader>
-            <CardContent>
-              {submodelTreeNodes.length > 0 ? (
-                <Accordion type="multiple" className="space-y-2">
-                  {submodelTreeNodes.map((smNode: any, i: number) => (
-                    <AccordionItem key={`${smNode.idShort || "submodel"}-${i}`} value={smNode.idShort || `submodel-${i}`} className="border rounded-lg px-4">
-                      <AccordionTrigger className="font-medium">{smNode.idShort || "Submodel"}</AccordionTrigger>
-                      <AccordionContent>{renderSubmodelPanel(smNode, i)}</AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No submodels found.</p>
-              )}
-            </CardContent>
-          </Card>
+          <div className="flex flex-col gap-3">
+            {submodels.map((sm: any, si: number) => {
+              const props = collectProps(sm.children ?? []);
+              const filledCount = props.filter(p => resolveValue(p)).length;
+
+              return (
+                <Card key={si}>
+                  {/* 서브모델 헤더 */}
+                  <div className="flex items-center justify-between px-5 py-3.5 border-b">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                      <span className="text-sm font-semibold text-zinc-800">{sm.idShort}</span>
+                      {sm.semanticId?.keys?.[0]?.value && (
+                        <span className="text-[10px] font-mono text-zinc-400 truncate max-w-[240px]">
+                          {sm.semanticId.keys[0].value}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-zinc-400">
+                      <span className="font-semibold text-zinc-700">{filledCount}</span>/{props.length} 입력됨
+                    </span>
+                  </div>
+
+                  {/* 프로퍼티 테이블 */}
+                  {props.length > 0 ? (
+                    <div className="divide-y divide-zinc-100">
+                      {props.map((prop: any, pi: number) => {
+                        const val = resolveValue(prop);
+                        return (
+                          <div key={pi} className="flex items-center px-5 py-2.5 gap-4">
+                            <div className="w-52 shrink-0">
+                              <span className="text-xs font-medium text-zinc-600">{prop.idShort}</span>
+                              {prop.modelType !== "Property" && (
+                                <span className="ml-1.5 text-[10px] text-zinc-400">{prop.modelType}</span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              {val ? (
+                                <span className="text-sm text-zinc-900">{val}</span>
+                              ) : (
+                                <span className="text-xs text-zinc-300 italic">미입력</span>
+                              )}
+                            </div>
+                            {prop.valueType && (
+                              <span className="text-[10px] font-mono text-zinc-300 shrink-0">{prop.valueType}</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="px-5 py-4 text-xs text-zinc-400">입력 가능한 항목 없음</div>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
         );
       })()}
-
-      {/* Tab: Tree view */}
-      {activeTab === "treeView" && (
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>AAS Structure</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {Array.isArray(treeData) && (
-                <div className="px-4 py-4">
-                  <TemplateBlueprint treeData={treeData} showValues />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-          {Array.isArray(conceptDescriptionTreeData) && conceptDescriptionTreeData.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Concept Descriptions</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="px-4 py-4">
-                  <TemplateBlueprint treeData={conceptDescriptionTreeData} showValues />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
     </div>
   );
 
