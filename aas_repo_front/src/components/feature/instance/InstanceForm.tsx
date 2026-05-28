@@ -1554,7 +1554,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                         style={{ minHeight: "130px" }}
                         onChange={(e) => setInputState((prev) => ({ ...prev, description: e.target.value }))}
                       />
-                      <p className="text-[11px] text-zinc-400">자산의 용도, 위치, 특성 등을 자유롭게 기술하세요.</p>
+                      <p className="text-[11px] text-zinc-400">AAS 인스턴스에 대한 설명을 상세하게 입력해주세요.</p>
                     </div>
 
                     {/* ── 열 3: 썸네일 ── */}
