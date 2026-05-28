@@ -256,9 +256,10 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
   const [inputState, setInputState] = useState<{
     instance_name: string;
     description: string;
+    thumbnail?: string; // base64 data URL
     verification: "fail" | "success" | undefined;
     verification_log?: { total: number; success: number; fail: number };
-  }>({ instance_name: "", description: "", verification: undefined });
+  }>({ instance_name: "", description: "", thumbnail: undefined, verification: undefined });
 
   const [loading, setLoading] = useState(false);
   const [selectedNode, setSelectedNode] = useState<{ node: any; rootId: string } | null>(null);
@@ -930,6 +931,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
 
     const instanceName = mode === "view" ? instance?.instance_name  : inputState.instance_name;
     const description  = mode === "view" ? instance?.description    : inputState.description;
+    const userThumbnail = mode === "view" ? instance?.thumbnail : inputState.thumbnail;
     const categoryName = mode === "view" ? instance?.category_name  : (aasmodel as any)?.category_name;
     const version      = mode === "view" ? instance?.aasmodel_version : (aasmodel as any)?.version;
     const assetKind    = treeData?.[0]?.AssetAdministrationShell?.assetInformation?.assetKind;
@@ -944,11 +946,11 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         {/* ── 헤더 ── */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-start gap-4 min-w-0">
-            {/* 썸네일 — 이미지 있으면 크게, 없으면 작은 placeholder */}
-            {thumbnailPath ? (
+            {/* 썸네일 — 사용자 업로드 > AAS 트리 이미지 > placeholder */}
+            {(userThumbnail || thumbnailPath) ? (
               <div className="w-20 h-20 rounded-xl overflow-hidden border border-zinc-200 bg-zinc-50 shrink-0">
                 <img
-                  src={thumbnailPath}
+                  src={userThumbnail || thumbnailPath!}
                   alt={instanceName || "thumbnail"}
                   className="object-cover w-full h-full"
                   onError={(e) => { (e.target as HTMLImageElement).src = "/assets/media/aas/aas_blank.jpg"; }}
@@ -1514,26 +1516,74 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
               {/* Step 0: Basic info */}
               {activeStep === 0 && (
                 <div className="rounded-xl border border-zinc-200 bg-white p-6">
-                  <div className="flex flex-col gap-5 max-w-xl">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-sm font-semibold text-zinc-800">
-                        인스턴스 이름 <span className="text-red-500">*</span>
+                  <div className="flex gap-6 items-start flex-wrap">
+                    {/* 썸네일 업로드 */}
+                    <div className="flex flex-col gap-1.5 items-start">
+                      <label className="text-sm font-semibold text-zinc-800">썸네일</label>
+                      <label className="cursor-pointer group">
+                        <div className={`w-28 h-28 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-colors ${inputState.thumbnail ? "border-zinc-200 bg-zinc-50" : "border-zinc-200 bg-zinc-50 hover:border-zinc-400 hover:bg-zinc-100"}`}>
+                          {inputState.thumbnail ? (
+                            <img src={inputState.thumbnail} alt="thumbnail preview" className="object-cover w-full h-full" />
+                          ) : (
+                            <div className="flex flex-col items-center gap-1.5 text-zinc-400 group-hover:text-zinc-500 transition-colors">
+                              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                                <circle cx="9" cy="9" r="2"/>
+                                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                              </svg>
+                              <span className="text-[11px] font-medium">이미지 추가</span>
+                            </div>
+                          )}
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                              setInputState((prev) => ({ ...prev, thumbnail: ev.target?.result as string }));
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                        />
                       </label>
-                      <Input
-                        value={inputState.instance_name ?? ""}
-                        placeholder="예: 로봇암_라인A_001"
-                        onChange={(e) => setInputState((prev) => ({ ...prev, instance_name: e.target.value }))}
-                      />
-                      <p className="text-[11px] text-zinc-400">이 AAS 인스턴스를 구분할 고유한 이름을 입력하세요.</p>
+                      {inputState.thumbnail && (
+                        <button
+                          type="button"
+                          className="text-[11px] text-zinc-400 hover:text-red-500 transition-colors"
+                          onClick={() => setInputState((prev) => ({ ...prev, thumbnail: undefined }))}
+                        >
+                          삭제
+                        </button>
+                      )}
+                      <p className="text-[11px] text-zinc-400">선택 사항</p>
                     </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-sm font-semibold text-zinc-800">설명</label>
-                      <Input
-                        value={inputState.description ?? ""}
-                        placeholder="예: A라인 1번 로봇암 — 2024년 도입"
-                        onChange={(e) => setInputState((prev) => ({ ...prev, description: e.target.value }))}
-                      />
-                      <p className="text-[11px] text-zinc-400">이 인스턴스가 어떤 자산을 나타내는지 간단히 설명하세요. (선택)</p>
+
+                    {/* 이름 + 설명 */}
+                    <div className="flex flex-col gap-5 flex-1 min-w-[240px]">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-semibold text-zinc-800">
+                          인스턴스 이름 <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          value={inputState.instance_name ?? ""}
+                          placeholder="예: 로봇암_라인A_001"
+                          onChange={(e) => setInputState((prev) => ({ ...prev, instance_name: e.target.value }))}
+                        />
+                        <p className="text-[11px] text-zinc-400">이 AAS 인스턴스를 구분할 고유한 이름을 입력하세요.</p>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-semibold text-zinc-800">설명</label>
+                        <Input
+                          value={inputState.description ?? ""}
+                          placeholder="예: A라인 1번 로봇암 — 2024년 도입"
+                          onChange={(e) => setInputState((prev) => ({ ...prev, description: e.target.value }))}
+                        />
+                        <p className="text-[11px] text-zinc-400">이 인스턴스가 어떤 자산을 나타내는지 간단히 설명하세요. (선택)</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1801,7 +1851,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       <CheckCircle2 className="size-5 text-green-500 shrink-0 mt-0.5" />
                       <div>
                         <p className="text-sm font-semibold text-green-700">검증을 통과했습니다.</p>
-                        <p className="text-xs text-green-600 mt-0.5">AAS 구조와 데이터가 모두 유효합니다. 저장 후 배포할 수 있습니다.</p>
+                        <p className="text-xs text-green-600 mt-0.5">AAS 구조와 ��이터가 모두 유효합니다. 저장 후 배포할 수 있습니다.</p>
                       </div>
                     </div>
                   )}
