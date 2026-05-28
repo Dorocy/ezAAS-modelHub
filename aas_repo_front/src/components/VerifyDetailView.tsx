@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { CheckCircle2, XCircle, Maximize2, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 interface VerificationMessage {
   count: number;
@@ -89,16 +89,14 @@ export default function VerifyDetailView({
               <Maximize2 className="size-3.5 mr-1" />전체 보기
             </Button>
           </div>
-          <ScrollArea className="h-48">
-            <div className="px-4 py-3 space-y-1.5">
-              {activeMessages.map((msg, i) => (
-                <div key={i} className="flex items-start gap-2">
-                  <span className="text-[11px] text-red-300 font-mono shrink-0 pt-0.5">{String(i + 1).padStart(2, "0")}</span>
-                  <p className="text-xs text-zinc-700 leading-relaxed break-words">{msg}</p>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
+          <div className="h-48 overflow-y-auto px-4 py-3 space-y-1.5">
+            {activeMessages.map((msg, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className="text-[11px] text-red-300 font-mono shrink-0 pt-0.5">{String(i + 1).padStart(2, "0")}</span>
+                <p className="text-xs text-zinc-700 leading-relaxed break-words">{msg}</p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -111,16 +109,14 @@ export default function VerifyDetailView({
               {verificationActive} — 오류 전체 목록
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="flex-1 px-6 py-4">
-            <div className="space-y-2">
-              {activeMessages.map((msg, i) => (
-                <div key={i} className="flex items-start gap-3 py-2 border-b border-zinc-100 last:border-b-0">
-                  <span className="text-xs text-zinc-400 font-mono shrink-0 pt-0.5 w-6 text-right">{i + 1}</span>
-                  <p className="text-sm text-zinc-700 leading-relaxed break-words">{msg}</p>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2">
+            {activeMessages.map((msg, i) => (
+              <div key={i} className="flex items-start gap-3 py-2 border-b border-zinc-100 last:border-b-0">
+                <span className="text-xs text-zinc-400 font-mono shrink-0 pt-0.5 w-6 text-right">{i + 1}</span>
+                <p className="text-sm text-zinc-700 leading-relaxed break-words">{msg}</p>
+              </div>
+            ))}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
