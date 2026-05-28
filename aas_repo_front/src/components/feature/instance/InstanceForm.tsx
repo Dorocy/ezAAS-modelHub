@@ -74,7 +74,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { ChevronDown, List, FilePlus, Plus, Trash2, ShieldCheck, Save, Pencil } from "lucide-react";
+import { ChevronDown, List, FilePlus, Plus, Trash2, ShieldCheck, Save, Pencil, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /* ─────────────────────────────── types ─────────────────────────── */
@@ -1719,21 +1719,49 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
 
               {/* Step 3: Verification */}
               {activeStep === 3 && (
-                <Card>
-                  <CardHeader><CardTitle>Verification</CardTitle></CardHeader>
-                  <CardContent className="flex flex-col items-center gap-4">
-                    <Button size="lg" disabled={loading} onClick={verifyInstance}>
-                      <ShieldCheck className="size-4 mr-2" />Run Verification
-                    </Button>
-                    {inputState.verification && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-muted-foreground">Verification Status:</span>
-                        {verificationBadge(inputState.verification)}
-                      </div>
-                    )}
-                    <VerifyDetailView verificationRef={verificationRef} verificationActive={verificationActive} setVerificationActive={setVerificationActive} />
-                  </CardContent>
-                </Card>
+                <div className="flex flex-col gap-4">
+                  {/* 실행 패널 */}
+                  <div className="rounded-lg border border-zinc-200 bg-white px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold text-zinc-900">AAS 검증</h3>
+                      <p className="text-xs text-zinc-400 mt-0.5">AAS 구조와 데이터의 유효성을 검사합니다. 검증 후 결과를 항목별로 확인하세요.</p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      {inputState.verification && verificationBadge(inputState.verification)}
+                      <Button size="sm" disabled={loading} onClick={verifyInstance}>
+                        <ShieldCheck className="size-4 mr-2" />검증 실행
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* 결과 없음 상태 */}
+                  {!inputState.verification && !verificationRef.current && (
+                    <div className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50 flex flex-col items-center justify-center py-16 gap-2">
+                      <ShieldCheck className="size-8 text-zinc-300" />
+                      <p className="text-sm text-zinc-400">검증 실행 버튼을 눌러 검증을 시작하세요.</p>
+                    </div>
+                  )}
+
+                  {/* 성공 상태 */}
+                  {inputState.verification === "success" && !verificationRef.current && (
+                    <div className="rounded-lg border border-green-200 bg-green-50 flex flex-col items-center justify-center py-12 gap-2">
+                      <CheckCircle2 className="size-8 text-green-500" />
+                      <p className="text-sm font-semibold text-green-700">모든 검증을 통과했습니다.</p>
+                      {inputState.verification_log && (
+                        <p className="text-xs text-green-500">
+                          총 {inputState.verification_log.total}개 · 성공 {inputState.verification_log.success}개
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 상세 결과 (fail) */}
+                  <VerifyDetailView
+                    verificationRef={verificationRef}
+                    verificationActive={verificationActive}
+                    setVerificationActive={setVerificationActive}
+                  />
+                </div>
               )}
 
               {/* Step 4: Complete */}
