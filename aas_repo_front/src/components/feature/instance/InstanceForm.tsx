@@ -1462,7 +1462,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     <div>
       {/* Toolbar */}
       <div className="py-4 border-b mb-6">
-        <div className="container-xxl mx-auto px-4 flex items-center justify-between flex-wrap gap-3">
+        <div className="mx-auto max-w-screen-2xl px-6 flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-lg font-bold text-foreground">
               {mode === "create" ? "AAS 인스턴스 생성" : mode === "edit" ? "AAS 인스턴스 수정" : "AAS 인스턴스 상세"}
@@ -1488,7 +1488,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         </div>
       </div>
 
-      <div className="container-xxl mx-auto px-4">
+      <div className="mx-auto max-w-screen-2xl px-6 py-6">
         {mode === "view" ? (
           <>
             {combinedModelDialog}
