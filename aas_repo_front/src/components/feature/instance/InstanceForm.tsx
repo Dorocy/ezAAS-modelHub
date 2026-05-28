@@ -150,69 +150,61 @@ function StepIndicator({
   active: number;
   onStepClick: (i: number) => void;
 }) {
+  const currentStep = STEPS[active];
   return (
-    <div className="flex items-center overflow-x-auto">
-      {STEPS.map((step, i) => {
-        const done = i < active;
-        const current = i === active;
-        return (
-          <React.Fragment key={i}>
-            <button
-              onClick={() => onStepClick(i)}
-              className={cn(
-                "flex items-center gap-2.5 min-w-fit px-1 py-1 rounded transition-colors group",
-              )}
-            >
-              {/* 번호 원 */}
-              <div
-                className={cn(
-                  "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all",
-                  current && "bg-zinc-900 text-white ring-2 ring-zinc-900 ring-offset-2",
-                  done && "bg-zinc-900 text-white",
-                  !current && !done && "bg-zinc-100 text-zinc-400 border border-zinc-200"
-                )}
+    <div className="flex flex-col gap-3">
+      {/* 스텝 목록 */}
+      <div className="flex items-center overflow-x-auto">
+        {STEPS.map((step, i) => {
+          const done = i < active;
+          const current = i === active;
+          return (
+            <React.Fragment key={i}>
+              <button
+                onClick={() => onStepClick(i)}
+                className="flex items-center gap-2.5 min-w-fit px-1 py-1 rounded transition-colors"
               >
-                {done ? (
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                ) : i + 1}
-              </div>
-              {/* 레이블 */}
-              <div className="text-left hidden sm:block">
-                <p className={cn(
-                  "text-xs font-semibold leading-none whitespace-nowrap",
-                  current && "text-zinc-900",
-                  done && "text-zinc-600",
-                  !current && !done && "text-zinc-400"
-                )}>{step.label}</p>
-              </div>
-            </button>
-            {i < STEPS.length - 1 && (
-              <div className={cn(
-                "flex-1 h-px mx-2 min-w-[20px]",
-                i < active ? "bg-zinc-900" : "bg-zinc-200"
-              )} />
-            )}
-          </React.Fragment>
-        );
-      })}
-    </div>
-  );
-}
-
-function StepHintBar({ active }: { active: number }) {
-  const step = STEPS[active];
-  if (!step) return null;
-  return (
-    <div className="flex items-start gap-3 rounded-lg bg-zinc-50 border border-zinc-200 px-4 py-3">
-      <div className="w-5 h-5 rounded-full bg-zinc-900 text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
-        {active + 1}
+                <div
+                  className={cn(
+                    "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all",
+                    current && "bg-zinc-900 text-white ring-2 ring-zinc-900 ring-offset-2",
+                    done && "bg-zinc-900 text-white",
+                    !current && !done && "bg-zinc-100 text-zinc-400 border border-zinc-200"
+                  )}
+                >
+                  {done ? (
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  ) : i + 1}
+                </div>
+                <div className="text-left hidden sm:block">
+                  <p className={cn(
+                    "text-xs font-semibold leading-none whitespace-nowrap",
+                    current && "text-zinc-900",
+                    done && "text-zinc-600",
+                    !current && !done && "text-zinc-400"
+                  )}>{step.label}</p>
+                </div>
+              </button>
+              {i < STEPS.length - 1 && (
+                <div className={cn(
+                  "flex-1 h-px mx-2 min-w-[20px]",
+                  i < active ? "bg-zinc-900" : "bg-zinc-200"
+                )} />
+              )}
+            </React.Fragment>
+          );
+        })}
       </div>
-      <div className="min-w-0">
-        <p className="text-xs font-semibold text-zinc-700">{step.label}</p>
-        <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">{step.hint}</p>
-      </div>
+      {/* 현재 스텝 안내 — 구분선 + 한 줄 */}
+      {currentStep && (
+        <div className="border-t border-zinc-100 pt-3 flex items-center gap-2">
+          <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">Step {active + 1}</span>
+          <span className="text-zinc-200">·</span>
+          <span className="text-xs text-zinc-500">{currentStep.hint}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -1533,11 +1525,6 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             {/* Stepper */}
             <div className="mb-4 rounded-xl border border-zinc-200 bg-white px-5 py-4">
               <StepIndicator active={activeStep} onStepClick={setActiveStep} />
-            </div>
-
-            {/* Step hint */}
-            <div className="mb-4">
-              <StepHintBar active={activeStep} />
             </div>
 
             {/* Step content */}
