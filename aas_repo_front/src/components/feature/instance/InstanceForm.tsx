@@ -935,7 +935,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     const createDate   = mode === "view" && instance?.create_date
       ? new Intl.DateTimeFormat("ko-KR").format(new Date(instance.create_date)) : null;
 
-    const totalMissing = totalProps - totalFilled;
+
 
     return (
       <div key={mode === "view" ? instance?.instance_seq : "create-preview"} className="flex flex-col gap-4">
@@ -992,20 +992,6 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
           )}
         </div>
 
-        {/* ── 미입력 경고 배너 ── */}
-        {totalMissing > 0 && (
-          <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-            <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-            <p className="text-sm text-amber-700">
-              <span className="font-semibold">{totalMissing}개 항목</span>이 아직 입력되지 않았습니다.{" "}
-              {submodels
-                .filter((sm: any) => collectProps(sm.children ?? []).some((x: any) => !resolveValue(x)))
-                .map((sm: any) => sm.idShort)
-                .join(", ")} 서브모델을 확인하세요.
-            </p>
-          </div>
-        )}
-
         {/* ── 서브모델 accordion ── */}
         <Accordion type="multiple" defaultValue={submodels.map((_: any, i: number) => `sm-${i}`)}>
           {submodels.map((sm: any, si: number) => {
@@ -1036,16 +1022,12 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       <p className="text-sm font-semibold text-zinc-800 leading-none">{sm.idShort}</p>
                       {smDesc && <p className="text-[11px] text-zinc-400 mt-1 leading-snug line-clamp-1">{smDesc}</p>}
                     </div>
-                    {/* 완료 / 미완료 배지 */}
+                    {/* 입력 현황 */}
                     <div className="shrink-0 flex items-center gap-2">
                       <span className="text-[11px] text-zinc-400">{filled}/{props.length}</span>
-                      {isComplete ? (
+                      {isComplete && props.length > 0 && (
                         <span className="text-[11px] font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full px-2.5 py-0.5">
                           완료
-                        </span>
-                      ) : (
-                        <span className="text-[11px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded-full px-2.5 py-0.5">
-                          미완료
                         </span>
                       )}
                     </div>
@@ -1070,7 +1052,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                           return (
                             <div
                               key={pi}
-                              className={`flex items-start gap-3 px-4 py-2.5 border-b border-r border-zinc-100 last:border-r-0 ${!val ? "bg-amber-50/50" : ""}`}
+                              className="flex items-start gap-3 px-4 py-2.5 border-b border-r border-zinc-100 last:border-r-0"
                             >
                               <span className="text-[11px] text-zinc-400 w-28 shrink-0 pt-0.5 leading-tight truncate">{prop.idShort}</span>
                               {val ? (
