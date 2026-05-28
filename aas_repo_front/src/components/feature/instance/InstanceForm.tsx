@@ -1516,7 +1516,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
               {/* Step 0: Basic info */}
               {activeStep === 0 && (
                 <div className="rounded-xl border border-zinc-200 bg-white p-6">
-                  <div className="flex gap-6 items-start flex-wrap">
+                  <div className="flex gap-6 items-start flex-wrap max-w-lg">
                     {/* 썸네일 업로드 */}
                     <div className="flex flex-col gap-1.5 items-start">
                       <label className="text-sm font-semibold text-zinc-800">썸네일</label>
