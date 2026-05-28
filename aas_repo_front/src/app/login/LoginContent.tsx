@@ -27,8 +27,8 @@ interface LoginContentProps {
 
 export default function LoginContent({ redirectUrl }: LoginContentProps) {
   const { login, loginWithSocial } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("admin");
+  const [password, setPassword] = useState("1234");
   const [resetOpen, setResetOpen] = useState(false);
 
   const onClickLogin = () => {
