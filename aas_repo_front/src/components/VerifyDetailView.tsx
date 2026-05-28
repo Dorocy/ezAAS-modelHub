@@ -102,7 +102,7 @@ export default function VerifyDetailView({
 
       {/* 전체 보기 Dialog */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-3xl h-[80vh] flex flex-col p-0 gap-0">
+        <DialogContent className="max-w-5xl w-[90vw] h-[80vh] flex flex-col p-0 gap-0">
           <DialogHeader className="px-6 py-4 border-b shrink-0">
             <DialogTitle className="flex items-center gap-2 text-red-700">
               <XCircle className="size-4" />
