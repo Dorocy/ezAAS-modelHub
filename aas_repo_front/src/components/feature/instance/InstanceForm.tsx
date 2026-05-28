@@ -1068,8 +1068,6 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
       </div>
     );
   })();
-    </div>
-  );
 
   /* ─── View Combined Model dialog ─── */
   const combinedModelDialog = (
