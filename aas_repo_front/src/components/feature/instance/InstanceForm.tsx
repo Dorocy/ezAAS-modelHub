@@ -855,25 +855,41 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                 <h2 className="text-lg font-bold text-foreground leading-tight">
                   {mode === "view" ? instance?.instance_name : inputState.instance_name}
                 </h2>
-                {Array.isArray(treeData) && treeData.length > 0 && (
-                  <p className="text-xs text-muted-foreground font-mono mt-0.5 truncate max-w-md">{treeData[0].id}</p>
-                )}
                 {(mode === "view" ? instance?.description : inputState.description) && (
-                  <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-xl">
+                  <p className="text-sm text-zinc-500 mt-1.5 leading-relaxed max-w-2xl">
                     {mode === "view" ? instance?.description : inputState.description}
                   </p>
                 )}
-                {/* 메타 배지들 */}
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {[
-                    { label: (mode === "view" ? instance?.category_name : (aasmodel as any)?.category_name) },
-                    { label: (mode === "view" ? instance?.aasmodel_version : (aasmodel as any)?.version) ? `v${mode === "view" ? instance?.aasmodel_version : (aasmodel as any)?.version}` : null },
-                    { label: mode === "view" && instance?.create_date ? new Intl.DateTimeFormat("ko-KR").format(new Date(instance.create_date)) : null, prefix: "생성" },
-                  ].filter(b => b.label).map(({ label, prefix }, i) => (
-                    <span key={i} className="inline-flex items-center text-xs text-zinc-500 bg-zinc-100 rounded-full px-2.5 py-0.5">
-                      {prefix && <span className="text-zinc-400 mr-1">{prefix}</span>}{label}
+                {/* 메타 정보 */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3">
+                  {(mode === "view" ? instance?.category_name : (aasmodel as any)?.category_name) && (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-zinc-500">
+                      <span className="text-zinc-300">|</span>
+                      카테고리
+                      <span className="font-semibold text-zinc-700">{mode === "view" ? instance?.category_name : (aasmodel as any)?.category_name}</span>
                     </span>
-                  ))}
+                  )}
+                  {(mode === "view" ? instance?.aasmodel_version : (aasmodel as any)?.version) && (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-zinc-500">
+                      <span className="text-zinc-300">|</span>
+                      버전
+                      <span className="font-semibold text-zinc-700">v{mode === "view" ? instance?.aasmodel_version : (aasmodel as any)?.version}</span>
+                    </span>
+                  )}
+                  {(treeData?.[0]?.AssetAdministrationShell?.assetInformation?.assetKind) && (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-zinc-500">
+                      <span className="text-zinc-300">|</span>
+                      자산 유형
+                      <span className="font-semibold text-zinc-700">{treeData[0].AssetAdministrationShell.assetInformation.assetKind}</span>
+                    </span>
+                  )}
+                  {mode === "view" && instance?.create_date && (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-zinc-500">
+                      <span className="text-zinc-300">|</span>
+                      생성일
+                      <span className="font-semibold text-zinc-700">{new Intl.DateTimeFormat("ko-KR").format(new Date(instance.create_date))}</span>
+                    </span>
+                  )}
                   {verificationBadge(mode === "view" ? instance?.verification : inputState.verification)}
                 </div>
               </div>
@@ -900,11 +916,28 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         </CardContent>
       </Card>
 
-      {/* ── 서브모델 값 요약 (단일 뷰) ── */}
+      {/* ── 서브모델 개념 카드 ── */}
       {(() => {
         const submodels = treeData?.[0]?.children?.filter((c: any) => c.modelType === "Submodel") ?? [];
+        if (submodels.length === 0) return null;
 
-        // 노드에서 Property 재귀 수집
+        // 서브모델 idShort 기반 한국어 설명 매핑
+        const smMeta: Record<string, { label: string; desc: string; icon: string }> = {
+          Nameplate:               { label: "명판 정보",        icon: "🏷", desc: "제조사, 제품명, 시리얼 번호 등 자산의 기본 신원 정보를 담고 있습니다." },
+          TechnicalData:           { label: "기술 데이터",      icon: "⚙️", desc: "제품의 기술 사양, 성능 파라미터, 정격값 등 엔지니어링 데이터를 포함합니다." },
+          HandoverDocumentation:   { label: "인도 문서",        icon: "📄", desc: "운영 매뉴얼, 안전 지침, 시험 성적서 등 자산 인도 시 필요한 문서를 관리합니다." },
+          CarbonFootprint:         { label: "탄소 발자국",      icon: "🌿", desc: "제품 생산·운송·사용 단계별 탄소 배출량 및 환경 영향 데이터를 포함합니다." },
+          ContactInformation:      { label: "연락처 정보",      icon: "📞", desc: "제조사, 공급사, 유지보수 담당자 등의 연락처 정보를 담고 있습니다." },
+          Documentation:           { label: "문서",             icon: "📁", desc: "관련 기술 문서, 인증서, 도면 등 자산과 연관된 문서를 관리합니다." },
+          Identification:          { label: "식별 정보",        icon: "🔑", desc: "자산의 고유 식별자, 배치 번호, 추적 코드 등 식별 데이터를 포함합니다." },
+        };
+
+        const getSmMeta = (idShort: string) => {
+          const key = Object.keys(smMeta).find(k => idShort?.includes(k));
+          return key ? smMeta[key] : null;
+        };
+
+        // Property 재귀 수집
         const collectProps = (nodes: any[]): any[] => {
           let result: any[] = [];
           for (const n of nodes ?? []) {
@@ -914,7 +947,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
           return result;
         };
 
-        // valuePath로 실제 값 추출
+        // valuePath로 실제 입력값 추출
         const resolveValue = (node: any): string => {
           const data = _.get((aasmodel as any).aasmodel_metadata, node.valuePath);
           if (!data) return "";
@@ -925,62 +958,81 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
           return String(data?.value ?? "");
         };
 
-        if (submodels.length === 0) return null;
-
         return (
           <div className="flex flex-col gap-3">
             {submodels.map((sm: any, si: number) => {
+              const meta = getSmMeta(sm.idShort);
+              const smDesc: string =
+                (Array.isArray(sm.description) && sm.description.find((d: any) => d.language === "en")?.text) ||
+                (Array.isArray(sm.description) && sm.description[0]?.text) ||
+                meta?.desc || "";
               const props = collectProps(sm.children ?? []);
               const filledCount = props.filter(p => resolveValue(p)).length;
+              const fillRatio = props.length > 0 ? Math.round((filledCount / props.length) * 100) : 0;
 
               return (
-                <Card key={si}>
-                  {/* 서브모델 헤더 */}
-                  <div className="flex items-center justify-between px-5 py-3.5 border-b">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
-                      <span className="text-sm font-semibold text-zinc-800">{sm.idShort}</span>
-                      {sm.semanticId?.keys?.[0]?.value && (
-                        <span className="text-[10px] font-mono text-zinc-400 truncate max-w-[240px]">
-                          {sm.semanticId.keys[0].value}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[11px] text-zinc-400">
-                      <span className="font-semibold text-zinc-700">{filledCount}</span>/{props.length} 입력됨
-                    </span>
-                  </div>
+                <Card key={si} className="overflow-hidden">
+                  <div className="flex items-stretch">
+                    {/* 왼쪽 색상 바 */}
+                    <div className="w-1 shrink-0 bg-blue-500" />
 
-                  {/* 프로퍼티 테이블 */}
-                  {props.length > 0 ? (
-                    <div className="divide-y divide-zinc-100">
-                      {props.map((prop: any, pi: number) => {
-                        const val = resolveValue(prop);
-                        return (
-                          <div key={pi} className="flex items-center px-5 py-2.5 gap-4">
-                            <div className="w-52 shrink-0">
-                              <span className="text-xs font-medium text-zinc-600">{prop.idShort}</span>
-                              {prop.modelType !== "Property" && (
-                                <span className="ml-1.5 text-[10px] text-zinc-400">{prop.modelType}</span>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              {val ? (
-                                <span className="text-sm text-zinc-900">{val}</span>
-                              ) : (
-                                <span className="text-xs text-zinc-300 italic">미입력</span>
-                              )}
-                            </div>
-                            {prop.valueType && (
-                              <span className="text-[10px] font-mono text-zinc-300 shrink-0">{prop.valueType}</span>
+                    <div className="flex-1 min-w-0 p-5">
+                      {/* 헤더 */}
+                      <div className="flex items-start justify-between gap-4 mb-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-bold text-zinc-900">
+                              {meta?.label ?? sm.idShort}
+                            </span>
+                            {meta && (
+                              <span className="text-xs text-zinc-400 font-mono">{sm.idShort}</span>
                             )}
                           </div>
-                        );
-                      })}
+                          {smDesc && (
+                            <p className="text-xs text-zinc-500 mt-1 leading-relaxed max-w-2xl">{smDesc}</p>
+                          )}
+                        </div>
+                        {/* 입력률 */}
+                        {props.length > 0 && (
+                          <div className="shrink-0 flex flex-col items-end gap-1">
+                            <span className="text-xs text-zinc-400">
+                              <span className="text-sm font-bold text-zinc-800">{filledCount}</span>/{props.length} 입력됨
+                            </span>
+                            <div className="w-24 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-blue-500 rounded-full transition-all"
+                                style={{ width: `${fillRatio}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 구성 요소 목록 — SubmodelElementCollection 단위로 */}
+                      {sm.children?.length > 0 && (
+                        <div className="flex flex-wrap gap-2 pt-3 border-t border-zinc-100">
+                          {sm.children.map((child: any, ci: number) => {
+                            const childProps = collectProps([child]);
+                            const childFilled = childProps.filter(p => resolveValue(p)).length;
+                            const isCollection = ["SubmodelElementCollection", "SubmodelElementList"].includes(child.modelType);
+                            return (
+                              <div
+                                key={ci}
+                                className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5"
+                              >
+                                <span className="text-xs font-medium text-zinc-700">{child.idShort}</span>
+                                {isCollection && childProps.length > 0 && (
+                                  <span className="text-[10px] text-zinc-400">
+                                    ({childFilled}/{childProps.length})
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="px-5 py-4 text-xs text-zinc-400">입력 가능한 항목 없음</div>
-                  )}
+                  </div>
                 </Card>
               );
             })}
