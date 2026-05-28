@@ -872,6 +872,25 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
       return String(data?.value ?? "");
     };
 
+    // File 노드에서 경로 추출 (originalValue 또는 value)
+    const resolveFilePath = (node: any): string => {
+      const data = _.get((aasmodel as any).aasmodel_metadata, node.valuePath);
+      if (!data) return "";
+      return String(data?.value ?? data?.originalValue ?? "");
+    };
+
+    const IMAGE_EXTS = [".jpg",".jpeg",".png",".gif",".webp",".bmp",".svg"];
+    const isImagePath = (path: string) =>
+      IMAGE_EXTS.some(ext => path.toLowerCase().endsWith(ext)) ||
+      path.startsWith("data:image/");
+
+    // 전체 서브모델에서 첫 번째 이미지 File 노드 찾기
+    const allFileNodes = collectProps(submodels.flatMap((sm: any) => sm.children ?? []))
+      .filter((n: any) => n.modelType === "File");
+    const thumbnailPath = allFileNodes
+      .map((n: any) => resolveFilePath(n))
+      .find((p: string) => p && isImagePath(p)) ?? null;
+
     const allProps = collectProps(submodels.flatMap((sm: any) => sm.children ?? []));
     const totalFilled = allProps.filter(p => resolveValue(p)).length;
     const totalProps  = allProps.length;
@@ -891,12 +910,24 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
       <div key={mode === "view" ? instance?.instance_seq : "create-preview"} className="flex flex-col gap-4">
 
         {/* ── 헤더 ── */}
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-lg overflow-hidden border bg-muted shrink-0 relative">
-              <img src="/assets/media/aas/aas_blank.jpg" alt="Instance" className="object-cover w-full h-full" />
-              <span className="absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full bg-green-500 border border-white" />
-            </div>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-start gap-4 min-w-0">
+            {/* 썸네일 — 이미지 있으면 크게, 없으면 작은 placeholder */}
+            {thumbnailPath ? (
+              <div className="w-20 h-20 rounded-xl overflow-hidden border border-zinc-200 bg-zinc-50 shrink-0">
+                <img
+                  src={thumbnailPath}
+                  alt={instanceName || "thumbnail"}
+                  className="object-cover w-full h-full"
+                  onError={(e) => { (e.target as HTMLImageElement).src = "/assets/media/aas/aas_blank.jpg"; }}
+                />
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-lg overflow-hidden border bg-muted shrink-0 relative">
+                <img src="/assets/media/aas/aas_blank.jpg" alt="Instance" className="object-cover w-full h-full" />
+                <span className="absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full bg-green-500 border border-white" />
+              </div>
+            )}
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-sm font-bold text-zinc-900">{instanceName || "—"}</h2>
@@ -905,7 +936,10 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                 {assetKind    && <span className="text-[11px] bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">{assetKind}</span>}
                 {verificationBadge(mode === "view" ? instance?.verification : inputState.verification)}
               </div>
-              {description && <p className="text-xs text-zinc-400 mt-0.5 truncate max-w-lg">{description}</p>}
+              {description && <p className="text-xs text-zinc-400 mt-1 max-w-lg leading-relaxed">{description}</p>}
+              {thumbnailPath && (
+                <p className="text-[11px] text-zinc-300 mt-1 font-mono truncate max-w-xs">{thumbnailPath}</p>
+              )}
             </div>
           </div>
           {mode === "view" && user?.user_seq === instance?.create_user_seq && (
@@ -999,17 +1033,32 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       {/* key-value 2열 그리드 */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 border-t border-zinc-100">
                         {group.items.map((prop: any, pi: number) => {
-                          const val = resolveValue(prop);
+                          const isFile = prop.modelType === "File";
+                          const val = isFile ? resolveFilePath(prop) : resolveValue(prop);
+                          const isImg = isFile && val && isImagePath(val);
                           return (
                             <div
                               key={pi}
                               className={`flex items-start gap-3 px-4 py-2.5 border-b border-r border-zinc-100 last:border-r-0 ${!val ? "bg-amber-50/50" : ""}`}
                             >
                               <span className="text-[11px] text-zinc-400 w-28 shrink-0 pt-0.5 leading-tight truncate">{prop.idShort}</span>
-                              {val
-                                ? <span className="text-xs font-medium text-zinc-900 flex-1 min-w-0 leading-snug break-words">{val}</span>
-                                : <span className="text-[11px] text-amber-400 italic flex-1 pt-0.5">미입력</span>
-                              }
+                              {val ? (
+                                isImg ? (
+                                  <div className="flex-1 min-w-0">
+                                    <img
+                                      src={val}
+                                      alt={prop.idShort}
+                                      className="h-16 w-auto max-w-full rounded border border-zinc-200 object-contain"
+                                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                                    />
+                                    <span className="text-[10px] text-zinc-300 font-mono mt-1 block truncate">{val}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs font-medium text-zinc-900 flex-1 min-w-0 leading-snug break-words">{val}</span>
+                                )
+                              ) : (
+                                <span className="text-[11px] text-amber-400 italic flex-1 pt-0.5">미입력</span>
+                              )}
                             </div>
                           );
                         })}
