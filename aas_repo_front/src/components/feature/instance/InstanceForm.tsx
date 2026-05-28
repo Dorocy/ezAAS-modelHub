@@ -1517,60 +1517,55 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             <div className="space-y-4">
               {/* Step 0: Basic info */}
               {activeStep === 0 && (
-                <div className="rounded-xl border border-zinc-200 bg-white p-6 max-w-2xl">
-                  <div className="flex gap-5 items-start">
+                <div className="rounded-xl border border-zinc-200 bg-white p-6">
+                  <div className="flex gap-6">
 
                     {/* ── 썸네일 ── */}
-                    <div className="shrink-0 flex flex-col items-center gap-1.5">
+                    <div className="shrink-0">
                       <label className="cursor-pointer group relative block">
                         <div className={cn(
-                          "w-24 h-24 rounded-xl border-2 border-dashed overflow-hidden transition-all duration-200 flex items-center justify-center",
+                          "w-36 h-36 rounded-xl border-2 border-dashed overflow-hidden transition-all duration-200 flex flex-col items-center justify-center gap-2",
                           inputState.thumbnail
-                            ? "border-zinc-200"
-                            : "border-zinc-200 bg-zinc-50 group-hover:border-zinc-400 group-hover:bg-zinc-100"
+                            ? "border-zinc-200 bg-transparent"
+                            : "border-zinc-200 bg-zinc-50 hover:border-zinc-400 hover:bg-zinc-100"
                         )}>
                           {inputState.thumbnail ? (
                             <>
                               <img src={inputState.thumbnail} alt="thumbnail" className="object-cover w-full h-full" />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 rounded-xl">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex flex-col items-center justify-center gap-1.5">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                                   <polyline points="17 8 12 3 7 8"/>
                                   <line x1="12" y1="3" x2="12" y2="15"/>
                                 </svg>
-                                <span className="text-white text-[10px] font-medium">변경</span>
+                                <span className="text-white text-xs font-medium">변경</span>
                               </div>
                             </>
                           ) : (
-                            <div className="flex flex-col items-center gap-1.5 text-zinc-400 group-hover:text-zinc-500 transition-colors">
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                                <rect width="18" height="18" x="3" y="3" rx="3" ry="3"/>
+                            <>
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-300 group-hover:text-zinc-400 transition-colors">
+                                <rect width="18" height="18" x="3" y="3" rx="3"/>
                                 <circle cx="8.5" cy="8.5" r="1.5"/>
                                 <path d="m21 15-5-5L5 21"/>
                               </svg>
-                              <span className="text-[10px] font-medium">사진 추가</span>
-                            </div>
+                              <span className="text-xs font-medium text-zinc-400 group-hover:text-zinc-500 transition-colors">썸네일 추가</span>
+                              <span className="text-[11px] text-zinc-300">선택 사항</span>
+                            </>
                           )}
                         </div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
+                        <input type="file" accept="image/*" className="hidden"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
                             const reader = new FileReader();
-                            reader.onload = (ev) => {
-                              setInputState((prev) => ({ ...prev, thumbnail: ev.target?.result as string }));
-                            };
+                            reader.onload = (ev) => setInputState((prev) => ({ ...prev, thumbnail: ev.target?.result as string }));
                             reader.readAsDataURL(file);
                           }}
                         />
                       </label>
                       {inputState.thumbnail && (
-                        <button
-                          type="button"
-                          className="text-[10px] text-zinc-400 hover:text-red-500 transition-colors"
+                        <button type="button"
+                          className="mt-1.5 w-full text-center text-[11px] text-zinc-400 hover:text-red-500 transition-colors"
                           onClick={() => setInputState((prev) => ({ ...prev, thumbnail: undefined }))}
                         >
                           삭제
@@ -1578,12 +1573,12 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       )}
                     </div>
 
-                    {/* ── 나머지 필드 ── */}
-                    <div className="flex-1 min-w-0 flex flex-col gap-3">
-                      {/* 이름 + URL 2열 */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="flex flex-col gap-1">
-                          <label className="text-xs font-semibold text-zinc-700">
+                    {/* ── 입력 필드 ── */}
+                    <div className="flex-1 min-w-0 flex flex-col gap-4">
+                      {/* Row 1: 이름 + URL */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-sm font-semibold text-zinc-800">
                             인스턴스 이름 <span className="text-red-500">*</span>
                           </label>
                           <Input
@@ -1592,8 +1587,8 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                             onChange={(e) => setInputState((prev) => ({ ...prev, instance_name: e.target.value }))}
                           />
                         </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-xs font-semibold text-zinc-700">회사 URL</label>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-sm font-semibold text-zinc-800">회사 URL</label>
                           <Input
                             value={inputState.company_url ?? ""}
                             placeholder="https://company.com"
@@ -1601,14 +1596,14 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                           />
                         </div>
                       </div>
-                      {/* 설명 */}
-                      <div className="flex flex-col gap-1">
-                        <label className="text-xs font-semibold text-zinc-700">설명</label>
+                      {/* Row 2: 설명 — 썸네일 높이에 맞게 */}
+                      <div className="flex flex-col gap-1.5 flex-1">
+                        <label className="text-sm font-semibold text-zinc-800">설명</label>
                         <Textarea
                           value={inputState.description ?? ""}
                           placeholder="이 인스턴스가 나타내는 자산에 대한 설명을 입력하세요."
-                          rows={3}
-                          className="resize-none text-sm"
+                          className="resize-none flex-1"
+                          style={{ minHeight: "72px", maxHeight: "100px" }}
                           onChange={(e) => setInputState((prev) => ({ ...prev, description: e.target.value }))}
                         />
                       </div>
