@@ -893,166 +893,155 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
       ? new Intl.DateTimeFormat("ko-KR").format(new Date(instance.create_date)) : null;
 
     const totalMissing = totalProps - totalFilled;
+    const accentColors = ["bg-blue-500","bg-violet-500","bg-cyan-500","bg-teal-500","bg-emerald-500","bg-indigo-500"];
 
     return (
-      <div key={mode === "view" ? instance?.instance_seq : "create-preview"} className="flex flex-col gap-3">
+      <div key={mode === "view" ? instance?.instance_seq : "create-preview"} className="flex flex-col gap-4">
 
-        {/* ── 상단: 인스턴스 헤더 + 전체 완성도 ── */}
-        <div className="rounded-lg border border-zinc-200 bg-white px-5 py-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-lg overflow-hidden border bg-muted shrink-0 relative">
-                <img src="/assets/media/aas/aas_blank.jpg" alt="Instance" className="object-cover w-full h-full" />
-                <span className="absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full bg-green-500 border border-white" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-base font-bold text-zinc-900">{instanceName || "—"}</h2>
-                  {categoryName && <span className="text-[11px] bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">{categoryName}</span>}
-                  {version      && <span className="text-[11px] bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">v{version}</span>}
-                  {assetKind    && <span className="text-[11px] bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">{assetKind}</span>}
-                  {verificationBadge(mode === "view" ? instance?.verification : inputState.verification)}
-                </div>
-                {description && <p className="text-xs text-zinc-400 mt-1 truncate max-w-xl">{description}</p>}
-              </div>
+        {/* ── 헤더 ── */}
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg overflow-hidden border bg-muted shrink-0 relative">
+              <img src="/assets/media/aas/aas_blank.jpg" alt="Instance" className="object-cover w-full h-full" />
+              <span className="absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full bg-green-500 border border-white" />
             </div>
-            {mode === "view" && user?.user_seq === instance?.create_user_seq && (
-              <div className="flex gap-2 shrink-0">
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="inline-flex h-7 items-center gap-1 rounded-md border border-input bg-background px-2.5 text-xs font-medium hover:bg-accent">
-                    Export <ChevronDown className="size-3" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {["json","xml","aasx"].map(fmt => (
-                      <DropdownMenuItem key={fmt} onClick={() => instance && handleExport(fmt, instance)}>{fmt}</DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Link href={ROUTES.INSTANCE.EDIT(instance?.instance_seq)}>
-                  <Button size="sm" className="h-7 text-xs"><Pencil className="size-3 mr-1" />Edit</Button>
-                </Link>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-sm font-bold text-zinc-900">{instanceName || "—"}</h2>
+                {categoryName && <span className="text-[11px] bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">{categoryName}</span>}
+                {version      && <span className="text-[11px] bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">v{version}</span>}
+                {assetKind    && <span className="text-[11px] bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">{assetKind}</span>}
+                {verificationBadge(mode === "view" ? instance?.verification : inputState.verification)}
               </div>
-            )}
+              {description && <p className="text-xs text-zinc-400 mt-0.5 truncate max-w-lg">{description}</p>}
+            </div>
           </div>
-
-          {/* 완성도 바 + 서브모델별 상태 */}
-          {totalProps > 0 && (
-            <div className="mt-4 pt-4 border-t border-zinc-100">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-zinc-600">전체 입력 완성도</span>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-zinc-400">{totalFilled}/{totalProps} 필드</span>
-                  {totalMissing > 0
-                    ? <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">{totalMissing}개 미입력</span>
-                    : <span className="text-[11px] font-semibold text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">모두 입력됨</span>
-                  }
-                  <span className="text-sm font-bold text-zinc-800">{overallRatio}%</span>
-                </div>
-              </div>
-              {/* 서브모델별 segmented bar */}
-              <div className="flex gap-0.5 h-2 rounded-full overflow-hidden">
-                {submodels.map((sm: any, si: number) => {
-                  const p = collectProps(sm.children ?? []);
-                  const f = p.filter((x: any) => resolveValue(x)).length;
-                  const segColors = ["bg-blue-500","bg-indigo-500","bg-violet-500","bg-cyan-500","bg-teal-500","bg-emerald-500"];
-                  const segBg     = ["bg-blue-100","bg-indigo-100","bg-violet-100","bg-cyan-100","bg-teal-100","bg-emerald-100"];
-                  const col = segColors[si % segColors.length];
-                  const bg  = segBg[si % segBg.length];
-                  const w = totalProps > 0 ? (p.length / totalProps) * 100 : 0;
-                  const innerW = p.length > 0 ? (f / p.length) * 100 : 0;
-                  return (
-                    <div key={si} className={`relative overflow-hidden ${bg}`} style={{ width: `${w}%` }}>
-                      <div className={`absolute left-0 top-0 h-full ${col}`} style={{ width: `${innerW}%` }} />
-                    </div>
-                  );
-                })}
-              </div>
-              {/* 서브모델 범례 */}
-              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                {submodels.map((sm: any, si: number) => {
-                  const meta = getSmMeta(sm.idShort);
-                  const p = collectProps(sm.children ?? []);
-                  const f = p.filter((x: any) => resolveValue(x)).length;
-                  const missing = p.length - f;
-                  const dotColors = ["bg-blue-500","bg-indigo-500","bg-violet-500","bg-cyan-500","bg-teal-500","bg-emerald-500"];
-                  return (
-                    <div key={si} className="flex items-center gap-1.5">
-                      <span className={`w-2 h-2 rounded-sm shrink-0 ${dotColors[si % dotColors.length]}`} />
-                      <span className="text-[11px] text-zinc-500">{meta?.label ?? sm.idShort}</span>
-                      {missing > 0
-                        ? <span className="text-[10px] text-amber-500 font-medium">-{missing}</span>
-                        : <span className="text-[10px] text-green-500">✓</span>
-                      }
-                    </div>
-                  );
-                })}
-              </div>
+          {mode === "view" && user?.user_seq === instance?.create_user_seq && (
+            <div className="flex gap-2 shrink-0">
+              <DropdownMenu>
+                <DropdownMenuTrigger className="inline-flex h-7 items-center gap-1 rounded-md border border-input bg-background px-2.5 text-xs font-medium hover:bg-accent">
+                  Export <ChevronDown className="size-3" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {["json","xml","aasx"].map(fmt => (
+                    <DropdownMenuItem key={fmt} onClick={() => instance && handleExport(fmt, instance)}>{fmt}</DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Link href={ROUTES.INSTANCE.EDIT(instance?.instance_seq)}>
+                <Button size="sm" className="h-7 text-xs"><Pencil className="size-3 mr-1" />Edit</Button>
+              </Link>
             </div>
           )}
         </div>
 
-        {/* ── 서브모델 카드 그리드 ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {/* ── 미입력 경고 배너 ── */}
+        {totalMissing > 0 && (
+          <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+            <p className="text-sm text-amber-700">
+              <span className="font-semibold">{totalMissing}개 항목</span>이 아직 입력되지 않았습니다.
+              {submodels.filter((sm: any) => {
+                const p = collectProps(sm.children ?? []);
+                return p.some((x: any) => !resolveValue(x));
+              }).map((sm: any) => {
+                const meta = getSmMeta(sm.idShort);
+                return meta?.label ?? sm.idShort;
+              }).join(", ")} 서브모델을 확인하세요.
+            </p>
+          </div>
+        )}
+
+        {/* ── 서브모델 accordion ── */}
+        <Accordion type="multiple" defaultValue={submodels.map((_: any, i: number) => `sm-${i}`)}>
           {submodels.map((sm: any, si: number) => {
-            const meta     = getSmMeta(sm.idShort);
-            const smDesc   = (Array.isArray(sm.description) && (sm.description.find((d: any) => d.language === "en")?.text || sm.description[0]?.text)) || meta?.desc || "";
-            const props    = collectProps(sm.children ?? []);
-            const filled   = props.filter(p => resolveValue(p)).length;
-            const missing  = props.length - filled;
-            const ratio    = props.length > 0 ? Math.round((filled / props.length) * 100) : 0;
+            const meta       = getSmMeta(sm.idShort);
+            const smDesc     = (Array.isArray(sm.description) && (sm.description.find((d: any) => d.language === "en")?.text || sm.description[0]?.text)) || meta?.desc || "";
+            const props      = collectProps(sm.children ?? []);
+            const filled     = props.filter(p => resolveValue(p)).length;
+            const missing    = props.length - filled;
             const isComplete = missing === 0;
+            const accent     = accentColors[si % accentColors.length];
 
-            const accentColors  = ["bg-blue-500","bg-indigo-500","bg-violet-500","bg-cyan-500","bg-teal-500","bg-emerald-500"];
-            const borderColors  = ["border-t-blue-500","border-t-indigo-500","border-t-violet-500","border-t-cyan-500","border-t-teal-500","border-t-emerald-500"];
-            const accent = accentColors[si % accentColors.length];
-            const border = borderColors[si % borderColors.length];
-
-            // 모든 props 표시 — 입력된 것 먼저
-            const sorted = [...props].sort((a,b) => (resolveValue(b)?1:0)-(resolveValue(a)?1:0));
+            // 그룹(Collection) 단위 또는 flat props
+            const groups: { label: string | null; items: any[] }[] = [];
+            for (const child of sm.children ?? []) {
+              const isCol = ["SubmodelElementCollection","SubmodelElementList"].includes(child.modelType);
+              if (isCol) {
+                groups.push({ label: child.idShort, items: collectProps([child]) });
+              } else if (["Property","MultiLanguageProperty","File","Range"].includes(child.modelType)) {
+                const last = groups[groups.length - 1];
+                if (last?.label === null) last.items.push(child);
+                else groups.push({ label: null, items: [child] });
+              }
+            }
 
             return (
-              <div key={si} className={`rounded-lg border border-zinc-200 border-t-2 ${border} bg-white overflow-hidden flex flex-col`}>
-                {/* 서브모델 헤더 */}
-                <div className="px-4 py-3 border-b border-zinc-100 flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-zinc-800">{meta?.label ?? sm.idShort}</span>
-                      {meta && <span className="text-[10px] font-mono text-zinc-400">{sm.idShort}</span>}
+              <AccordionItem key={si} value={`sm-${si}`} className="border border-zinc-200 rounded-lg overflow-hidden mb-2 last:mb-0">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-zinc-50 [&[data-state=open]]:bg-zinc-50 group">
+                  <div className="flex items-center justify-between gap-3 w-full pr-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* 색상 도트 */}
+                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${accent}`} />
+                      <div className="min-w-0 text-left">
+                        <p className="text-sm font-semibold text-zinc-800 leading-none">{meta?.label ?? sm.idShort}</p>
+                        {smDesc && <p className="text-[11px] text-zinc-400 mt-1 leading-snug line-clamp-1">{smDesc}</p>}
+                      </div>
                     </div>
-                    {smDesc && <p className="text-[11px] text-zinc-400 mt-0.5 leading-relaxed line-clamp-2">{smDesc}</p>}
-                  </div>
-                  <div className="shrink-0 flex flex-col items-end gap-1 pt-0.5">
-                    {isComplete
-                      ? <span className="text-[11px] font-semibold text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">완료</span>
-                      : <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">{missing}개 미입력</span>
-                    }
-                    <div className="w-16 h-1 bg-zinc-100 rounded-full overflow-hidden mt-1">
-                      <div className={`h-full rounded-full ${accent}`} style={{ width: `${ratio}%` }} />
+                    {/* 상태 배지 */}
+                    <div className="shrink-0 flex items-center gap-2">
+                      {isComplete ? (
+                        <span className="text-[11px] font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2.5 py-0.5">
+                          완료 {props.length}개
+                        </span>
+                      ) : (
+                        <>
+                          <span className="text-[11px] font-medium text-zinc-500 bg-zinc-100 rounded-full px-2.5 py-0.5">
+                            {filled}/{props.length}
+                          </span>
+                          <span className="text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
+                            {missing}개 미입력
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
-                </div>
+                </AccordionTrigger>
 
-                {/* 프로퍼티 목록 — 전체, 입력 완료 우선 */}
-                {sorted.length > 0 && (
-                  <div className="flex-1 divide-y divide-zinc-100">
-                    {sorted.map((prop: any, pi: number) => {
-                      const val = resolveValue(prop);
-                      return (
-                        <div key={pi} className={`flex items-center gap-3 px-4 py-2 ${!val ? "bg-amber-50/40" : ""}`}>
-                          <span className="text-[11px] text-zinc-400 w-36 shrink-0 truncate">{prop.idShort}</span>
-                          {val
-                            ? <span className="text-xs text-zinc-800 font-medium flex-1 min-w-0 truncate">{val}</span>
-                            : <span className="text-[11px] text-amber-400 italic flex-1">미입력</span>
-                          }
+                <AccordionContent className="p-0">
+                  {groups.map((group, gi) => (
+                    <div key={gi}>
+                      {/* 그룹 레이블 */}
+                      {group.label && (
+                        <div className="px-4 py-2 bg-zinc-50 border-t border-zinc-100">
+                          <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">{group.label}</span>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                      )}
+                      {/* key-value 2열 그리드 */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 border-t border-zinc-100">
+                        {group.items.map((prop: any, pi: number) => {
+                          const val = resolveValue(prop);
+                          return (
+                            <div
+                              key={pi}
+                              className={`flex items-start gap-3 px-4 py-2.5 border-b border-r border-zinc-100 last:border-r-0 ${!val ? "bg-amber-50/50" : ""}`}
+                            >
+                              <span className="text-[11px] text-zinc-400 w-28 shrink-0 pt-0.5 leading-tight truncate">{prop.idShort}</span>
+                              {val
+                                ? <span className="text-xs font-medium text-zinc-900 flex-1 min-w-0 leading-snug break-words">{val}</span>
+                                : <span className="text-[11px] text-amber-400 italic flex-1 pt-0.5">미입력</span>
+                              }
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </AccordionContent>
+              </AccordionItem>
             );
           })}
-        </div>
+        </Accordion>
       </div>
     );
   })();
