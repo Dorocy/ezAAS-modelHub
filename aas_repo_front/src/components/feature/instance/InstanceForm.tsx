@@ -256,10 +256,11 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
   const [inputState, setInputState] = useState<{
     instance_name: string;
     description: string;
+    company_url?: string;
     thumbnail?: string; // base64 data URL
     verification: "fail" | "success" | undefined;
     verification_log?: { total: number; success: number; fail: number };
-  }>({ instance_name: "", description: "", thumbnail: undefined, verification: undefined });
+  }>({ instance_name: "", description: "", company_url: "", thumbnail: undefined, verification: undefined });
 
   const [loading, setLoading] = useState(false);
   const [selectedNode, setSelectedNode] = useState<{ node: any; rootId: string } | null>(null);
@@ -1516,22 +1517,22 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
               {/* Step 0: Basic info */}
               {activeStep === 0 && (
                 <div className="rounded-xl border border-zinc-200 bg-white p-6">
-                  <div className="flex gap-6 items-start flex-wrap max-w-lg">
+                  <div className="flex gap-8 items-start">
                     {/* 썸네일 업로드 */}
-                    <div className="flex flex-col gap-1.5 items-start">
-                      <label className="text-sm font-semibold text-zinc-800">썸네일</label>
+                    <div className="flex flex-col gap-2 items-center shrink-0">
                       <label className="cursor-pointer group">
-                        <div className={`w-28 h-28 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-colors ${inputState.thumbnail ? "border-zinc-200 bg-zinc-50" : "border-zinc-200 bg-zinc-50 hover:border-zinc-400 hover:bg-zinc-100"}`}>
+                        <div className={`w-40 h-40 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-colors ${inputState.thumbnail ? "border-zinc-200" : "border-zinc-200 bg-zinc-50 hover:border-zinc-400 hover:bg-zinc-100"}`}>
                           {inputState.thumbnail ? (
                             <img src={inputState.thumbnail} alt="thumbnail preview" className="object-cover w-full h-full" />
                           ) : (
-                            <div className="flex flex-col items-center gap-1.5 text-zinc-400 group-hover:text-zinc-500 transition-colors">
-                              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <div className="flex flex-col items-center gap-2 text-zinc-400 group-hover:text-zinc-500 transition-colors">
+                              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                                 <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
                                 <circle cx="9" cy="9" r="2"/>
                                 <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
                               </svg>
-                              <span className="text-[11px] font-medium">이미지 추가</span>
+                              <span className="text-xs font-medium">썸네일 추가</span>
+                              <span className="text-[11px] text-zinc-300">선택 사항</span>
                             </div>
                           )}
                         </div>
@@ -1559,11 +1560,10 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                           삭제
                         </button>
                       )}
-                      <p className="text-[11px] text-zinc-400">선택 사항</p>
                     </div>
 
-                    {/* 이름 + 설명 */}
-                    <div className="flex flex-col gap-5 flex-1 min-w-[240px]">
+                    {/* 입력 필드 */}
+                    <div className="flex flex-col gap-4 w-80">
                       <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-semibold text-zinc-800">
                           인스턴스 이름 <span className="text-red-500">*</span>
@@ -1573,7 +1573,6 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                           placeholder="예: 로봇암_라인A_001"
                           onChange={(e) => setInputState((prev) => ({ ...prev, instance_name: e.target.value }))}
                         />
-                        <p className="text-[11px] text-zinc-400">이 AAS 인스턴스를 구분할 고유한 이름을 입력하세요.</p>
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-semibold text-zinc-800">설명</label>
@@ -1582,7 +1581,14 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                           placeholder="예: A라인 1번 로봇암 — 2024년 도입"
                           onChange={(e) => setInputState((prev) => ({ ...prev, description: e.target.value }))}
                         />
-                        <p className="text-[11px] text-zinc-400">이 인스턴스가 어떤 자산을 나타내는지 간단히 설명하세요. (선택)</p>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-semibold text-zinc-800">회사 URL</label>
+                        <Input
+                          value={inputState.company_url ?? ""}
+                          placeholder="예: https://company.com"
+                          onChange={(e) => setInputState((prev) => ({ ...prev, company_url: e.target.value }))}
+                        />
                       </div>
                     </div>
                   </div>
