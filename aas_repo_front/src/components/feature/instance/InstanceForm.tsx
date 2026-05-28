@@ -469,7 +469,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
   };
 
   const handleSubmit = async () => {
-    if (!(await confirmSave("Do you want to Save?"))) return;
+    if (!(await confirmSave("저장하시겠습니까?"))) return;
     for (const key in inputState) {
       if ((inputState as any)[key] === "") return showToast.error(`Please check ${key} field`);
     }
@@ -480,7 +480,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
       verification = await verifyInstance();
     }
     if (verification === "fail") {
-      if (!(await confirmSave("Validation has failed. Would you like to continue anyway?"))) return;
+      showToast.error("검증이 실패했지만 저장을 진행합니다. 이후 검증을 다시 실행해주세요.");
     }
     const payloadAASmodel = {
       ...aasmodel,
@@ -1187,7 +1187,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     }
   }, [previewModel]);
 
-  /* 카테고리 목록 (lv:1 만 표시) */
+  /* 카테고리 ���록 (lv:1 만 표시) */
   const categoryItems = useMemo(() => {
     const list = Array.isArray(categorys) ? categorys : [];
     return list.filter((c: any) => c.lv === 1);
@@ -1766,29 +1766,66 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
 
               {/* Step 4: Complete */}
               {activeStep === 4 && (
-                <Card>
-                  <CardHeader><CardTitle>Complete</CardTitle></CardHeader>
-                  <CardContent className="text-center space-y-3">
-                    <p className="text-base">You have completed all the steps.</p>
-                    <p className="text-sm text-muted-foreground mb-4">Click the button below to finalize your instance.</p>
-                    <div className="flex justify-center gap-2">
+                <div className="flex flex-col gap-3">
+                  {/* 검증 상태 안내 */}
+                  {inputState.verification === "success" && (
+                    <div className="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
+                      <CheckCircle2 className="size-5 text-green-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-green-700">검증을 통과했습니다.</p>
+                        <p className="text-xs text-green-600 mt-0.5">AAS 구조와 데이터가 모두 유효합니다. 저장 후 배포할 수 있습니다.</p>
+                      </div>
+                    </div>
+                  )}
+                  {inputState.verification === "fail" && (
+                    <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                      <ShieldCheck className="size-5 text-amber-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-amber-700">검증이 실패했습니다.</p>
+                        <p className="text-xs text-amber-600 mt-0.5">검증 실패 상태로도 저장할 수 있습니다. 저장 후 3단계로 돌아가 검증을 다시 실행하거나, 2단계에서 데이터를 수정할 수 있습니다.</p>
+                      </div>
+                    </div>
+                  )}
+                  {!inputState.verification && (
+                    <div className="flex items-start gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
+                      <ShieldCheck className="size-5 text-zinc-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-zinc-600">검증을 실행하지 않았습니다.</p>
+                        <p className="text-xs text-zinc-400 mt-0.5">검증 없이도 저장할 수 있습니다. 3단계로 돌아가 검증을 먼저 실행하는 것을 권장합니다.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 저장 패널 */}
+                  <div className="rounded-lg border border-zinc-200 bg-white px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                      <p className="text-sm font-semibold text-zinc-900">
+                        {mode === "create" ? "인스턴스 생성" : "변경 사항 저장"}
+                      </p>
+                      <p className="text-xs text-zinc-400 mt-0.5">
+                        {mode === "create"
+                          ? "저장하면 AAS 인스턴스가 생성되고 목록에 등록됩니다."
+                          : "저장하면 변경 사항이 즉시 반영됩니다."}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {mode === "edit" && (
+                        <Button variant="destructive" size="sm" disabled={loading} onClick={async () => {
+                          const isConfirm = await confirmSave("정말 삭제하시겠습니까?", { labels: { confirm: "삭제", cancel: "취소" }, confirmProps: { color: "red.8" } });
+                          if (isConfirm) { await deleteModel({ modelType: "instance", modelSeq: instance?.instance_seq }); router.replace(ROUTES.INSTANCE.LIST); }
+                        }}>
+                          <Trash2 className="size-3.5 mr-1" />삭제
+                        </Button>
+                      )}
                       {((mode === "create" && (user?.user_group_seq === UserRole.User || user?.user_group_seq === UserRole.Manager)) ||
                         (mode === "edit" && (user?.user_group_seq === UserRole.Manager || user?.user_seq === instance?.create_user_seq))) && (
                         <Button disabled={loading} onClick={() => handleSubmit()}>
-                          <Save className="size-3.5 mr-1" />{mode === "create" ? "Create" : "Save"}
-                        </Button>
-                      )}
-                      {mode === "edit" && (
-                        <Button variant="destructive" disabled={loading} onClick={async () => {
-                          const isConfirm = await confirmSave("Are you sure you want to delete it?", { labels: { confirm: "Delete", cancel: "Cancel" }, confirmProps: { color: "red.8" } });
-                          if (isConfirm) { await deleteModel({ modelType: "instance", modelSeq: instance?.instance_seq }); router.replace(ROUTES.INSTANCE.LIST); }
-                        }}>
-                          <Trash2 className="size-3.5 mr-1" />Delete
+                          <Save className="size-3.5 mr-1" />{mode === "create" ? "저장하고 생성" : "저장"}
                         </Button>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               )}
             </div>
 
