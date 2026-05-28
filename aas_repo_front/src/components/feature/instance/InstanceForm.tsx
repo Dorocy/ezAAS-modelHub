@@ -1531,8 +1531,8 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             <div className="space-y-4">
               {/* Step 0: Basic info */}
               {activeStep === 0 && (
-                <div className="rounded-xl border border-zinc-200 bg-white p-6 max-w-2xl">
-                  <div className="flex flex-col gap-5">
+                <div className="rounded-xl border border-zinc-200 bg-white p-6">
+                  <div className="flex flex-col gap-5 max-w-xl">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-sm font-semibold text-zinc-800">
                         인스턴스 이름 <span className="text-red-500">*</span>
@@ -1541,7 +1541,6 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                         value={inputState.instance_name ?? ""}
                         placeholder="예: 로봇암_라인A_001"
                         onChange={(e) => setInputState((prev) => ({ ...prev, instance_name: e.target.value }))}
-                        className="h-10"
                       />
                       <p className="text-[11px] text-zinc-400">이 AAS 인스턴스를 구분할 고유한 이름을 입력하세요.</p>
                     </div>
@@ -1551,7 +1550,6 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                         value={inputState.description ?? ""}
                         placeholder="예: A라인 1번 로봇암 — 2024년 도입"
                         onChange={(e) => setInputState((prev) => ({ ...prev, description: e.target.value }))}
-                        className="h-10"
                       />
                       <p className="text-[11px] text-zinc-400">이 인스턴스가 어떤 자산을 나타내는지 간단히 설명하세요. (선택)</p>
                     </div>
