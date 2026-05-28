@@ -44,7 +44,7 @@ import {
   Legend,
   ChartData,
 } from "chart.js";
-import BarChart from "@/components/BarChart";
+
 import CarbonFootprintView from "./CarbonFootprintView";
 import TechnicalDataView from "./TechnicalDataView";
 import HandoverDocumentationView from "./HandoverDocumentationView";
@@ -842,77 +842,73 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
   const originalForm = (
     <div key={mode === "view" ? instance?.instance_seq : "create-preview"}>
       {/* Header Card */}
-      <Card className="mb-6">
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-4 sm:flex-nowrap">
-            {/* Avatar */}
-            <div className="shrink-0">
-              <div className="w-24 h-24 rounded-lg overflow-hidden border bg-muted relative">
+      <Card className="mb-4">
+        <CardContent className="pt-5 pb-0">
+          <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+            {/* 왼쪽: 이름 + ID + description */}
+            <div className="flex items-start gap-4 min-w-0 flex-1">
+              <div className="w-12 h-12 rounded-xl overflow-hidden border bg-muted shrink-0 relative">
                 <img src="/assets/media/aas/aas_blank.jpg" alt="Instance" className="object-cover w-full h-full" />
-                <span className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-background" />
+                <span className="absolute bottom-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-background" />
               </div>
-            </div>
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2 flex-wrap">
-                <div>
-                  <h2 className="text-xl font-bold text-foreground">
-                    {mode === "view" ? instance?.instance_name : inputState.instance_name}
-                  </h2>
-                  {Array.isArray(treeData) && treeData.length > 0 && (
-                    <p className="text-sm text-muted-foreground font-mono">{treeData[0].id}</p>
-                  )}
-                </div>
-                {mode === "view" && user?.user_seq === instance?.create_user_seq && (
-                  <div className="flex gap-2">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger className="inline-flex h-8 items-center gap-1 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground">
-                        Export <ChevronDown className="size-3" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        {["json", "xml", "aasx"].map((fmt) => (
-                          <DropdownMenuItem key={fmt} onClick={() => instance && handleExport(fmt, instance)}>
-                            {fmt}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <Link href={ROUTES.INSTANCE.EDIT(instance?.instance_seq)}>
-                      <Button size="sm"><Pencil className="size-3 mr-1" />Edit</Button>
-                    </Link>
-                  </div>
+              <div className="min-w-0">
+                <h2 className="text-lg font-bold text-foreground leading-tight">
+                  {mode === "view" ? instance?.instance_name : inputState.instance_name}
+                </h2>
+                {Array.isArray(treeData) && treeData.length > 0 && (
+                  <p className="text-xs text-muted-foreground font-mono mt-0.5 truncate max-w-md">{treeData[0].id}</p>
                 )}
-              </div>
-              {/* Stats row */}
-              <div className="flex flex-wrap gap-3 mt-4">
-                {[
-                  { label: "Category", value: mode === "view" ? instance?.category_name : (aasmodel as any)?.category_name },
-                  { label: "Verification", value: verificationBadge(mode === "view" ? instance?.verification : inputState.verification) },
-                  { label: "Version", value: mode === "view" ? instance?.aasmodel_version : (aasmodel as any)?.version },
-                  { label: "Instance seq", value: mode === "view" ? instance?.instance_seq : "(auto)" },
-                  { label: "Create Date", value: mode === "view" && instance?.create_date ? new Intl.DateTimeFormat("ko-KR").format(new Date(instance.create_date)) : "N/A" },
-                  { label: "Last Update", value: mode === "view" && instance?.last_mod_date ? new Intl.DateTimeFormat("ko-KR").format(new Date(instance.last_mod_date)) : "N/A" },
-                ].map(({ label, value }) => (
-                  <div key={label} className="border border-dashed rounded px-4 py-2 min-w-[120px]">
-                    <div className="font-semibold text-sm">{value ?? "—"}</div>
-                    <div className="text-xs text-muted-foreground">{label}</div>
-                  </div>
-                ))}
+                {(mode === "view" ? instance?.description : inputState.description) && (
+                  <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-xl">
+                    {mode === "view" ? instance?.description : inputState.description}
+                  </p>
+                )}
+                {/* 메타 배지들 */}
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {[
+                    { label: (mode === "view" ? instance?.category_name : (aasmodel as any)?.category_name) },
+                    { label: (mode === "view" ? instance?.aasmodel_version : (aasmodel as any)?.version) ? `v${mode === "view" ? instance?.aasmodel_version : (aasmodel as any)?.version}` : null },
+                    { label: mode === "view" && instance?.create_date ? new Intl.DateTimeFormat("ko-KR").format(new Date(instance.create_date)) : null, prefix: "생성" },
+                  ].filter(b => b.label).map(({ label, prefix }, i) => (
+                    <span key={i} className="inline-flex items-center text-xs text-zinc-500 bg-zinc-100 rounded-full px-2.5 py-0.5">
+                      {prefix && <span className="text-zinc-400 mr-1">{prefix}</span>}{label}
+                    </span>
+                  ))}
+                  {verificationBadge(mode === "view" ? instance?.verification : inputState.verification)}
+                </div>
               </div>
             </div>
+            {/* 오른쪽: 액션 */}
+            {mode === "view" && user?.user_seq === instance?.create_user_seq && (
+              <div className="flex gap-2 shrink-0">
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="inline-flex h-8 items-center gap-1 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground">
+                    Export <ChevronDown className="size-3" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {["json", "xml", "aasx"].map((fmt) => (
+                      <DropdownMenuItem key={fmt} onClick={() => instance && handleExport(fmt, instance)}>{fmt}</DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Link href={ROUTES.INSTANCE.EDIT(instance?.instance_seq)}>
+                  <Button size="sm"><Pencil className="size-3 mr-1" />Edit</Button>
+                </Link>
+              </div>
+            )}
           </div>
           {/* Nav Tabs */}
-          <div className="flex gap-6 border-b mt-4 pt-2">
+          <div className="flex gap-1 border-b">
             {[
-              { key: "templateInfo", label: "AAS Instance info" },
-              { key: "submodel", label: "Submodel" },
-              { key: "treeView", label: "Tree view" },
+              { key: "templateInfo", label: "개요" },
+              { key: "submodel", label: "서브모델" },
+              { key: "treeView", label: "트리 구조" },
             ].map(({ key, label }) => (
               <button
                 key={key}
                 onClick={() => setActiveTab(key)}
                 className={cn(
-                  "pb-2 text-sm font-medium border-b-2 transition-colors",
+                  "px-4 pb-2.5 pt-1 text-sm font-medium border-b-2 transition-colors",
                   activeTab === key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -923,41 +919,59 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         </CardContent>
       </Card>
 
-      {/* Tab: Instance info */}
+      {/* Tab: 개요 */}
       {activeTab === "templateInfo" && (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Asset 정보 */}
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Instance info</CardTitle></CardHeader>
-            <CardContent>
-              <table className="w-full text-sm">
-                <tbody>
-                  <tr className="border-b"><th className="text-left text-muted-foreground py-1.5 pr-4 font-medium">Asset Kind</th><td className="py-1.5 font-medium text-primary">{treeData?.[0]?.AssetAdministrationShell?.assetInformation?.assetKind}</td></tr>
-                  <tr className="border-b"><th className="text-left text-muted-foreground py-1.5 pr-4 font-medium">Global Asset ID</th><td className="py-1.5 font-medium text-primary font-mono text-xs break-all">{treeData?.[0]?.id}</td></tr>
-                  <tr><th className="text-left text-muted-foreground py-1.5 pr-4 font-medium align-top">Reference Submodel</th>
-                    <td className="py-1.5">
-                      <ul className="space-y-1">
-                        {treeData?.[0]?.children?.filter((c: any) => c.modelType === "Submodel").map((sm: any, i: number) => (
-                          <li key={i} className="text-primary font-medium">{sm.idShort || `Submodel ${i + 1}`}</li>
-                        ))}
-                      </ul>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+            <CardHeader className="pb-3 pt-5 px-5">
+              <CardTitle className="text-sm font-semibold text-zinc-700">Asset 정보</CardTitle>
+            </CardHeader>
+            <CardContent className="px-5 pb-5">
+              <div className="flex flex-col divide-y divide-zinc-100">
+                {[
+                  { label: "Asset Kind", value: treeData?.[0]?.AssetAdministrationShell?.assetInformation?.assetKind },
+                  { label: "Global Asset ID", value: treeData?.[0]?.id, mono: true },
+                  { label: "Instance Seq", value: mode === "view" ? instance?.instance_seq : "(자동 부여)" },
+                  { label: "마지막 수정", value: mode === "view" && instance?.last_mod_date ? new Intl.DateTimeFormat("ko-KR").format(new Date(instance.last_mod_date)) : "—" },
+                ].map(({ label, value, mono }) => (
+                  <div key={label} className="flex items-start justify-between gap-4 py-2.5">
+                    <span className="text-xs text-zinc-400 shrink-0 w-28">{label}</span>
+                    <span className={cn("text-xs text-zinc-800 font-medium text-right break-all", mono && "font-mono")}>{value ?? "—"}</span>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
+
+          {/* 서브모델 구성 */}
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Description</CardTitle></CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              {mode === "view" ? instance?.description : inputState.description}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Components</CardTitle></CardHeader>
-            <CardContent>
-              {Object.keys(componentCounts).length > 0
-                ? <BarChart data={chartData} />
-                : <p className="text-sm text-muted-foreground">No components to display.</p>}
+            <CardHeader className="pb-3 pt-5 px-5">
+              <CardTitle className="text-sm font-semibold text-zinc-700">서브모델 구성</CardTitle>
+            </CardHeader>
+            <CardContent className="px-5 pb-5">
+              {(() => {
+                const submodels = treeData?.[0]?.children?.filter((c: any) => c.modelType === "Submodel") ?? [];
+                if (submodels.length === 0) return <p className="text-xs text-zinc-400">서브모델 없음</p>;
+                return (
+                  <div className="flex flex-col gap-2">
+                    {submodels.map((sm: any, i: number) => {
+                      const leafCount = sm.children?.length ?? 0;
+                      return (
+                        <div key={i} className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2.5">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                            <span className="text-sm font-medium text-zinc-800 truncate">{sm.idShort || `Submodel ${i + 1}`}</span>
+                          </div>
+                          <span className="text-[10px] font-semibold text-zinc-400 bg-white border border-zinc-200 rounded-full px-2 py-0.5 shrink-0">
+                            {leafCount}개 요소
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </div>
