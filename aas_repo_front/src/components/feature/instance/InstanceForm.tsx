@@ -472,7 +472,8 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         try {
           const verificationData = JSON.parse(json.data);
           if (verificationData) {
-            setVerificationActive(0);
+            const firstKey = Object.keys(verificationData).find(k => verificationData[k]?.count > 0) ?? Object.keys(verificationData)[0] ?? null;
+            setVerificationActive(firstKey);
             verificationRef.current = verificationData;
             setInputState((prev) => ({ ...prev, verification: "fail", verification_log: verificationData?.summary }));
           } else {
