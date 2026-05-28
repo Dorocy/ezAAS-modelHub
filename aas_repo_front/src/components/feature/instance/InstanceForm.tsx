@@ -1008,26 +1008,54 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                         )}
                       </div>
 
-                      {/* 구성 요소 목록 — SubmodelElementCollection 단위로 */}
+                      {/* 프로퍼티 값 테이블 */}
                       {sm.children?.length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-3 border-t border-zinc-100">
+                        <div className="pt-3 border-t border-zinc-100">
                           {sm.children.map((child: any, ci: number) => {
-                            const childProps = collectProps([child]);
-                            const childFilled = childProps.filter(p => resolveValue(p)).length;
                             const isCollection = ["SubmodelElementCollection", "SubmodelElementList"].includes(child.modelType);
-                            return (
-                              <div
-                                key={ci}
-                                className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5"
-                              >
-                                <span className="text-xs font-medium text-zinc-700">{child.idShort}</span>
-                                {isCollection && childProps.length > 0 && (
-                                  <span className="text-[10px] text-zinc-400">
-                                    ({childFilled}/{childProps.length})
-                                  </span>
-                                )}
-                              </div>
+                            const childProps = isCollection ? collectProps([child]) : (
+                              ["Property", "MultiLanguageProperty", "File", "Range"].includes(child.modelType) ? [child] : []
                             );
+
+                            if (isCollection) {
+                              return (
+                                <div key={ci} className="mb-4 last:mb-0">
+                                  <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-1.5">{child.idShort}</p>
+                                  <div className="rounded-lg border border-zinc-100 overflow-hidden">
+                                    {childProps.map((prop: any, pi: number) => {
+                                      const val = resolveValue(prop);
+                                      return (
+                                        <div key={pi} className="flex items-center gap-3 px-3 py-2 border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50/60">
+                                          <span className="text-xs text-zinc-500 w-44 shrink-0 truncate">{prop.idShort}</span>
+                                          <span className={`text-xs flex-1 min-w-0 truncate ${val ? "text-zinc-900 font-medium" : "text-zinc-300 italic"}`}>
+                                            {val || "미입력"}
+                                          </span>
+                                          {prop.valueType && (
+                                            <span className="text-[10px] font-mono text-zinc-300 shrink-0">{prop.valueType.replace("xs:", "")}</span>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            // 단일 Property
+                            return childProps.map((prop: any, pi: number) => {
+                              const val = resolveValue(prop);
+                              return (
+                                <div key={`${ci}-${pi}`} className="flex items-center gap-3 px-3 py-2 rounded-lg border border-zinc-100 mb-1.5 last:mb-0 hover:bg-zinc-50/60">
+                                  <span className="text-xs text-zinc-500 w-44 shrink-0 truncate">{prop.idShort}</span>
+                                  <span className={`text-xs flex-1 min-w-0 truncate ${val ? "text-zinc-900 font-medium" : "text-zinc-300 italic"}`}>
+                                    {val || "미입력"}
+                                  </span>
+                                  {prop.valueType && (
+                                    <span className="text-[10px] font-mono text-zinc-300 shrink-0">{prop.valueType.replace("xs:", "")}</span>
+                                  )}
+                                </div>
+                              );
+                            });
                           })}
                         </div>
                       )}
@@ -1383,7 +1411,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                   {previewTreeData ? (
                     <TemplateBlueprint treeData={previewTreeData} />
                   ) : (
-                    <p className="text-xs text-muted-foreground text-center py-6">구조 데이터가 없습니다.</p>
+                    <p className="text-xs text-muted-foreground text-center py-6">구�� 데이터가 없습니다.</p>
                   )}
                 </div>
               )}
@@ -1527,7 +1555,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                             />
                             {mode === "create" && (
                               <Button variant="outline" size="sm" onClick={removeAASModel} className="text-destructive border-destructive/40 hover:bg-destructive/10">
-                                <Trash2 className="size-3.5 mr-1" />템플릿 변경
+                                <Trash2 className="size-3.5 mr-1" />템��릿 변경
                               </Button>
                             )}
                           </div>
