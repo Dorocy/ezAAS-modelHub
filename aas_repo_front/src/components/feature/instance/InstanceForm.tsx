@@ -73,6 +73,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { ChevronDown, List, FilePlus, Plus, Trash2, ShieldCheck, Save, Pencil, CheckCircle2, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -1518,21 +1519,42 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
               {activeStep === 0 && (
                 <div className="rounded-xl border border-zinc-200 bg-white p-6">
                   <div className="flex gap-8 items-start">
-                    {/* 썸네일 업로드 */}
-                    <div className="flex flex-col gap-2 items-center shrink-0">
-                      <label className="cursor-pointer group">
-                        <div className={`w-40 h-40 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-colors ${inputState.thumbnail ? "border-zinc-200" : "border-zinc-200 bg-zinc-50 hover:border-zinc-400 hover:bg-zinc-100"}`}>
+
+                    {/* ── 썸네일 업로드 ── */}
+                    <div className="shrink-0 flex flex-col items-center gap-2">
+                      <label className="cursor-pointer group relative">
+                        <div className={cn(
+                          "w-44 h-44 rounded-2xl border-2 border-dashed overflow-hidden transition-all duration-200 flex items-center justify-center",
+                          inputState.thumbnail
+                            ? "border-zinc-200 bg-zinc-50"
+                            : "border-zinc-200 bg-zinc-50 group-hover:border-zinc-400 group-hover:bg-zinc-100"
+                        )}>
                           {inputState.thumbnail ? (
-                            <img src={inputState.thumbnail} alt="thumbnail preview" className="object-cover w-full h-full" />
+                            <>
+                              <img src={inputState.thumbnail} alt="thumbnail" className="object-cover w-full h-full" />
+                              {/* hover 오버레이 */}
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 rounded-2xl">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                  <polyline points="17 8 12 3 7 8"/>
+                                  <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                                <span className="text-white text-[11px] font-medium">변경</span>
+                              </div>
+                            </>
                           ) : (
-                            <div className="flex flex-col items-center gap-2 text-zinc-400 group-hover:text-zinc-500 transition-colors">
-                              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-                                <circle cx="9" cy="9" r="2"/>
-                                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-                              </svg>
-                              <span className="text-xs font-medium">썸네일 추가</span>
-                              <span className="text-[11px] text-zinc-300">선택 사항</span>
+                            <div className="flex flex-col items-center gap-3 text-zinc-300 group-hover:text-zinc-400 transition-colors px-4 text-center">
+                              <div className="w-12 h-12 rounded-xl bg-zinc-100 group-hover:bg-zinc-200 flex items-center justify-center transition-colors">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400">
+                                  <rect width="18" height="18" x="3" y="3" rx="3" ry="3"/>
+                                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                                  <path d="m21 15-5-5L5 21"/>
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold text-zinc-500 group-hover:text-zinc-700 transition-colors">썸네일 업로드</p>
+                                <p className="text-[11px] text-zinc-300 mt-0.5">JPG, PNG, WEBP</p>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -1551,7 +1573,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                           }}
                         />
                       </label>
-                      {inputState.thumbnail && (
+                      {inputState.thumbnail ? (
                         <button
                           type="button"
                           className="text-[11px] text-zinc-400 hover:text-red-500 transition-colors"
@@ -1559,38 +1581,47 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                         >
                           삭제
                         </button>
+                      ) : (
+                        <p className="text-[11px] text-zinc-300">선택 사항</p>
                       )}
                     </div>
 
-                    {/* 입력 필드 */}
-                    <div className="flex flex-col gap-4 w-80">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-zinc-800">
-                          인스턴스 이름 <span className="text-red-500">*</span>
-                        </label>
-                        <Input
-                          value={inputState.instance_name ?? ""}
-                          placeholder="예: 로봇암_라인A_001"
-                          onChange={(e) => setInputState((prev) => ({ ...prev, instance_name: e.target.value }))}
-                        />
+                    {/* ── 입력 필드 ── */}
+                    <div className="flex-1 flex flex-col gap-4 min-w-0">
+                      {/* 이름 + 회사 URL — 2열 */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-sm font-semibold text-zinc-800">
+                            인스턴스 이름 <span className="text-red-500">*</span>
+                          </label>
+                          <Input
+                            value={inputState.instance_name ?? ""}
+                            placeholder="예: 로봇암_라인A_001"
+                            onChange={(e) => setInputState((prev) => ({ ...prev, instance_name: e.target.value }))}
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-sm font-semibold text-zinc-800">회사 URL</label>
+                          <Input
+                            value={inputState.company_url ?? ""}
+                            placeholder="https://company.com"
+                            onChange={(e) => setInputState((prev) => ({ ...prev, company_url: e.target.value }))}
+                          />
+                        </div>
                       </div>
+                      {/* 설명 — 전체 너비, textarea */}
                       <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-semibold text-zinc-800">설명</label>
-                        <Input
+                        <Textarea
                           value={inputState.description ?? ""}
-                          placeholder="예: A라인 1번 로봇암 — 2024년 도입"
+                          placeholder="이 인스턴스가 나타내는 자산에 대한 설명을 입력하세요."
+                          rows={4}
+                          className="resize-none"
                           onChange={(e) => setInputState((prev) => ({ ...prev, description: e.target.value }))}
                         />
                       </div>
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-zinc-800">회사 URL</label>
-                        <Input
-                          value={inputState.company_url ?? ""}
-                          placeholder="예: https://company.com"
-                          onChange={(e) => setInputState((prev) => ({ ...prev, company_url: e.target.value }))}
-                        />
-                      </div>
                     </div>
+
                   </div>
                 </div>
               )}
