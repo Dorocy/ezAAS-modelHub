@@ -50,7 +50,6 @@ export default function VerifyDetailView({
         {failEntries.length > 0 && (
           <Button
             variant="outline"
-            size="sm"
             onClick={() => setAllModalOpen(true)}
           >
             <Maximize2 className="size-3.5 mr-1.5" />전체 오류 보기
@@ -106,8 +105,7 @@ export default function VerifyDetailView({
             </div>
             <Button
               variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs text-zinc-500 hover:text-zinc-800"
+              className="text-xs text-zinc-500 hover:text-zinc-800"
               onClick={() => setItemModalOpen(true)}
             >
               <Maximize2 className="size-3.5 mr-1" />상세 보기

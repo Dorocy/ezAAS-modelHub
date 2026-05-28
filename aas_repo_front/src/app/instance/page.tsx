@@ -158,7 +158,7 @@ export default function InstancePage() {
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               />
             </div>
-            <Button size="sm" onClick={handleSearch}>
+            <Button onClick={handleSearch}>
               <Search className="size-3.5 mr-1.5" />검색
             </Button>
           </div>
@@ -241,7 +241,7 @@ export default function InstancePage() {
                             <div className="flex items-center gap-1.5">
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="outline" size="sm">
+                                  <Button variant="outline">
                                     <Download className="size-3.5 mr-1.5" />
                                     내보내기
                                     <ChevronDown className="size-3 ml-1" />

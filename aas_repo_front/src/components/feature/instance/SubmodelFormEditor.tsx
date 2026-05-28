@@ -180,7 +180,7 @@ function FileFieldInput({
               onValueChange(stateKey, path, file);
             }}
           />
-          <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()} className="shrink-0">
+          <Button type="button" variant="outline" onClick={() => fileRef.current?.click()} className="shrink-0">
             Browse
           </Button>
         </div>
@@ -500,7 +500,7 @@ function SubmodelPanel({
               </span>
             </div>
             {editMode && (
-              <Button type="button" size="sm" onClick={onSave}>
+              <Button type="button" onClick={onSave}>
                 저장
               </Button>
             )}

@@ -147,7 +147,7 @@ export default function DistributePage() {
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               />
             </div>
-            <Button size="sm" onClick={handleSearch}>
+            <Button onClick={handleSearch}>
               <Search className="size-3.5 mr-1.5" />검색
             </Button>
           </div>

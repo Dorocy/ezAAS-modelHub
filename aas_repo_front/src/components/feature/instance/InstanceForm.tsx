@@ -987,7 +987,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                 </DropdownMenuContent>
               </DropdownMenu>
               <Link href={ROUTES.INSTANCE.EDIT(instance?.instance_seq)}>
-                <Button size="sm"><Pencil className="size-3.5 mr-1.5" />수정</Button>
+                <Button><Pencil className="size-3.5 mr-1.5" />수정</Button>
               </Link>
             </div>
           )}
@@ -1225,12 +1225,11 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              size="sm"
               onClick={() => { setModalOpen(false); setModelSeq(""); setPreviewModel(null); }}
             >
               Cancel
             </Button>
-            <Button size="sm" disabled={!modelSeq} onClick={handleTemplateConfirm}>
+            <Button disabled={!modelSeq} onClick={handleTemplateConfirm}>
               선택 완료
             </Button>
           </div>
@@ -1460,10 +1459,10 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
           </div>
           <div className="flex gap-2 items-center">
             <Link href="/instance">
-              <Button variant="outline" size="sm"><List className="size-3.5 mr-1" />목록</Button>
+              <Button variant="outline"><List className="size-3.5 mr-1" />목록</Button>
             </Link>
             {mode === "create" && activeStep === 1 && (
-              <Button size="sm" onClick={() => { setModalOpen(true); setModelType("aasmodel"); }}>
+              <Button onClick={() => { setModalOpen(true); setModelType("aasmodel"); }}>
                 <FilePlus className="size-3.5 mr-1" />AAS 템플릿 선택
               </Button>
             )}
@@ -1477,17 +1476,17 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             {combinedModelDialog}
             {/* foot buttons for view mode */}
             <div className="flex gap-2 mb-4">
-              <Button variant="outline" size="sm" onClick={() => { if (combinedAASTreeData) setCombinedModalOpen(true); }}>
+              <Button variant="outline" onClick={() => { if (combinedAASTreeData) setCombinedModalOpen(true); }}>
                 통합 모델 보기
               </Button>
               {user?.user_seq === instance?.create_user_seq && (
                 <>
                   <Link href={ROUTES.INSTANCE.EDIT(instance?.instance_seq)}>
-                    <Button variant="outline" size="sm"><Pencil className="size-3.5 mr-1.5" />수정</Button>
+                    <Button variant="outline"><Pencil className="size-3.5 mr-1.5" />수정</Button>
                   </Link>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline">
                         <Download className="size-3.5 mr-1.5" />내보내기 <ChevronDown className="size-3 ml-1" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -1556,7 +1555,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                             템플릿을 선택하면 트리 구조가 표시되고 각 항목의 값을 입력할 수 있습니다.
                           </p>
                         </div>
-                        <Button size="sm" onClick={() => { setModalOpen(true); setModelType("aasmodel"); }}>
+                        <Button onClick={() => { setModalOpen(true); setModelType("aasmodel"); }}>
                           <FilePlus className="size-3.5 mr-1.5" />AAS 템플릿 선택
                         </Button>
                       </CardContent>
@@ -1587,7 +1586,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                               mode={mode}
                             />
                             {mode === "create" && (
-                              <Button variant="destructive" size="sm" onClick={removeAASModel}>
+                              <Button variant="destructive" onClick={removeAASModel}>
                                 <Trash2 className="size-3.5 mr-1.5" />템플릿 변경
                               </Button>
                             )}
@@ -1625,10 +1624,10 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                                     <CardHeader className="flex-row items-center justify-between pb-2 shrink-0 px-4 py-3 border-b">
                                       <CardTitle className="text-sm font-semibold text-primary">AAS Tree</CardTitle>
                                       <div className="flex items-center gap-2">
-                                        <Button size="sm" variant="outline" onClick={() => { setModalOpen(true); setModelType("submodel"); }}>
+                                        <Button variant="outline" onClick={() => { setModalOpen(true); setModelType("submodel"); }}>
                                           <Plus className="size-3.5 mr-1" />Submodel 추가
                                         </Button>
-                                        <Button size="sm" variant="ghost" onClick={() => setShowAdvancedTree(false)} className="text-xs text-muted-foreground">
+                                        <Button variant="ghost" onClick={() => setShowAdvancedTree(false)} className="text-xs text-muted-foreground">
                                           Simple view
                                         </Button>
                                       </div>
@@ -1669,8 +1668,8 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                                       </div>
                                       {selectedNode && (
                                         <div className="flex gap-2 shrink-0">
-                                          <Button size="sm" onClick={handleDetailSave}>저장</Button>
-                                          <Button size="sm" variant="destructive" onClick={handleDelete}
+                                          <Button onClick={handleDetailSave}>저장</Button>
+                                          <Button variant="destructive" onClick={handleDelete}
                                             disabled={selectedNode.node.modelType !== "Submodel"}>
                                             삭제
                                           </Button>
@@ -1757,7 +1756,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       {inputState.verification && verificationBadge(inputState.verification)}
-                      <Button size="sm" disabled={loading} onClick={verifyInstance}>
+                      <Button disabled={loading} onClick={verifyInstance}>
                         <ShieldCheck className="size-4 mr-2" />검증 실행
                       </Button>
                     </div>
@@ -1839,7 +1838,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {mode === "edit" && (
-                        <Button variant="destructive" size="sm" disabled={loading} onClick={async () => {
+                        <Button variant="destructive" disabled={loading} onClick={async () => {
                           const isConfirm = await confirmSave("정말 삭제하시겠습니까?", { labels: { confirm: "삭제", cancel: "취소" }, confirmProps: { color: "red.8" } });
                           if (isConfirm) { await deleteModel({ modelType: "instance", modelSeq: instance?.instance_seq }); router.replace(ROUTES.INSTANCE.LIST); }
                         }}>
@@ -1870,13 +1869,12 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                 <div className="flex items-center gap-2">
                   <CancelButton />
                   {activeStep > 0 && (
-                    <Button variant="outline" size="sm" onClick={() => setActiveStep(activeStep - 1)}>
+                    <Button variant="outline" onClick={() => setActiveStep(activeStep - 1)}>
                       이전
                     </Button>
                   )}
                   {activeStep < STEPS.length - 1 && (
                     <Button
-                      size="sm"
                       onClick={() => {
                         if (activeStep === 0 && !inputState.instance_name) return showToast.error("인스턴스 이름을 입력해주세요.");
                         if (activeStep === 1 && !Array.isArray(treeData)) return showToast.error("AAS 템플릿을 선택해주세요.");

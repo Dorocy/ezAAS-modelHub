@@ -18,7 +18,7 @@ const SearchBox: React.FC<SearchBoxProps> = ({ onSearch, children }) => {
       <CardContent className="py-4">
         <div className="flex flex-wrap items-center gap-3">
           {children}
-          <Button type="button" size="sm" onClick={onSearch}>
+          <Button type="button" onClick={onSearch}>
             <Search className="size-3.5 mr-1.5" />
             검색
           </Button>
