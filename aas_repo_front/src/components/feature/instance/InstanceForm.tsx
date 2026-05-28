@@ -893,178 +893,132 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
       ? new Intl.DateTimeFormat("ko-KR").format(new Date(instance.create_date)) : null;
 
     return (
-      <div key={mode === "view" ? instance?.instance_seq : "create-preview"} className="flex flex-col gap-4">
+      <div key={mode === "view" ? instance?.instance_seq : "create-preview"} className="flex flex-col gap-3">
 
-        {/* ── 상단 Summary 헤더 ── */}
-        <Card className="overflow-hidden">
-          {/* 상단 컬러 띠 */}
-          <div className="h-1.5 w-full bg-blue-500" />
-          <CardContent className="p-6">
-            <div className="flex items-start gap-5">
+        {/* ── 컴팩트 헤더 바 ── */}
+        <Card>
+          <CardContent className="px-4 py-3">
+            <div className="flex items-center gap-3 flex-wrap">
               {/* 아바타 */}
-              <div className="w-16 h-16 rounded-xl overflow-hidden border bg-muted shrink-0 relative">
+              <div className="w-9 h-9 rounded-lg overflow-hidden border bg-muted shrink-0 relative">
                 <img src="/assets/media/aas/aas_blank.jpg" alt="Instance" className="object-cover w-full h-full" />
-                <span className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-background" />
+                <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-green-500 border border-background" />
               </div>
-
-              {/* 이름 + 설명 + 메타 */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <h2 className="text-xl font-bold text-zinc-900 leading-tight">{instanceName || "—"}</h2>
-                    {description && (
-                      <p className="text-sm text-zinc-500 mt-1.5 leading-relaxed max-w-2xl">{description}</p>
-                    )}
-                    <div className="flex flex-wrap items-center gap-3 mt-3">
-                      {categoryName && (
-                        <span className="inline-flex items-center gap-1 text-xs bg-zinc-100 text-zinc-600 rounded-full px-2.5 py-0.5 font-medium">{categoryName}</span>
-                      )}
-                      {version && (
-                        <span className="inline-flex items-center gap-1 text-xs bg-zinc-100 text-zinc-600 rounded-full px-2.5 py-0.5 font-medium">v{version}</span>
-                      )}
-                      {assetKind && (
-                        <span className="inline-flex items-center gap-1 text-xs bg-zinc-100 text-zinc-600 rounded-full px-2.5 py-0.5 font-medium">{assetKind}</span>
-                      )}
-                      {createDate && (
-                        <span className="text-xs text-zinc-400">생성 {createDate}</span>
-                      )}
-                      {verificationBadge(mode === "view" ? instance?.verification : inputState.verification)}
-                    </div>
-                  </div>
-                  {/* 액션 */}
-                  {mode === "view" && user?.user_seq === instance?.create_user_seq && (
-                    <div className="flex gap-2 shrink-0">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger className="inline-flex h-8 items-center gap-1 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground">
-                          Export <ChevronDown className="size-3" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          {["json","xml","aasx"].map(fmt => (
-                            <DropdownMenuItem key={fmt} onClick={() => instance && handleExport(fmt, instance)}>{fmt}</DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <Link href={ROUTES.INSTANCE.EDIT(instance?.instance_seq)}>
-                        <Button size="sm"><Pencil className="size-3 mr-1" />Edit</Button>
-                      </Link>
-                    </div>
-                  )}
+              {/* 이름 */}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-bold text-zinc-900">{instanceName || "—"}</span>
+                  {categoryName && <span className="text-[11px] bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">{categoryName}</span>}
+                  {version      && <span className="text-[11px] bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">v{version}</span>}
+                  {assetKind    && <span className="text-[11px] bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">{assetKind}</span>}
+                  {createDate   && <span className="text-[11px] text-zinc-400">생성 {createDate}</span>}
+                  {verificationBadge(mode === "view" ? instance?.verification : inputState.verification)}
                 </div>
+                {description && (
+                  <p className="text-xs text-zinc-400 mt-0.5 truncate max-w-2xl">{description}</p>
+                )}
               </div>
+              {/* stat */}
+              {totalProps > 0 && (
+                <div className="flex items-center gap-4 shrink-0 border-l border-zinc-100 pl-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-24 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500 rounded-full" style={{ width: `${overallRatio}%` }} />
+                    </div>
+                    <span className="text-xs font-bold text-zinc-700">{overallRatio}%</span>
+                  </div>
+                  <span className="text-[11px] text-zinc-400">{totalFilled}/{totalProps} 입력됨</span>
+                  <span className="text-[11px] text-zinc-400">서브모델 {submodels.length}개</span>
+                </div>
+              )}
+              {/* 액션 */}
+              {mode === "view" && user?.user_seq === instance?.create_user_seq && (
+                <div className="flex gap-2 shrink-0">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="inline-flex h-7 items-center gap-1 rounded-md border border-input bg-background px-2.5 text-xs font-medium hover:bg-accent">
+                      Export <ChevronDown className="size-3" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {["json","xml","aasx"].map(fmt => (
+                        <DropdownMenuItem key={fmt} onClick={() => instance && handleExport(fmt, instance)}>{fmt}</DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Link href={ROUTES.INSTANCE.EDIT(instance?.instance_seq)}>
+                    <Button size="sm" className="h-7 text-xs"><Pencil className="size-3 mr-1" />Edit</Button>
+                  </Link>
+                </div>
+              )}
             </div>
-
-            {/* 전체 입력률 + 서브모델 수 stat */}
-            {totalProps > 0 && (
-              <div className="mt-5 pt-5 border-t border-zinc-100 flex items-center gap-8 flex-wrap">
-                <div>
-                  <p className="text-[11px] text-zinc-400 mb-1">전체 입력 완성도</p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-40 h-2 bg-zinc-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${overallRatio}%` }} />
-                    </div>
-                    <span className="text-sm font-bold text-zinc-800">{overallRatio}%</span>
-                    <span className="text-xs text-zinc-400">({totalFilled}/{totalProps} 필드)</span>
-                  </div>
-                </div>
-                <div className="flex gap-6">
-                  <div>
-                    <p className="text-[11px] text-zinc-400">서브모델</p>
-                    <p className="text-lg font-bold text-zinc-900">{submodels.length}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-zinc-400">총 필드</p>
-                    <p className="text-lg font-bold text-zinc-900">{totalProps}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-zinc-400">입력 완료</p>
-                    <p className="text-lg font-bold text-blue-600">{totalFilled}</p>
-                  </div>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 
-        {/* ── 서브모델 카드들 ── */}
-        {submodels.map((sm: any, si: number) => {
-          const meta       = getSmMeta(sm.idShort);
-          const smDesc     = (Array.isArray(sm.description) && (sm.description.find((d: any) => d.language === "en")?.text || sm.description[0]?.text)) || meta?.desc || "";
-          const props      = collectProps(sm.children ?? []);
-          const filled     = props.filter(p => resolveValue(p)).length;
-          const ratio      = props.length > 0 ? Math.round((filled / props.length) * 100) : 0;
-          const accentColor = smColors[si % smColors.length];
-          const lightBg    = smBgLight[si % smBgLight.length];
-          const textColor  = smTextColor[si % smTextColor.length];
+        {/* ── 서브모델 2열 그리드 ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {submodels.map((sm: any, si: number) => {
+            const meta        = getSmMeta(sm.idShort);
+            const smDesc      = (Array.isArray(sm.description) && (sm.description.find((d: any) => d.language === "en")?.text || sm.description[0]?.text)) || meta?.desc || "";
+            const props       = collectProps(sm.children ?? []);
+            const filled      = props.filter(p => resolveValue(p)).length;
+            const ratio       = props.length > 0 ? Math.round((filled / props.length) * 100) : 0;
+            const accentColor = smColors[si % smColors.length];
+            const lightBg     = smBgLight[si % smBgLight.length];
+            const textColor   = smTextColor[si % smTextColor.length];
 
-          return (
-            <Card key={si} className="overflow-hidden">
-              {/* 서브모델 헤더 */}
-              <div className={`px-5 py-4 flex items-start justify-between gap-4 ${lightBg}`}>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold text-white ${accentColor} shrink-0`}>
+            // 입력된 것 먼저, 최대 6개만 노출
+            const MAX_SHOW = 6;
+            const sortedProps = [...props].sort((a, b) => (resolveValue(b) ? 1 : 0) - (resolveValue(a) ? 1 : 0));
+            const visibleProps = sortedProps.slice(0, MAX_SHOW);
+            const hiddenCount  = props.length - MAX_SHOW;
+
+            return (
+              <Card key={si} className="overflow-hidden flex flex-col">
+                {/* 서브모델 헤더 */}
+                <div className={`px-4 py-3 flex items-center justify-between gap-3 ${lightBg}`}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold text-white shrink-0 ${accentColor}`}>
                       {si + 1}
                     </span>
-                    <span className={`text-sm font-bold ${textColor}`}>{meta?.label ?? sm.idShort}</span>
-                    {meta && <span className="text-xs text-zinc-400 font-mono">{sm.idShort}</span>}
-                  </div>
-                  {smDesc && (
-                    <p className="text-xs text-zinc-500 mt-1.5 leading-relaxed">{smDesc}</p>
-                  )}
-                </div>
-                {/* 입력률 */}
-                {props.length > 0 && (
-                  <div className="shrink-0 flex flex-col items-end gap-1.5">
-                    <span className="text-[11px] text-zinc-500">
-                      <span className="font-bold text-zinc-800">{filled}</span>/{props.length} 입력됨
-                    </span>
-                    <div className="w-20 h-1.5 bg-white/70 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full transition-all ${accentColor}`} style={{ width: `${ratio}%` }} />
+                    <div className="min-w-0">
+                      <span className={`text-xs font-bold ${textColor}`}>{meta?.label ?? sm.idShort}</span>
+                      {smDesc && <p className="text-[11px] text-zinc-400 truncate max-w-xs mt-0.5">{smDesc}</p>}
                     </div>
                   </div>
-                )}
-              </div>
-
-              {/* 프로퍼티 테이블 */}
-              {sm.children?.length > 0 && (
-                <div className="divide-y divide-zinc-100">
-                  {sm.children.map((child: any, ci: number) => {
-                    const isCollection = ["SubmodelElementCollection","SubmodelElementList"].includes(child.modelType);
-                    const childProps   = isCollection
-                      ? collectProps([child])
-                      : (["Property","MultiLanguageProperty","File","Range"].includes(child.modelType) ? [child] : []);
-
-                    if (childProps.length === 0) return null;
-
-                    return (
-                      <div key={ci}>
-                        {isCollection && (
-                          <div className="px-5 py-2 bg-zinc-50 border-b border-zinc-100">
-                            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">{child.idShort}</span>
-                          </div>
-                        )}
-                        {childProps.map((prop: any, pi: number) => {
-                          const val = resolveValue(prop);
-                          return (
-                            <div key={pi} className="flex items-center gap-4 px-5 py-2.5 hover:bg-zinc-50/60 transition-colors">
-                              <span className="text-xs text-zinc-400 w-48 shrink-0 truncate">{prop.idShort}</span>
-                              <span className={`text-sm flex-1 min-w-0 truncate ${val ? "text-zinc-900 font-medium" : "text-zinc-300 italic"}`}>
-                                {val || "미입력"}
-                              </span>
-                              {prop.valueType && (
-                                <span className="text-[10px] font-mono text-zinc-300 shrink-0">{prop.valueType.replace("xs:","")}</span>
-                              )}
-                            </div>
-                          );
-                        })}
+                  {props.length > 0 && (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="w-14 h-1 bg-white/70 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${accentColor}`} style={{ width: `${ratio}%` }} />
                       </div>
-                    );
-                  })}
+                      <span className="text-[10px] text-zinc-500 whitespace-nowrap">{filled}/{props.length}</span>
+                    </div>
+                  )}
                 </div>
-              )}
-            </Card>
-          );
-        })}
+
+                {/* 프로퍼티 — 최대 6개 */}
+                {visibleProps.length > 0 && (
+                  <div className="flex-1 divide-y divide-zinc-100">
+                    {visibleProps.map((prop: any, pi: number) => {
+                      const val = resolveValue(prop);
+                      return (
+                        <div key={pi} className="flex items-center gap-3 px-4 py-1.5">
+                          <span className="text-[11px] text-zinc-400 w-36 shrink-0 truncate">{prop.idShort}</span>
+                          <span className={`text-[11px] flex-1 min-w-0 truncate ${val ? "text-zinc-800 font-medium" : "text-zinc-300 italic"}`}>
+                            {val || "미입력"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {hiddenCount > 0 && (
+                      <div className="px-4 py-1.5">
+                        <span className="text-[11px] text-zinc-400">+{hiddenCount}개 더 있음</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
       </div>
     );
   })();
