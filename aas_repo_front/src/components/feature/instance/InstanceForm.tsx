@@ -1586,40 +1586,37 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       )}
                     </div>
 
-                    {/* ── 입력 필드 ── */}
-                    <div className="flex-1 flex flex-col gap-4 min-w-0">
-                      {/* 이름 + 회사 URL — 2열 */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-sm font-semibold text-zinc-800">
-                            인스턴스 이름 <span className="text-red-500">*</span>
-                          </label>
-                          <Input
-                            value={inputState.instance_name ?? ""}
-                            placeholder="예: 로봇암_라인A_001"
-                            onChange={(e) => setInputState((prev) => ({ ...prev, instance_name: e.target.value }))}
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-sm font-semibold text-zinc-800">회사 URL</label>
-                          <Input
-                            value={inputState.company_url ?? ""}
-                            placeholder="https://company.com"
-                            onChange={(e) => setInputState((prev) => ({ ...prev, company_url: e.target.value }))}
-                          />
-                        </div>
-                      </div>
-                      {/* 설명 — 전체 너비, textarea */}
+                    {/* ── 이름 + URL (세로) ── */}
+                    <div className="flex flex-col gap-4 w-56 shrink-0">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-zinc-800">설명</label>
-                        <Textarea
-                          value={inputState.description ?? ""}
-                          placeholder="이 인스턴스가 나타내는 자산에 대한 설명을 입력하세요."
-                          rows={4}
-                          className="resize-none"
-                          onChange={(e) => setInputState((prev) => ({ ...prev, description: e.target.value }))}
+                        <label className="text-sm font-semibold text-zinc-800">
+                          인스턴스 이름 <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          value={inputState.instance_name ?? ""}
+                          placeholder="예: 로봇암_라인A_001"
+                          onChange={(e) => setInputState((prev) => ({ ...prev, instance_name: e.target.value }))}
                         />
                       </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-semibold text-zinc-800">회사 URL</label>
+                        <Input
+                          value={inputState.company_url ?? ""}
+                          placeholder="https://company.com"
+                          onChange={(e) => setInputState((prev) => ({ ...prev, company_url: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+
+                    {/* ── 설명 (세로 꽉 채움) ── */}
+                    <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                      <label className="text-sm font-semibold text-zinc-800">설명</label>
+                      <Textarea
+                        value={inputState.description ?? ""}
+                        placeholder="이 인스턴스가 나타내는 자산에 대한 설명을 입력하세요."
+                        className="resize-none flex-1 h-[9.5rem]"
+                        onChange={(e) => setInputState((prev) => ({ ...prev, description: e.target.value }))}
+                      />
                     </div>
 
                   </div>
@@ -1926,7 +1923,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                     <div className="flex items-center gap-2 shrink-0">
                       {mode === "edit" && (
                         <Button variant="destructive" disabled={loading} onClick={async () => {
-                          const isConfirm = await confirmSave("정말 삭제하시겠습니까?", { labels: { confirm: "삭제", cancel: "취소" }, confirmProps: { color: "red.8" } });
+                          const isConfirm = await confirmSave("정말 삭제��시겠습니까?", { labels: { confirm: "삭제", cancel: "취소" }, confirmProps: { color: "red.8" } });
                           if (isConfirm) { await deleteModel({ modelType: "instance", modelSeq: instance?.instance_seq }); router.replace(ROUTES.INSTANCE.LIST); }
                         }}>
                           <Trash2 className="size-3.5 mr-1" />삭제
