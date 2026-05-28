@@ -23,7 +23,6 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
   const search = req.nextUrl.search;
   const targetUrl = `${BACKEND}/${pathStr}${search}`;
 
-  // 클라이언트가 apiRequest에서 넣어준 Authorization 헤더를 그대로 전달
   const forwardHeaders: Record<string, string> = {
     "Content-Type": req.headers.get("content-type") || "application/json",
     "ngrok-skip-browser-warning": "true",
@@ -34,11 +33,13 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
     forwardHeaders["Authorization"] = authHeader;
   }
 
-  // body 그대로 전달
   let body: BodyInit | null = null;
   if (req.method !== "GET" && req.method !== "HEAD") {
     body = await req.text();
   }
+
+  console.log("[v0] proxy →", req.method, targetUrl);
+  console.log("[v0] proxy body =", body?.slice(0, 200));
 
   try {
     const backendRes = await fetch(targetUrl, {
@@ -48,6 +49,7 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
     });
 
     const contentType = backendRes.headers.get("content-type") || "";
+    console.log("[v0] proxy ← status", backendRes.status, "content-type:", contentType);
 
     // 백엔드가 HTML을 반환하면 에러로 처리 (ngrok 경고 페이지 방어)
     if (contentType.includes("text/html")) {
