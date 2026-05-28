@@ -158,8 +158,8 @@ export default function InstancePage() {
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               />
             </div>
-            <Button size="sm" className="h-8" onClick={handleSearch}>
-              Search
+            <Button size="sm" onClick={handleSearch}>
+              <Search className="size-3.5 mr-1.5" />검색
             </Button>
           </div>
         </div>
@@ -240,10 +240,12 @@ export default function InstancePage() {
                           {hasPermission && (
                             <div className="flex items-center gap-1.5">
                               <DropdownMenu>
-                                <DropdownMenuTrigger className="inline-flex h-7 items-center justify-center gap-1 rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs hover:bg-accent hover:text-accent-foreground">
-                                  <Download className="size-3" />
-                                  Export
-                                  <ChevronDown className="size-3" />
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    <Download className="size-3.5 mr-1.5" />
+                                    내보내기
+                                    <ChevronDown className="size-3 ml-1" />
+                                  </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   {(["json", "xml", "aasx"] as const).map((fmt) => (
@@ -259,13 +261,10 @@ export default function InstancePage() {
 
                               <Link
                                 href={ROUTES.INSTANCE.EDIT(instance.instance_seq)}
-                                className={cn(
-                                  buttonVariants({ variant: "outline", size: "sm" }),
-                                  "h-7 text-xs"
-                                )}
+                                className={buttonVariants({ variant: "outline", size: "sm" })}
                               >
-                                <Pencil className="size-3" data-icon="inline-start" />
-                                Edit
+                                <Pencil className="size-3.5 mr-1.5" />
+                                수정
                               </Link>
                             </div>
                           )}
@@ -294,7 +293,6 @@ export default function InstancePage() {
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
             >
@@ -306,7 +304,6 @@ export default function InstancePage() {
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
             >

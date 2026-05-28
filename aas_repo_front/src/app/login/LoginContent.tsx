@@ -67,7 +67,7 @@ export default function LoginContent({ redirectUrl }: LoginContentProps) {
             {/* Social login */}
             <Button
               variant="outline"
-              className="w-full h-9"
+              className="w-full"
               onClick={() => loginWithSocial("google")}
             >
               <img
@@ -128,7 +128,7 @@ export default function LoginContent({ redirectUrl }: LoginContentProps) {
                 />
               </div>
 
-              <Button className="w-full mt-1 h-9" onClick={onClickLogin}>
+              <Button className="w-full" onClick={onClickLogin}>
                 Sign in
               </Button>
             </div>

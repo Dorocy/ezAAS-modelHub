@@ -74,7 +74,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { ChevronDown, List, FilePlus, Plus, Trash2, ShieldCheck, Save, Pencil, CheckCircle2 } from "lucide-react";
+import { ChevronDown, List, FilePlus, Plus, Trash2, ShieldCheck, Save, Pencil, CheckCircle2, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /* ─────────────────────────────── types ─────────────────────────── */
@@ -994,7 +994,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                 </DropdownMenuContent>
               </DropdownMenu>
               <Link href={ROUTES.INSTANCE.EDIT(instance?.instance_seq)}>
-                <Button size="sm" className="h-7 text-xs"><Pencil className="size-3 mr-1" />Edit</Button>
+                <Button size="sm"><Pencil className="size-3.5 mr-1.5" />수정</Button>
               </Link>
             </div>
           )}
@@ -1503,16 +1503,18 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             {/* foot buttons for view mode */}
             <div className="flex gap-2 mb-4">
               <Button variant="outline" size="sm" onClick={() => { if (combinedAASTreeData) setCombinedModalOpen(true); }}>
-                View Combined Model
+                통합 모델 보기
               </Button>
               {user?.user_seq === instance?.create_user_seq && (
                 <>
                   <Link href={ROUTES.INSTANCE.EDIT(instance?.instance_seq)}>
-                    <Button variant="outline" size="sm"><Pencil className="size-3 mr-1" />Edit</Button>
+                    <Button variant="outline" size="sm"><Pencil className="size-3.5 mr-1.5" />수정</Button>
                   </Link>
                   <DropdownMenu>
-                    <DropdownMenuTrigger className="inline-flex h-8 items-center gap-1 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground">
-                      Export <ChevronDown className="size-3" />
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Download className="size-3.5 mr-1.5" />내보내기 <ChevronDown className="size-3 ml-1" />
+                      </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       {["json", "xml", "aasx"].map((fmt) => (
@@ -1586,8 +1588,8 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                             템플릿을 선택하면 트리 구조가 표시되고 각 항목의 값을 입력할 수 있습니다.
                           </p>
                         </div>
-                        <Button size="lg" onClick={() => { setModalOpen(true); setModelType("aasmodel"); }}>
-                          <FilePlus className="size-4 mr-2" />Select AAS Template
+                        <Button size="sm" onClick={() => { setModalOpen(true); setModelType("aasmodel"); }}>
+                          <FilePlus className="size-3.5 mr-1.5" />AAS 템플릿 선택
                         </Button>
                       </CardContent>
                     </Card>
@@ -1617,8 +1619,8 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                               mode={mode}
                             />
                             {mode === "create" && (
-                              <Button variant="outline" size="sm" onClick={removeAASModel} className="text-destructive border-destructive/40 hover:bg-destructive/10">
-                                <Trash2 className="size-3.5 mr-1" />템��릿 변경
+                              <Button variant="destructive" size="sm" onClick={removeAASModel}>
+                                <Trash2 className="size-3.5 mr-1.5" />템플릿 변경
                               </Button>
                             )}
                           </div>
