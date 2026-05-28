@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND = (
-  process.env.AAS_API_BASE ||
-  process.env.NEXT_PUBLIC_AAS_API_BASE_SERVER ||
-  process.env.NEXT_PUBLIC_AAS_API_BASE ||
-  ""
-).trim();
-
 async function handler(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  const BACKEND = (
+    process.env.AAS_API_BASE ||
+    process.env.NEXT_PUBLIC_AAS_API_BASE_SERVER ||
+    process.env.NEXT_PUBLIC_AAS_API_BASE ||
+    ""
+  ).trim();
+
+  console.log("[v0] proxy BACKEND =", BACKEND);
+
   if (!BACKEND) {
     return NextResponse.json(
-      { result: "error", msg: "NEXT_PUBLIC_AAS_API_BASE 환경변수가 설정되지 않았습니다. 백엔드 서버 URL을 설정해 주세요." },
+      { result: "error", msg: "AAS_API_BASE 환경변수가 설정되지 않았습니다. .env.local을 확인해 주세요." },
       { status: 503 }
     );
   }
