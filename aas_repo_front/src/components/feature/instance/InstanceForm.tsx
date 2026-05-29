@@ -463,15 +463,12 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     };
     try {
       setLoading(true);
-      console.log("[v0] verifyInstance: calling backend verification");
       const result = await apiVerifyInstance(body);
-      console.log("[v0] verifyInstance: success", result);
       verification = "success";
       verificationRef.current = null;
       setInputState((prev) => ({ ...prev, verification, verification_log: result.data?.summary }));
       setVerificationActive(null);
     } catch (error: any) {
-      console.log("[v0] verifyInstance: caught error", error?.message, "cause:", error?.cause);
       const json = error?.cause?.json;
       verification = "fail";
       if (json && json.data && typeof json.data === "string") {
@@ -528,7 +525,6 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     //  API도 호출되지 않은 채 조용히 중단됐다 — "API가 아예 안 나간다"의 원인)
     try {
       setLoading(true);
-      console.log("[v0] handleSubmit: building payload, mode =", mode, "verification =", verification);
 
       const payloadAASmodel = {
         ...aasmodel,
@@ -574,12 +570,10 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
       });
       for (const file of allFilesToUpload) formData.append("attachments", file);
 
-      console.log("[v0] handleSubmit: payload ready, submodels =", submodelsToSend.length, "files =", allFilesToUpload.length, "-> calling upsertInstance");
       await upsertInstance({ formData, withToast: true });
-      console.log("[v0] handleSubmit: upsertInstance success, navigating to list");
       router.push(ROUTES.INSTANCE.LIST);
     } catch (e) {
-      console.error("[v0] handleSubmit failed:", e);
+      console.error("instance upsert failed:", e);
       showToast.error("저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
     }
     finally { setLoading(false); }
