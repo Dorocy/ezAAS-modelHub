@@ -35,10 +35,12 @@ export async function apiRequest({
       const m = raw.match(/https?:\/\/[^\s'"]+/);
       return (m ? m[0] : raw).replace(/\/+$/, "").trim();
     };
+    // AAS_API_BASE를 최우선으로 읽는다. (운영 중 백엔드 주소가 바뀔 때
+    //  이 변수만 갱신되는 경우가 많고, NEXT_PUBLIC_* 값은 빌드시 박혀 stale 해지기 쉽다.)
     const baseRaw =
+      sanitize(process.env.AAS_API_BASE) ||
       sanitize(process.env.NEXT_PUBLIC_AAS_API_BASE_SERVER) ||
       sanitize(process.env.NEXT_PUBLIC_AAS_API_BASE) ||
-      sanitize(process.env.AAS_API_BASE) ||
       "";
     const base = process.env.NEXT_PUBLIC_AAS_API_PORT_SERVER
       ? `${baseRaw}:${process.env.NEXT_PUBLIC_AAS_API_PORT_SERVER}`
