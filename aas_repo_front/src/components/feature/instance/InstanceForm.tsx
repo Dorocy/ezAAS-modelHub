@@ -530,31 +530,16 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         ...aasmodel,
         aasmodel_metadata: JSON.stringify(applyMetadata("aasmodel", aasmodel.aasmodel_metadata)),
       };
-      const submodelsFromAAS = ((aasmodel.aasmodel_metadata as any)?.submodels as any[])?.map((sm) => {
-        const referencedCDs = new Set<string>();
-        function findSemanticIds(element: any) {
-          if (typeof element !== "object" || element === null) return;
-          if (element.semanticId?.keys) element.semanticId.keys.forEach((k: any) => k.value && referencedCDs.add(k.value));
-          if (element.isCaseOf) element.isCaseOf.forEach((ref: any) => ref.keys?.forEach((k: any) => k.value && referencedCDs.add(k.value)));
-          if (element.submodelElements) element.submodelElements.forEach(findSemanticIds);
-          if (element.statements) element.statements.forEach(findSemanticIds);
-          if (element.value && typeof element.value === "object") {
-            if (Array.isArray(element.value)) element.value.forEach(findSemanticIds);
-            else findSemanticIds(element.value);
-          }
-        }
-        findSemanticIds(sm);
-        const allCDs = (aasmodel.aasmodel_metadata as any)?.conceptDescriptions || [];
-        return {
-          submodel_seq: sm.submodel_seq || null,
-          submodel_metadata: JSON.stringify({
-            assetAdministrationShells: [],
-            submodels: [sm],
-            conceptDescriptions: allCDs.filter((cd: any) => cd.id && referencedCDs.has(cd.id)),
-          }),
-        };
-      }) || [];
-      const submodelsToSend = submodelsFromAAS.length > 0 ? submodelsFromAAS : [{ submodel_seq: null, submodel_metadata: "{}" }];
+      // submodels[] 는 최소 스텁만 전송한다.
+      // 백엔드 저장 로직은 (1) submodels 배열이 비어있지 않은지만 필수 검증하고,
+      // (2) submodel_seq 가 null 인 항목은 per-submodel 테이블 저장에서 건너뛴다.
+      // 템플릿 기반 인스턴스의 submodel 은 submodel_seq 가 항상 null 이므로,
+      // 기존 코드가 보내던 submodel_metadata(전체 submodel + conceptDescriptions, 약 400KB)는
+      // 실제로 저장에 전혀 사용되지 않으면서 multipart 파트 크기만 키워
+      // "Part exceeded maximum size of 1024KB" 400 에러를 유발했다.
+      // 모든 데이터는 aasmodel_metadata 에 보존되고 조회 시 그대로 복원되므로,
+      // 스텁만 보내도 저장/조회 동작은 완전히 동일하다.
+      const submodelsToSend = [{ submodel_seq: null, submodel_metadata: "{}" }];
 
       let body: InstanceSavePayload;
       if (mode === "create") {
@@ -1868,7 +1853,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       <p className="text-sm font-semibold text-green-700">모든 검증을 통과했습니다.</p>
                       {inputState.verification_log && (
                         <p className="text-xs text-green-500">
-                          총 {inputState.verification_log.total}개 · 성공 {inputState.verification_log.success}개
+                          총 {inputState.verification_log.total}�� · 성공 {inputState.verification_log.success}개
                         </p>
                       )}
                     </div>
