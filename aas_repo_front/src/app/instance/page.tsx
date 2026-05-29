@@ -191,7 +191,6 @@ export default function InstancePage() {
                 <TableHead className="w-32">Category</TableHead>
                 <TableHead>Instance Name</TableHead>
                 <TableHead className="hidden lg:table-cell">Description</TableHead>
-                <TableHead className="hidden md:table-cell">Reference Template ID</TableHead>
                 <TableHead className="w-28">Verification</TableHead>
                 {user && user.user_group_seq <= UserRole.Approvedor && (
                   <TableHead className="w-24">User</TableHead>
@@ -213,9 +212,6 @@ export default function InstancePage() {
                   </TableCell>
                   <TableCell className="text-sm text-zinc-500 hidden lg:table-cell max-w-[260px] truncate">
                     {instance.description}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs text-zinc-400 truncate max-w-[180px] hidden md:table-cell">
-                    {instance.aasmodel_template_id}
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={instance.verification} label={instance.verification} />
