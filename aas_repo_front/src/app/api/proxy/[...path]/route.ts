@@ -8,8 +8,6 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
     ""
   ).trim();
 
-  console.log("[v0] proxy BACKEND =", BACKEND);
-
   if (!BACKEND) {
     return NextResponse.json(
       { result: "error", msg: "AAS_API_BASE 환경변수가 설정되지 않았습니다. .env.local을 확인해 주세요." },
@@ -38,9 +36,6 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
     body = await req.text();
   }
 
-  console.log("[v0] proxy →", req.method, targetUrl);
-  console.log("[v0] proxy body =", body?.slice(0, 200));
-
   try {
     const backendRes = await fetch(targetUrl, {
       method: req.method,
@@ -49,7 +44,6 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
     });
 
     const contentType = backendRes.headers.get("content-type") || "";
-    console.log("[v0] proxy ← status", backendRes.status, "content-type:", contentType);
 
     // 백엔드가 HTML을 반환하면 에러로 처리 (ngrok 경고 페이지 방어)
     if (contentType.includes("text/html")) {
