@@ -505,8 +505,10 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
 
   const handleSubmit = async () => {
     if (!(await confirmSave("저장하시겠습니까?"))) return;
-    for (const key in inputState) {
-      if ((inputState as any)[key] === "") return showToast.error(`Please check ${key} field`);
+    // 필수 입력값만 검증한다. description, company_url, thumbnail 등은 선택 입력이므로
+    // 비어 있어도 저장을 막지 않는다. (이전에는 모든 필드를 검사해 선택 필드가 비면 저장이 중단됐음)
+    if (!inputState.instance_name?.trim()) {
+      return showToast.error("인스턴스 이름을 입력해주세요.");
     }
     let verification: "success" | "fail";
     if (inputState.verification === "success" || inputState.verification === "fail") {
