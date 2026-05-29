@@ -463,12 +463,15 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     };
     try {
       setLoading(true);
+      console.log("[v0] verifyInstance: calling backend verification");
       const result = await apiVerifyInstance(body);
+      console.log("[v0] verifyInstance: success", result);
       verification = "success";
       verificationRef.current = null;
       setInputState((prev) => ({ ...prev, verification, verification_log: result.data?.summary }));
       setVerificationActive(null);
     } catch (error: any) {
+      console.log("[v0] verifyInstance: caught error", error?.message, "cause:", error?.cause);
       const json = error?.cause?.json;
       verification = "fail";
       if (json && json.data && typeof json.data === "string") {
@@ -519,55 +522,64 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     if (verification === "fail") {
       showToast.error("검증이 실패했지만 저장을 진행합니다. 이후 검증을 다시 실행해주세요.");
     }
-    const payloadAASmodel = {
-      ...aasmodel,
-      aasmodel_metadata: JSON.stringify(applyMetadata("aasmodel", aasmodel.aasmodel_metadata)),
-    };
-    const submodelsFromAAS = ((aasmodel.aasmodel_metadata as any)?.submodels as any[])?.map((sm) => {
-      const referencedCDs = new Set<string>();
-      function findSemanticIds(element: any) {
-        if (typeof element !== "object" || element === null) return;
-        if (element.semanticId?.keys) element.semanticId.keys.forEach((k: any) => k.value && referencedCDs.add(k.value));
-        if (element.isCaseOf) element.isCaseOf.forEach((ref: any) => ref.keys?.forEach((k: any) => k.value && referencedCDs.add(k.value)));
-        if (element.submodelElements) element.submodelElements.forEach(findSemanticIds);
-        if (element.statements) element.statements.forEach(findSemanticIds);
-        if (element.value && typeof element.value === "object") {
-          if (Array.isArray(element.value)) element.value.forEach(findSemanticIds);
-          else findSemanticIds(element.value);
-        }
-      }
-      findSemanticIds(sm);
-      const allCDs = (aasmodel.aasmodel_metadata as any)?.conceptDescriptions || [];
-      return {
-        submodel_seq: sm.submodel_seq || null,
-        submodel_metadata: JSON.stringify({
-          assetAdministrationShells: [],
-          submodels: [sm],
-          conceptDescriptions: allCDs.filter((cd: any) => cd.id && referencedCDs.has(cd.id)),
-        }),
-      };
-    }) || [];
-    const submodelsToSend = submodelsFromAAS.length > 0 ? submodelsFromAAS : [{ submodel_seq: null, submodel_metadata: "{}" }];
 
-    let body: InstanceSavePayload;
-    if (mode === "create") {
-      body = { ...inputState, verification, instance_seq: "", aasmodel_seq: payloadAASmodel.aasmodel_seq, aasmodel_metadata: payloadAASmodel.aasmodel_metadata, status: "Y", submodels: submodelsToSend };
-    } else {
-      body = { ...inputState, verification, instance_seq: instance!.instance_seq, aasmodel_seq: payloadAASmodel.aasmodel_seq, aasmodel_metadata: payloadAASmodel.aasmodel_metadata, status: "Y", submodels: submodelsToSend };
-    }
-    const formData = new FormData();
-    formData.append("body", JSON.stringify(body));
-    const allFilesToUpload: File[] = [];
-    Object.values(treeDataRef.current).forEach((rootChanges: any) => {
-      Object.values(rootChanges).forEach((change: any) => { if (change instanceof File) allFilesToUpload.push(change); });
-    });
-    for (const file of allFilesToUpload) formData.append("attachments", file);
+    // body 생성부터 API 호출까지 모두 try로 감싼다.
+    // (이전에는 body 생성이 try 밖에 있어, 여기서 에러가 나면 토스트도 없고
+    //  API도 호출되지 않은 채 조용히 중단됐다 — "API가 아예 안 나간다"의 원인)
     try {
       setLoading(true);
+      console.log("[v0] handleSubmit: building payload, mode =", mode, "verification =", verification);
+
+      const payloadAASmodel = {
+        ...aasmodel,
+        aasmodel_metadata: JSON.stringify(applyMetadata("aasmodel", aasmodel.aasmodel_metadata)),
+      };
+      const submodelsFromAAS = ((aasmodel.aasmodel_metadata as any)?.submodels as any[])?.map((sm) => {
+        const referencedCDs = new Set<string>();
+        function findSemanticIds(element: any) {
+          if (typeof element !== "object" || element === null) return;
+          if (element.semanticId?.keys) element.semanticId.keys.forEach((k: any) => k.value && referencedCDs.add(k.value));
+          if (element.isCaseOf) element.isCaseOf.forEach((ref: any) => ref.keys?.forEach((k: any) => k.value && referencedCDs.add(k.value)));
+          if (element.submodelElements) element.submodelElements.forEach(findSemanticIds);
+          if (element.statements) element.statements.forEach(findSemanticIds);
+          if (element.value && typeof element.value === "object") {
+            if (Array.isArray(element.value)) element.value.forEach(findSemanticIds);
+            else findSemanticIds(element.value);
+          }
+        }
+        findSemanticIds(sm);
+        const allCDs = (aasmodel.aasmodel_metadata as any)?.conceptDescriptions || [];
+        return {
+          submodel_seq: sm.submodel_seq || null,
+          submodel_metadata: JSON.stringify({
+            assetAdministrationShells: [],
+            submodels: [sm],
+            conceptDescriptions: allCDs.filter((cd: any) => cd.id && referencedCDs.has(cd.id)),
+          }),
+        };
+      }) || [];
+      const submodelsToSend = submodelsFromAAS.length > 0 ? submodelsFromAAS : [{ submodel_seq: null, submodel_metadata: "{}" }];
+
+      let body: InstanceSavePayload;
+      if (mode === "create") {
+        body = { ...inputState, verification, instance_seq: "", aasmodel_seq: payloadAASmodel.aasmodel_seq, aasmodel_metadata: payloadAASmodel.aasmodel_metadata, status: "Y", submodels: submodelsToSend };
+      } else {
+        body = { ...inputState, verification, instance_seq: instance!.instance_seq, aasmodel_seq: payloadAASmodel.aasmodel_seq, aasmodel_metadata: payloadAASmodel.aasmodel_metadata, status: "Y", submodels: submodelsToSend };
+      }
+      const formData = new FormData();
+      formData.append("body", JSON.stringify(body));
+      const allFilesToUpload: File[] = [];
+      Object.values(treeDataRef.current).forEach((rootChanges: any) => {
+        Object.values(rootChanges).forEach((change: any) => { if (change instanceof File) allFilesToUpload.push(change); });
+      });
+      for (const file of allFilesToUpload) formData.append("attachments", file);
+
+      console.log("[v0] handleSubmit: payload ready, submodels =", submodelsToSend.length, "files =", allFilesToUpload.length, "-> calling upsertInstance");
       await upsertInstance({ formData, withToast: true });
+      console.log("[v0] handleSubmit: upsertInstance success, navigating to list");
       router.push(ROUTES.INSTANCE.LIST);
     } catch (e) {
-      console.error("instance upsert failed:", e);
+      console.error("[v0] handleSubmit failed:", e);
       showToast.error("저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
     }
     finally { setLoading(false); }
