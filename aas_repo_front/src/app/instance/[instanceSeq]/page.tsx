@@ -1,5 +1,4 @@
-import { getInstance, getInstanceDetail } from "@/api";
-import InstanceFormClient from "@/components/feature/instance/InstanceFormClient";
+import InstanceFormLoader from "@/components/feature/instance/InstanceFormLoader";
 
 interface Props {
   params: Promise<{ instanceSeq: string }>;
@@ -7,19 +6,6 @@ interface Props {
 
 export default async function Page({ params }: Props) {
   const { instanceSeq } = await params;
-
-  const instance = await getInstance({ instance_seq: instanceSeq });
-  const instanceDetail = await getInstanceDetail({ instance_seq: instanceSeq });
-
-  return (
-    <>
-      {instance != null && (
-        <InstanceFormClient
-          mode="view"
-          instance={instance}
-          combinedAAS={instanceDetail[0]?.metadata}
-        />
-      )}
-    </>
-  );
+  // 데이터는 클라이언트에서 프록시+메모리 토큰으로 가져온다(서버 쿠키 의존 제거).
+  return <InstanceFormLoader mode="view" instanceSeq={instanceSeq} />;
 }
