@@ -71,7 +71,7 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
     try {
       return parsingAAS(addValuePaths({ ...metadata }));
     } catch (e) {
-      console.error("[v0] failed to parse template metadata", e);
+      console.error("failed to parse template metadata", e);
       return undefined;
     }
   }, [model]);
