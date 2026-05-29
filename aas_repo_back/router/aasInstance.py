@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from app.aasSubModelModule import *
 from typing import Annotated, Union, Optional
 from middleware.authMiddleware import verify_token
@@ -56,10 +56,22 @@ async def instanceInfo(header:Annotated[dict, Depends(verify_token)], instance_s
 @router.post("/data", tags=['INSTANCE'], summary='INSTANCE', description="INSTANCE SAVE")
 async def instanceSave(
     header: Annotated[dict, Depends(verify_token)],
-    body: bytes = Form(...),
+    # body 를 파일 파트(UploadFile)로 받는다.
+    # 폼 텍스트 필드(Form)는 Starlette 의 multipart 파트당 1024KB 제한에 걸려
+    # metadata 가 큰 인스턴스를 저장할 때 "Part exceeded maximum size of 1024KB" 400 에러가 났다.
+    # 파일 파트는 디스크로 스풀링되어 해당 제한을 받지 않으므로 큰 payload 도 저장할 수 있다.
+    # (구버전 프론트엔드 호환을 위해 Form 텍스트 필드도 fallback 으로 허용한다.)
+    body: Optional[UploadFile] = File(default=None),
+    body_text: Optional[bytes] = Form(default=None),
     attachments: list[UploadFile] = File(default=None)
 ):
-    body_dict = json.loads(body.decode('utf-8'))
+    if body is not None:
+        raw = await body.read()
+    elif body_text is not None:
+        raw = body_text
+    else:
+        raise HTTPException(status_code=400, detail="body is required")
+    body_dict = json.loads(raw.decode('utf-8'))
     return await instanceSaveEvent(header, body_dict, attachments)
 
 
