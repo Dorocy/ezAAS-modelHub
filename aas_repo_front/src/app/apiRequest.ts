@@ -29,9 +29,20 @@ export async function apiRequest({
 
   if (isServer) {
     // 서버사이드: ngrok으로 직접 요청 (CORS 없음)
+    // 환경변수에 지저분한 값(공백, "-> http://..." 등)이 섞여도 첫 http(s) URL만 추출한다.
+    const sanitize = (raw?: string) => {
+      if (!raw) return "";
+      const m = raw.match(/https?:\/\/[^\s'"]+/);
+      return (m ? m[0] : raw).replace(/\/+$/, "").trim();
+    };
+    const baseRaw =
+      sanitize(process.env.NEXT_PUBLIC_AAS_API_BASE_SERVER) ||
+      sanitize(process.env.NEXT_PUBLIC_AAS_API_BASE) ||
+      sanitize(process.env.AAS_API_BASE) ||
+      "";
     const base = process.env.NEXT_PUBLIC_AAS_API_PORT_SERVER
-      ? `${process.env.NEXT_PUBLIC_AAS_API_BASE_SERVER}:${process.env.NEXT_PUBLIC_AAS_API_PORT_SERVER}`
-      : process.env.NEXT_PUBLIC_AAS_API_BASE_SERVER || process.env.NEXT_PUBLIC_AAS_API_BASE || "";
+      ? `${baseRaw}:${process.env.NEXT_PUBLIC_AAS_API_PORT_SERVER}`
+      : baseRaw;
     fullUrl = `${base}/${url}`;
   } else {
     // 클라이언트사이드: Next.js 프록시를 경유 (CORS / ngrok 경고 페이지 우회)

@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// 환경변수에 지저분한 값(예: "https://xxx.ngrok-free.app -> http://localhost:8000",
+// 앞뒤 공백, 따옴표 등)이 들어와도 첫 번째 유효한 http(s) URL만 안전하게 추출한다.
+// ngrok 터미널 출력을 그대로 붙여넣는 경우 등을 방어한다.
+function sanitizeBackendUrl(raw: string | undefined): string {
+  if (!raw) return "";
+  const match = raw.match(/https?:\/\/[^\s'"]+/);
+  return (match ? match[0] : raw).replace(/\/+$/, "").trim();
+}
+
 async function handler(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
-  const BACKEND = (
-    process.env.AAS_API_BASE ||
-    process.env.NEXT_PUBLIC_AAS_API_BASE_SERVER ||
-    process.env.NEXT_PUBLIC_AAS_API_BASE ||
-    ""
-  ).trim();
+  const BACKEND =
+    sanitizeBackendUrl(process.env.AAS_API_BASE) ||
+    sanitizeBackendUrl(process.env.NEXT_PUBLIC_AAS_API_BASE_SERVER) ||
+    sanitizeBackendUrl(process.env.NEXT_PUBLIC_AAS_API_BASE) ||
+    "";
 
   if (!BACKEND) {
     return NextResponse.json(
