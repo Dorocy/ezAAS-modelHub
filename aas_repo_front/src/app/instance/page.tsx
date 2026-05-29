@@ -7,7 +7,17 @@ import { getInstanceList, getCodeList, exportModel } from "@/api/index";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/constants/roles";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -22,81 +32,50 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
-import { Plus, Download, Pencil, ChevronDown, Boxes } from "lucide-react";
-import {
-  ResourceListShell,
-  ResourceCard,
-  ResourceRow,
-  StatusBadge,
-  type ViewType,
-  type CategoryItem,
-} from "@/components/feature/shared/ResourceListShell";
+import { Plus, Search, Download, Pencil, ChevronDown, ChevronLeft, ChevronRight, Layers } from "lucide-react";
 
 const PAGE_SIZE = 20;
 
 export default function InstancePage() {
   const { user, isAuthenticated } = useAuth();
 
-  const [inputValue, setInputValue]         = useState("");
-  const [searchKey, setSearchKey]           = useState("");
-  const [activeCategory, setActiveCategory] = useState("all");
-  const [searchMode, setSearchMode]         = useState<"my" | "all">("all");
-  const [view, setView]                     = useState<ViewType>("table");
-  const [page, setPage]                     = useState(1);
+  const [inputValue, setInputValue] = useState("");
+  const [searchKey, setSearchKey] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [searchMode, setSearchMode] = useState<"my" | "all">("all");
+  const [page, setPage] = useState(1);
 
-  const { data: rawCategories = [] } = useSWR(
+  const { data: categories = [] } = useSWR(
     isAuthenticated ? "categories-instance" : null,
     () => getCodeList("category")
   );
-
-  const categories: CategoryItem[] = (rawCategories as any[]).map((c) => ({
-    id: String(c.category_seq ?? c.id),
-    label: c.category_name ?? c.text,
-  }));
 
   const searchParams: Record<string, string> = {};
   if (searchKey) searchParams.searchKey = searchKey;
   if (searchMode === "my" && user) searchParams.user_seq = String(user.user_seq);
 
   const { data: instanceData, isLoading, error } = useSWR(
-    isAuthenticated ? ["instance-list", page, searchKey, activeCategory, searchMode] : null,
+    isAuthenticated ? ["instance-list", page, searchKey, categoryFilter, searchMode] : null,
     () =>
       getInstanceList({
-        // 백엔드는 전체 조회 시 "all"을 기대한다. "0"을 보내면 빈 목록이 반환된다.
-        category_seq: activeCategory === "all" ? "all" : activeCategory,
+        category_seq: categoryFilter === "all" ? "0" : categoryFilter,
         pageNumber: page,
         pageSize: PAGE_SIZE,
         searchParams,
       })
   );
 
-  // 응답 구조: { recordsTotal, recordsFiltered, data: [...instances] } (apiRequest가 .data 언래핑)
-  const payload = instanceData?.data ?? instanceData;
-  const instances: any[] = Array.isArray(payload?.data)
-    ? payload.data
-    : Array.isArray(payload)
-      ? payload
-      : Array.isArray(instanceData)
-        ? instanceData
-        : [];
-  const totalCount: number =
-    instanceData?.recordsTotal ??
-    instanceData?.recordsFiltered ??
-    payload?.recordsTotal ??
-    payload?.recordsFiltered ??
-    instances.length;
+  const instances: any[] = Array.isArray(instanceData) ? instanceData : (Array.isArray(instanceData?.list) ? instanceData.list : []);
+  const totalCount: number = instanceData?.totalCount ?? instanceData?.total ?? instances.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   const handleSearch = useCallback(() => {
     setSearchKey(inputValue);
     setPage(1);
   }, [inputValue]);
-
-  const handleCategory = (val: string) => {
-    setActiveCategory(val);
-    setPage(1);
-  };
 
   const handleExport = async (instance: any, format: "json" | "xml" | "aasx") => {
     await exportModel({
@@ -109,185 +88,233 @@ export default function InstancePage() {
 
   const canCreate =
     user &&
-    (user.user_group_seq === UserRole.User || user.user_group_seq === UserRole.Manager);
-
-  const canManageRow = (instance: any) =>
-    user &&
-    (user.user_group_seq === UserRole.Manager ||
-      String(user.user_seq) === String(instance.create_user_seq));
-
-  /* sidebar: My / All toggle (only for elevated roles) */
-  const sidebarExtra =
-    user && user.user_group_seq !== UserRole.User ? (
-      <div className="mb-3">
-        <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
-          Scope
-        </p>
-        <div className="flex rounded-lg border border-zinc-200 overflow-hidden text-sm">
-          {(["my", "all"] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => { setSearchMode(mode); setPage(1); }}
-              className={cn(
-                "flex-1 px-2 py-1.5 transition-colors",
-                searchMode === mode
-                  ? "bg-zinc-900 text-white font-medium"
-                  : "bg-white text-zinc-500 hover:bg-zinc-100"
-              )}
-            >
-              {mode === "my" ? "Mine" : "All"}
-            </button>
-          ))}
-        </div>
-      </div>
-    ) : null;
+    (user.user_group_seq === UserRole.User ||
+      user.user_group_seq === UserRole.Manager);
 
   return (
-    <ResourceListShell
-      title="My AAS Instance"
-      subtitle={isLoading ? "Loading..." : `${totalCount} instances`}
-      headerAction={
-        canCreate ? (
-          <Link href={ROUTES.INSTANCE.CREATE} className={cn(buttonVariants({ size: "sm" }))}>
-            <Plus className="w-3.5 h-3.5 mr-1.5" />
-            Create AAS
-          </Link>
-        ) : undefined
-      }
-      searchValue={inputValue}
-      onSearchChange={setInputValue}
-      onSearchSubmit={handleSearch}
-      searchPlaceholder="Search instances..."
-      categories={categories}
-      activeCategory={activeCategory}
-      onCategoryChange={handleCategory}
-      totalCount={totalCount}
-      sidebarExtra={sidebarExtra}
-      view={view}
-      views={["table", "grid", "list"]}
-      onViewChange={setView}
-      resultText={
-        <>
-          {searchKey && <span className="text-zinc-900 font-medium">&quot;{searchKey}&quot; · </span>}
-          {isLoading ? "Loading..." : `${instances.length} of ${totalCount}`}
-        </>
-      }
-      page={page}
-      totalPages={totalPages}
-      onPageChange={setPage}
-      isLoading={isLoading}
-      isEmpty={!isLoading && instances.length === 0}
-      error={error}
-      errorText="Failed to load instances. Please check your connection and try again."
-      emptyIcon={Boxes}
-      emptyTitle="No instances found"
-      emptyHint="Create one from an AAS template to get started"
-    >
-      {view === "table" ? (
-        <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-32">Category</TableHead>
-                <TableHead>Instance Name</TableHead>
-                <TableHead className="hidden lg:table-cell">Description</TableHead>
-                <TableHead className="w-28">Verification</TableHead>
-                {user && user.user_group_seq <= UserRole.Approvedor && (
-                  <TableHead className="w-24">User</TableHead>
-                )}
-                {canCreate && <TableHead className="w-44">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {instances.map((instance: any) => (
-                <TableRow key={instance.instance_seq}>
-                  <TableCell className="text-sm">{instance.category_name}</TableCell>
-                  <TableCell>
-                    <Link
-                      href={ROUTES.INSTANCE.VIEW(instance.instance_seq)}
-                      className="font-medium text-zinc-900 hover:text-blue-600 hover:underline"
-                    >
-                      {instance.instance_name}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-sm text-zinc-500 hidden lg:table-cell max-w-[260px] truncate">
-                    {instance.description}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={instance.verification} label={instance.verification} />
-                  </TableCell>
+    <div className="flex flex-col">
+      <PageHeader
+        title="My AAS Instance"
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "My AAS Instance" },
+        ]}
+        actions={
+          canCreate ? (
+            <Link href="/instance/ins" className={cn(buttonVariants({ size: "sm" }))}>
+              <Plus className="size-3.5" data-icon="inline-start" />
+              Create AAS
+            </Link>
+          ) : undefined
+        }
+      />
+
+      {/* Filters */}
+      <div className="border-b border-border/60 bg-muted/30 px-6 py-2.5">
+        <div className="mx-auto max-w-screen-2xl flex flex-wrap items-center gap-2.5">
+          {user && user.user_group_seq !== UserRole.User && (
+            <div className="flex rounded-md border border-border overflow-hidden text-sm">
+              {(["my", "all"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => { setSearchMode(mode); setPage(1); }}
+                  className={`px-3 py-1.5 capitalize transition-colors ${
+                    searchMode === mode
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {mode === "my" ? "My Instances" : "All Instances"}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <Select
+            value={categoryFilter}
+            onValueChange={(val) => { setCategoryFilter(val ?? "all"); setPage(1); }}
+          >
+            <SelectTrigger className="h-8 w-44 text-sm">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((c: any) => (
+                <SelectItem key={c.category_seq ?? c.id} value={String(c.category_seq ?? c.id)}>
+                  {c.category_name ?? c.text}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="relative flex-1 min-w-[200px] max-w-sm flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+              <Input
+                className="h-8 pl-8 text-sm"
+                placeholder="Please enter a search term"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              />
+            </div>
+            <Button size="sm" className="h-8" onClick={handleSearch}>
+              Search
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="mx-auto max-w-screen-2xl w-full px-6 py-6">
+        <p className="mb-4 text-sm text-muted-foreground">
+          {isLoading ? "Loading..." : `${totalCount} results found`}
+        </p>
+
+        {error && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive mb-4">
+            Failed to load data. Please check your connection or try again.
+          </div>
+        )}
+
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full rounded" />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-32">Category</TableHead>
+                  <TableHead>Instance Name</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Reference Template ID</TableHead>
+                  <TableHead className="w-32">Verification</TableHead>
                   {user && user.user_group_seq <= UserRole.Approvedor && (
-                    <TableCell className="text-sm">{instance.user_id}</TableCell>
+                    <TableHead className="w-24">User</TableHead>
                   )}
                   {canCreate && (
-                    <TableCell>
-                      {canManageRow(instance) && (
-                        <div className="flex items-center gap-1.5">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger render={
-                              <Button variant="outline" size="sm">
-                                <Download className="size-3.5 mr-1.5" />
-                                Export
-                                <ChevronDown className="size-3 ml-1" />
-                              </Button>
-                            } />
-                            <DropdownMenuContent align="end">
-                              {(["json", "xml", "aasx"] as const).map((fmt) => (
-                                <DropdownMenuItem key={fmt} onClick={() => handleExport(instance, fmt)}>
-                                  {fmt}
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-
-                          <Link
-                            href={ROUTES.INSTANCE.EDIT(instance.instance_seq)}
-                            className={buttonVariants({ variant: "outline", size: "sm" })}
-                          >
-                            <Pencil className="size-3.5 mr-1.5" />
-                            Edit
-                          </Link>
-                        </div>
-                      )}
-                    </TableCell>
+                    <TableHead className="w-44">Actions</TableHead>
                   )}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ) : view === "grid" ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {instances.map((instance: any) => (
-            <ResourceCard
-              key={instance.instance_seq}
-              href={ROUTES.INSTANCE.VIEW(instance.instance_seq)}
-              icon={Boxes}
-              title={instance.instance_name}
-              description={instance.description}
-              category={instance.category_name}
-              status={instance.verification}
-              statusLabel={instance.verification}
-              metaId={instance.aasmodel_template_id}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
-          {instances.map((instance: any) => (
-            <ResourceRow
-              key={instance.instance_seq}
-              href={ROUTES.INSTANCE.VIEW(instance.instance_seq)}
-              icon={Boxes}
-              title={instance.instance_name}
-              description={instance.description}
-              category={instance.category_name}
-              status={instance.verification}
-              statusLabel={instance.verification}
-            />
-          ))}
-        </div>
-      )}
-    </ResourceListShell>
+              </TableHeader>
+              <TableBody>
+                {instances.map((instance: any) => {
+                  const hasPermission =
+                    user &&
+                    (user.user_group_seq === UserRole.Manager ||
+                      String(user.user_seq) === String(instance.create_user_seq));
+
+                  return (
+                    <TableRow key={instance.instance_seq}>
+                      <TableCell className="text-sm">{instance.category_name}</TableCell>
+                      <TableCell>
+                        <Link
+                          href={ROUTES.INSTANCE.VIEW(instance.instance_seq)}
+                          className="font-medium text-foreground hover:text-primary hover:underline"
+                        >
+                          {instance.instance_name}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {instance.description}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground truncate max-w-[180px]">
+                        {instance.aasmodel_template_id}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={instance.verification === "success" ? "default" : "destructive"}
+                        >
+                          {instance.verification}
+                        </Badge>
+                      </TableCell>
+                      {user && user.user_group_seq <= UserRole.Approvedor && (
+                        <TableCell className="text-sm">{instance.user_id}</TableCell>
+                      )}
+                      {canCreate && (
+                        <TableCell>
+                          {hasPermission && (
+                            <div className="flex items-center gap-1.5">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger className="inline-flex h-7 items-center justify-center gap-1 rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs hover:bg-accent hover:text-accent-foreground">
+                                  <Download className="size-3" />
+                                  Export
+                                  <ChevronDown className="size-3" />
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {(["json", "xml", "aasx"] as const).map((fmt) => (
+                                    <DropdownMenuItem
+                                      key={fmt}
+                                      onClick={() => handleExport(instance, fmt)}
+                                    >
+                                      {fmt}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+
+                              <Link
+                                href={ROUTES.INSTANCE.EDIT(instance.instance_seq)}
+                                className={cn(
+                                  buttonVariants({ variant: "outline", size: "sm" }),
+                                  "h-7 text-xs"
+                                )}
+                              >
+                                <Pencil className="size-3" data-icon="inline-start" />
+                                Edit
+                              </Link>
+                            </div>
+                          )}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })}
+                {instances.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-40">
+                      <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                        <Layers className="size-8 opacity-30" />
+                        <p className="text-sm">No instances found.</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="mt-6 flex items-center justify-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              {page} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

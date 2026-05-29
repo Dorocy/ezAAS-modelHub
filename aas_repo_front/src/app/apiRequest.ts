@@ -29,22 +29,9 @@ export async function apiRequest({
 
   if (isServer) {
     // 서버사이드: ngrok으로 직접 요청 (CORS 없음)
-    // 환경변수에 지저분한 값(공백, "-> http://..." 등)이 섞여도 첫 http(s) URL만 추출한다.
-    const sanitize = (raw?: string) => {
-      if (!raw) return "";
-      const m = raw.match(/https?:\/\/[^\s'"]+/);
-      return (m ? m[0] : raw).replace(/\/+$/, "").trim();
-    };
-    // AAS_API_BASE를 최우선으로 읽는다. (운영 중 백엔드 주소가 바뀔 때
-    //  이 변수만 갱신되는 경우가 많고, NEXT_PUBLIC_* 값은 빌드시 박혀 stale 해지기 쉽다.)
-    const baseRaw =
-      sanitize(process.env.AAS_API_BASE) ||
-      sanitize(process.env.NEXT_PUBLIC_AAS_API_BASE_SERVER) ||
-      sanitize(process.env.NEXT_PUBLIC_AAS_API_BASE) ||
-      "";
     const base = process.env.NEXT_PUBLIC_AAS_API_PORT_SERVER
-      ? `${baseRaw}:${process.env.NEXT_PUBLIC_AAS_API_PORT_SERVER}`
-      : baseRaw;
+      ? `${process.env.NEXT_PUBLIC_AAS_API_BASE_SERVER}:${process.env.NEXT_PUBLIC_AAS_API_PORT_SERVER}`
+      : process.env.NEXT_PUBLIC_AAS_API_BASE_SERVER || process.env.NEXT_PUBLIC_AAS_API_BASE || "";
     fullUrl = `${base}/${url}`;
   } else {
     // 클라이언트사이드: Next.js 프록시를 경유 (CORS / ngrok 경고 페이지 우회)
@@ -83,45 +70,23 @@ export async function apiRequest({
       ? showToast.loading(messages.loading || "Loading...")
       : undefined;
 
-  // 응답 본문을 JSON으로 안전하게 파싱한다.
-  // 백엔드(ngrok 터널 등)가 다운되면 JSON 대신 HTML 에러 페이지를 반환하는데,
-  // 그대로 response.json()을 호출하면 SyntaxError가 발생해 혼란스러운
-  // unhandled promise rejection으로 이어진다. 이를 깔끔한 에러로 변환한다.
-  const parseJsonSafe = async (response: Response) => {
-    const text = await response.text();
-    try {
-      return JSON.parse(text);
-    } catch {
-      throw new Error(
-        "백엔드 서버에 연결할 수 없습니다. 서버 또는 ngrok 터널 상태를 확인해주세요.",
-        { cause: { status: response.status, body: text.slice(0, 200) } }
-      );
-    }
-  };
-
   try {
     const response = await fetch(fullUrl, options);
 
     if (!response.ok) {
       if (response.status === 401) {
+        await fetch(
+          `${isServer ? process.env.NEXT_PUBLIC_SITE_URL : ""}/api/logout`,
+          { method: "POST" }
+        );
         if (isServer) {
-          // 서버사이드에서는 내부 API 라우트를 fetch 할 수 없다(절대 URL 필요).
-          // 인증 쿠키를 직접 삭제한 뒤 로그인 페이지로 리다이렉트한다.
-          try {
-            const { cookies } = await import("next/headers");
-            const cookieStore = await cookies();
-            cookieStore.delete("token_message");
-          } catch {
-            // 쿠키 컨텍스트가 없으면(예: 라우트 핸들러 외부) 무시
-          }
           redirect(ROUTES.LOGIN);
         } else {
-          await fetch("/api/logout", { method: "POST" });
           window.location.replace(ROUTES.LOGIN);
         }
       }
 
-      const json = await parseJsonSafe(response);
+      const json = await response.json();
       if (!errorThrow) return json;
 
       throw new Error(json.msg || messages.error || "API Error", {
@@ -130,9 +95,9 @@ export async function apiRequest({
     }
 
     const result =
-      responseType === "blob" ? await response.blob() : await parseJsonSafe(response);
+      responseType === "blob" ? await response.blob() : await response.json();
 
-    if (result && typeof result === "object" && "result" in result && result.result !== "ok") {
+    if ("result" in result && result.result !== "ok") {
       if (!errorThrow) return result;
       throw new Error(result.msg || messages.error || "API Error", {
         cause: { status: response.status, json: result },
@@ -156,17 +121,8 @@ export async function apiRequest({
       throw error;
     }
 
-    // 서버사이드: redirect()가 던진 NEXT_REDIRECT는 그대로 전파해야 한다.
-    if (isServer && error?.message === "NEXT_REDIRECT") {
+    if (isServer && error.message === "NEXT_REDIRECT") {
       throw error;
-    }
-
-    // 그 외 서버사이드 에러는 조용히 undefined를 반환하지 않고,
-    // 로그를 남긴 뒤 다시 던져 호출부/에러 바운더리가 처리하도록 한다.
-    if (isServer) {
-      console.error("[apiRequest] server-side request failed:", error?.message, "url:", fullUrl);
-      if (errorThrow) throw error;
-      return undefined;
     }
   }
 }

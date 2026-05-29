@@ -22,6 +22,7 @@ import {
   Tree,
   useTree,
   Highlight,
+  HoverCard,
   getTreeExpandedState,
 } from "@mantine/core";
 import {
@@ -978,6 +979,173 @@ const modelTypeToBadge = (modelType: string) => {
   return { label: m.abbr, color: "gray" };
 };
 
+/* ─────────────────────────────────────────────────────────────────────────
+   노드 개념 설명(ConceptDescription) 호버 정보
+   - 트리 노드에는 aas.js 파싱 단계에서 idShort, description, semanticId,
+     그리고 semanticId 와 매칭된 전체 ConceptDescription 객체가 이미 붙어 있다.
+   - 라벨에 마우스오버하면 개념의 의미(선호 이름/정의/단위/데이터타입/식별자)를
+     바로 볼 수 있도록 HoverCard 로 표시한다.
+───────────────────────────────────────────────────────────────────────────*/
+// 다국어(langString) 배열/문자열을 { language, text } 배열로 정규화
+const normMultiLang = (v: any): Array<{ language: string; text: string }> => {
+  if (!v) return [];
+  if (typeof v === "string") return v.trim() ? [{ language: "", text: v }] : [];
+  if (Array.isArray(v)) return v.filter((x: any) => x && (x.text ?? "").toString().trim());
+  return [];
+};
+
+// ConceptDescription 의 dataSpecificationContent 추출
+const getCdSpecContent = (cd: any) => {
+  const specs = cd?.embeddedDataSpecifications;
+  if (!Array.isArray(specs) || specs.length === 0) return null;
+  return specs[0]?.dataSpecificationContent ?? null;
+};
+
+// 노드에서 표시할 개념 정보 추출
+const extractNodeConceptInfo = (node: any) => {
+  const cd = node?.ConceptDescription ?? null;
+  const ds = getCdSpecContent(cd);
+  const descEntries = normMultiLang(node?.description);
+  const preferredName = ds ? normMultiLang(ds.preferredName) : [];
+  const definition = ds ? normMultiLang(ds.definition) : [];
+  const unit = ds?.unit ?? "";
+  const dataType = ds?.dataType ?? node?.valueType ?? "";
+  const semId = node?.semanticId?.keys?.[0]?.value ?? "";
+  const hasInfo =
+    descEntries.length > 0 ||
+    preferredName.length > 0 ||
+    definition.length > 0 ||
+    !!unit ||
+    !!cd ||
+    !!semId;
+  return { cd, ds, descEntries, preferredName, definition, unit, dataType, semId, hasInfo };
+};
+
+const HOVER_LABEL_STYLE: React.CSSProperties = {
+  fontSize: 9.5,
+  fontWeight: 700,
+  color: "#94a3b8",
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+  marginBottom: 3,
+};
+
+const MlBlock = ({ entries }: { entries: Array<{ language: string; text: string }> }) => {
+  if (entries.length === 0) return null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      {entries.map((e, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+          {e.language && (
+            <span style={{ fontSize: 9, fontFamily: "monospace", background: "#f1f5f9", color: "#64748b", borderRadius: 3, padding: "1px 4px", flexShrink: 0, marginTop: 1 }}>
+              {e.language}
+            </span>
+          )}
+          <span style={{ fontSize: 12, color: "#334155", lineHeight: 1.5, wordBreak: "break-word" }}>{e.text}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// 개념 설명 호버 카드 내용
+const ConceptInfoCard = ({ node, info }: { node: any; info: ReturnType<typeof extractNodeConceptInfo> }) => {
+  const { descEntries, preferredName, definition, unit, dataType, semId } = info;
+  const tm = getTypeMeta(node.modelType);
+  return (
+    <div style={{ width: 320 }}>
+      {/* 헤더: 타입 + idShort */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+        <span style={{ fontSize: 9, fontWeight: 700, color: "#fff", background: "#0070f3", borderRadius: 4, padding: "2px 6px", letterSpacing: "0.03em", flexShrink: 0 }}>
+          {tm.abbr}
+        </span>
+        <span style={{ fontWeight: 700, color: "#0f172a", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {node.idShort}
+        </span>
+      </div>
+
+      <div style={{ padding: "11px 12px", display: "flex", flexDirection: "column", gap: 11 }}>
+        {preferredName.length > 0 && (
+          <div>
+            <div style={HOVER_LABEL_STYLE}>선호 이름 (Preferred Name)</div>
+            <MlBlock entries={preferredName} />
+          </div>
+        )}
+        {definition.length > 0 && (
+          <div>
+            <div style={HOVER_LABEL_STYLE}>정의 (Definition)</div>
+            <MlBlock entries={definition} />
+          </div>
+        )}
+        {descEntries.length > 0 && (
+          <div>
+            <div style={HOVER_LABEL_STYLE}>설명 (Description)</div>
+            <MlBlock entries={descEntries} />
+          </div>
+        )}
+        {(unit || dataType) && (
+          <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+            {dataType && (
+              <div>
+                <div style={HOVER_LABEL_STYLE}>데이터 타입</div>
+                <span style={{ fontSize: 11, fontFamily: "monospace", background: "#f1f5f9", color: "#475569", borderRadius: 4, padding: "2px 7px" }}>{dataType}</span>
+              </div>
+            )}
+            {unit && (
+              <div>
+                <div style={HOVER_LABEL_STYLE}>단위</div>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#0070f3" }}>{unit}</span>
+              </div>
+            )}
+          </div>
+        )}
+        {semId && (
+          <div>
+            <div style={HOVER_LABEL_STYLE}>Semantic ID</div>
+            <div style={{ fontSize: 10.5, fontFamily: "monospace", color: "#64748b", wordBreak: "break-all", lineHeight: 1.45 }}>{semId}</div>
+          </div>
+        )}
+        {preferredName.length === 0 && definition.length === 0 && descEntries.length === 0 && !unit && (
+          <div style={{ fontSize: 11, color: "#94a3b8", fontStyle: "italic" }}>
+            연결된 개념 설명 정보가 없습니다.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// 라벨 + 개념 설명 호버. 정보가 있을 때만 호버 카드로 감싼다.
+const NodeInfoLabel = memo(({ node, text, style }: { node: any; text: any; style: React.CSSProperties }) => {
+  const info = useMemo(() => extractNodeConceptInfo(node), [node]);
+
+  const labelSpan = (
+    <span
+      style={{
+        ...style,
+        ...(info.hasInfo
+          ? { textDecoration: "underline", textDecorationStyle: "dotted", textDecorationColor: "#cbd5e1", textUnderlineOffset: 3, cursor: "help" }
+          : {}),
+      }}
+      title={info.hasInfo ? undefined : (typeof text === "string" ? text : undefined)}
+    >
+      {text}
+    </span>
+  );
+
+  if (!info.hasInfo) return labelSpan;
+
+  return (
+    <HoverCard width={320} shadow="lg" openDelay={130} closeDelay={60} position="right-start" withArrow withinPortal>
+      <HoverCard.Target>{labelSpan}</HoverCard.Target>
+      <HoverCard.Dropdown p={0} style={{ overflow: "hidden", borderRadius: 10, border: "1px solid #e2e8f0" }} onClick={(e) => e.stopPropagation()}>
+        <ConceptInfoCard node={node} info={info} />
+      </HoverCard.Dropdown>
+    </HoverCard>
+  );
+});
+NodeInfoLabel.displayName = "NodeInfoLabel";
+
 const RenderTreeNode = memo(
   ({
     level,
@@ -1098,9 +1266,11 @@ const RenderTreeNode = memo(
               <div style={{ fontSize: 10, fontWeight: 600, color: "#64748b", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 1 }}>
                 Asset Administration Shell
               </div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {node.idShort}
-              </div>
+              <NodeInfoLabel
+                node={node}
+                text={node.idShort}
+                style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+              />
             </div>
             {isExpandable && CHEVRON}
           </div>
@@ -1135,9 +1305,11 @@ const RenderTreeNode = memo(
               <div style={{ fontSize: 10, fontWeight: 600, color: "#64748b", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 1 }}>
                 Submodel
               </div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {node.idShort}
-              </div>
+              <NodeInfoLabel
+                node={node}
+                text={node.idShort}
+                style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+              />
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
               {childCount > 0 && (
@@ -1199,9 +1371,11 @@ const RenderTreeNode = memo(
                   <span style={{ fontSize: 9, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.04em", flexShrink: 0 }}>
                     {isCollection ? "SMC" : "SML"}
                   </span>
-                  <span style={{ fontSize: 12.5, fontWeight: 500, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {node.idShort}
-                  </span>
+                  <NodeInfoLabel
+                    node={node}
+                    text={node.idShort}
+                    style={{ fontSize: 12.5, fontWeight: 500, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                  />
                 </div>
                 {childCount > 0 && (
                   <span style={{ fontSize: 9, color: "#94a3b8", background: "#f1f5f9", borderRadius: 99, padding: "0 5px", flexShrink: 0 }}>
@@ -1256,10 +1430,11 @@ const RenderTreeNode = memo(
             </span>
 
             {/* 이름 */}
-            <span style={{ fontSize: 12, fontWeight: 500, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}
-              title={node.idShort}>
-              {node.idShort}
-            </span>
+            <NodeInfoLabel
+              node={node}
+              text={node.idShort}
+              style={{ fontSize: 12, fontWeight: 500, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}
+            />
 
             {/* 값 미리보기 */}
             {hasValue ? (
@@ -1320,7 +1495,11 @@ const RenderTreeNode = memo(
           </svg>
           <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 5 }}>
             <span style={{ fontSize: 9, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.04em", flexShrink: 0 }}>{tm.abbr}</span>
-            <span style={{ fontSize: 12.5, fontWeight: 500, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{node.idShort}</span>
+            <NodeInfoLabel
+              node={node}
+              text={node.idShort}
+              style={{ fontSize: 12.5, fontWeight: 500, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+            />
           </div>
           {isExpandable && CHEVRON}
           {editMode && onDelete && isDeletable && (

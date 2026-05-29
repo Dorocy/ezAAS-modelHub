@@ -125,9 +125,7 @@ export const AuthProvider = ({
     setClientToken(JSON.stringify(token));
 
     // 쿠키 설정을 위한 API 호출 (서버사이드 렌더링용)
-    // 반드시 await 한다. 그렇지 않으면 아래 router.replace로 페이지가 이동/리렌더될 때
-    // 이전(만료/무효) 쿠키가 남아있어 서버사이드 요청이 옛 토큰으로 나가 401이 발생할 수 있다.
-    await fetch("/api/auth/cookie", {
+    fetch("/api/auth/cookie", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),

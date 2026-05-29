@@ -27,8 +27,8 @@ interface LoginContentProps {
 
 export default function LoginContent({ redirectUrl }: LoginContentProps) {
   const { login, loginWithSocial } = useAuth();
-  const [email, setEmail] = useState("admin");
-  const [password, setPassword] = useState("1234");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [resetOpen, setResetOpen] = useState(false);
 
   const onClickLogin = () => {
@@ -67,7 +67,7 @@ export default function LoginContent({ redirectUrl }: LoginContentProps) {
             {/* Social login */}
             <Button
               variant="outline"
-              className="w-full"
+              className="w-full h-9"
               onClick={() => loginWithSocial("google")}
             >
               <img
@@ -128,7 +128,7 @@ export default function LoginContent({ redirectUrl }: LoginContentProps) {
                 />
               </div>
 
-              <Button className="w-full" onClick={onClickLogin}>
+              <Button className="w-full mt-1 h-9" onClick={onClickLogin}>
                 Sign in
               </Button>
             </div>

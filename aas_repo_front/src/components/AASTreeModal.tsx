@@ -58,7 +58,7 @@ export default function OpenTreeModalButton({
         <DialogContent className="max-w-full w-screen h-screen rounded-none p-0 flex flex-col">
           <DialogHeader className="px-6 pt-4 pb-2 border-b flex-row items-center justify-between space-y-0">
             <DialogTitle>AAS Tree</DialogTitle>
-            <Button variant="outline" onClick={handleClose}>
+            <Button size="sm" variant="outline" onClick={handleClose}>
               <X className="size-3.5 mr-1" />Close
             </Button>
           </DialogHeader>
