@@ -70,6 +70,22 @@ export async function apiRequest({
       ? showToast.loading(messages.loading || "Loading...")
       : undefined;
 
+  // 응답 본문을 JSON으로 안전하게 파싱한다.
+  // 백엔드(ngrok 터널 등)가 다운되면 JSON 대신 HTML 에러 페이지를 반환하는데,
+  // 그대로 response.json()을 호출하면 SyntaxError가 발생해 혼란스러운
+  // unhandled promise rejection으로 이어진다. 이를 깔끔한 에러로 변환한다.
+  const parseJsonSafe = async (response: Response) => {
+    const text = await response.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error(
+        "백엔드 서버에 연결할 수 없습니다. 서버 또는 ngrok 터널 상태를 확인해주세요.",
+        { cause: { status: response.status, body: text.slice(0, 200) } }
+      );
+    }
+  };
+
   try {
     const response = await fetch(fullUrl, options);
 
@@ -86,7 +102,7 @@ export async function apiRequest({
         }
       }
 
-      const json = await response.json();
+      const json = await parseJsonSafe(response);
       if (!errorThrow) return json;
 
       throw new Error(json.msg || messages.error || "API Error", {
@@ -95,9 +111,9 @@ export async function apiRequest({
     }
 
     const result =
-      responseType === "blob" ? await response.blob() : await response.json();
+      responseType === "blob" ? await response.blob() : await parseJsonSafe(response);
 
-    if ("result" in result && result.result !== "ok") {
+    if (result && typeof result === "object" && "result" in result && result.result !== "ok") {
       if (!errorThrow) return result;
       throw new Error(result.msg || messages.error || "API Error", {
         cause: { status: response.status, json: result },
@@ -121,8 +137,17 @@ export async function apiRequest({
       throw error;
     }
 
-    if (isServer && error.message === "NEXT_REDIRECT") {
+    // 서버사이드: redirect()가 던진 NEXT_REDIRECT는 그대로 전파해야 한다.
+    if (isServer && error?.message === "NEXT_REDIRECT") {
       throw error;
+    }
+
+    // 그 외 서버사이드 에러는 조용히 undefined를 반환하지 않고,
+    // 로그를 남긴 뒤 다시 던져 호출부/에러 바운더리가 처리하도록 한다.
+    if (isServer) {
+      console.error("[apiRequest] server-side request failed:", error?.message, "url:", fullUrl);
+      if (errorThrow) throw error;
+      return undefined;
     }
   }
 }
