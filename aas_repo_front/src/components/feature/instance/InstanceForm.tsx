@@ -563,15 +563,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         body = { ...inputState, verification, instance_seq: instance!.instance_seq, aasmodel_seq: payloadAASmodel.aasmodel_seq, aasmodel_metadata: payloadAASmodel.aasmodel_metadata, status: "Y", submodels: submodelsToSend };
       }
       const formData = new FormData();
-      // body 를 텍스트 필드가 아닌 파일 파트(Blob)로 전송한다.
-      // 텍스트 폼 필드는 백엔드(Starlette) multipart 파트당 1024KB 제한에 걸려
-      // metadata 가 큰 인스턴스 저장 시 "Part exceeded maximum size of 1024KB" 에러가 발생한다.
-      // 파일 파트는 디스크로 스풀링되어 크기 제한을 받지 않는다.
-      formData.append(
-        "body",
-        new Blob([JSON.stringify(body)], { type: "application/json" }),
-        "body.json"
-      );
+      formData.append("body", JSON.stringify(body));
       const allFilesToUpload: File[] = [];
       Object.values(treeDataRef.current).forEach((rootChanges: any) => {
         Object.values(rootChanges).forEach((change: any) => { if (change instanceof File) allFilesToUpload.push(change); });
