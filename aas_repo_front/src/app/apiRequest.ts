@@ -104,13 +104,19 @@ export async function apiRequest({
 
     if (!response.ok) {
       if (response.status === 401) {
-        await fetch(
-          `${isServer ? process.env.NEXT_PUBLIC_SITE_URL : ""}/api/logout`,
-          { method: "POST" }
-        );
         if (isServer) {
+          // 서버사이드에서는 내부 API 라우트를 fetch 할 수 없다(절대 URL 필요).
+          // 인증 쿠키를 직접 삭제한 뒤 로그인 페이지로 리다이렉트한다.
+          try {
+            const { cookies } = await import("next/headers");
+            const cookieStore = await cookies();
+            cookieStore.delete("token_message");
+          } catch {
+            // 쿠키 컨텍스트가 없으면(예: 라우트 핸들러 외부) 무시
+          }
           redirect(ROUTES.LOGIN);
         } else {
+          await fetch("/api/logout", { method: "POST" });
           window.location.replace(ROUTES.LOGIN);
         }
       }
