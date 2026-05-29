@@ -215,11 +215,17 @@ export async function getInstanceTargetList(params: GetInstanceTargetListParams)
 }
 
 export async function getInstanceList(params: GetInstanceListParams) {
-  // API: instance/list/instance/{category_seq|all}
-  const categorySeq = params.category_seq || "all";
-  const searchKey = (params.searchParams as any)?.searchKey;
-  const query = searchKey ? `?search=${encodeURIComponent(searchKey)}` : "";
-  const url = `instance/list/instance/${categorySeq}${query}`;
+  // API: GET /instance/list/{category}/{pageNumber}/{pageSize}
+  //   - category: "all" | category_seq
+  //   - query: searchKey, user_seq("my" 필터)
+  // 응답: { data: { recordsTotal, recordsFiltered, data: [...instances] } }
+  const category = params.category_seq && params.category_seq !== "0" ? params.category_seq : "all";
+  const qs = new URLSearchParams();
+  const sp = params.searchParams || {};
+  if (sp.searchKey) qs.set("searchKey", sp.searchKey);
+  if (sp.user_seq) qs.set("user_seq", sp.user_seq);
+  const query = qs.toString() ? `?${qs.toString()}` : "";
+  const url = `instance/list/${category}/${params.pageNumber}/${params.pageSize}${query}`;
   return apiRequest({ url, withToast: params.withToast });
 }
 

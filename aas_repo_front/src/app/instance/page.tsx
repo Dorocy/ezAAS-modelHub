@@ -61,15 +61,25 @@ export default function InstancePage() {
     isAuthenticated ? ["instance-list", page, searchKey, categoryFilter, searchMode] : null,
     () =>
       getInstanceList({
-        category_seq: categoryFilter === "all" ? "0" : categoryFilter,
+        // 백엔드는 전체 조회 시 "all"을 기대한다. "0"을 보내면 빈 목록이 반환된다.
+        category_seq: categoryFilter === "all" ? "all" : categoryFilter,
         pageNumber: page,
         pageSize: PAGE_SIZE,
         searchParams,
       })
   );
 
-  const instances: any[] = Array.isArray(instanceData) ? instanceData : (Array.isArray(instanceData?.list) ? instanceData.list : []);
-  const totalCount: number = instanceData?.totalCount ?? instanceData?.total ?? instances.length;
+  // 응답 구조: { result, msg, data: { recordsTotal, recordsFiltered, data: [...instances] } }
+  // 다양한 형태를 방어적으로 처리한다.
+  const payload = instanceData?.data ?? instanceData;
+  const instances: any[] = Array.isArray(payload?.data)
+    ? payload.data
+    : Array.isArray(payload)
+      ? payload
+      : Array.isArray(instanceData)
+        ? instanceData
+        : [];
+  const totalCount: number = payload?.recordsTotal ?? payload?.recordsFiltered ?? instances.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   const handleSearch = useCallback(() => {
