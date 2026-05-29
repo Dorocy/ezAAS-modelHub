@@ -46,14 +46,25 @@ export default function InstanceFormLoader({ mode, instanceSeq }: Props) {
     );
   }
 
-  if (error || !instance) {
+  // 백엔드가 400을 반환하면 apiRequest는 errorThrow 없이 에러 JSON
+  // ({ result: "error", msg, data: "" })을 그대로 반환한다. 이 경우 instance는
+  // truthy 이지만 편집/조회에 필요한 instance_seq·aasmodel_metadata가 없다.
+  // (예: metadata 가 비어있는 손상된 인스턴스) → 폼을 띄우지 않고 에러 화면을 보여준다.
+  const isErrorResponse =
+    !!instance &&
+    ((instance as any).result === "error" || !(instance as any).instance_seq);
+
+  if (error || !instance || isErrorResponse) {
+    const backendMsg = (instance as any)?.msg as string | undefined;
     return (
       <div className="flex flex-col items-center justify-center gap-2 py-24 text-center">
         <p className="text-sm font-medium text-zinc-900">
           인스턴스를 불러오지 못했습니다.
         </p>
         <p className="text-sm text-zinc-500">
-          잠시 후 다시 시도하거나 목록에서 다시 선택해주세요.
+          {backendMsg
+            ? "이 인스턴스는 메타데이터가 손상되어 열 수 없습니다."
+            : "잠시 후 다시 시도하거나 목록에서 다시 선택해주세요."}
         </p>
       </div>
     );
