@@ -566,7 +566,10 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
       setLoading(true);
       await upsertInstance({ formData, withToast: true });
       router.push(ROUTES.INSTANCE.LIST);
-    } catch {}
+    } catch (e) {
+      console.error("instance upsert failed:", e);
+      showToast.error("저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+    }
     finally { setLoading(false); }
   };
 
@@ -1634,7 +1637,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                         <div className="text-center">
                           <h3 className="font-semibold text-lg">AAS 템플릿을 선택하세요</h3>
                           <p className="text-sm text-muted-foreground mt-1">
-                            템플릿을 선택하면 트리 구조가 표시되고 각 항목의 값을 입력할 수 있습니다.
+                            템플릿을 ���택하면 트리 구조가 표시되고 각 항목의 값을 입력할 수 있습니다.
                           </p>
                         </div>
                         <Button onClick={() => { setModalOpen(true); setModelType("aasmodel"); }}>

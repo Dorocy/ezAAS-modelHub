@@ -31,9 +31,12 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
     forwardHeaders["Authorization"] = authHeader;
   }
 
+  // body는 ArrayBuffer로 읽어 바이너리(파일 첨부 등 multipart/form-data)를 보존한다.
+  // req.text()로 읽으면 파일 바이너리가 UTF-8로 디코딩되며 손상되어
+  // 인스턴스 생성처럼 첨부파일이 있는 요청이 백엔드에서 깨진다.
   let body: BodyInit | null = null;
   if (req.method !== "GET" && req.method !== "HEAD") {
-    body = await req.text();
+    body = await req.arrayBuffer();
   }
 
   try {
