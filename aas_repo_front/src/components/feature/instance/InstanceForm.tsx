@@ -1525,7 +1525,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             </div>
 
             {/* Step content */}
-            <div className="space-y-4">
+            <div className="space-y-4 pb-28">
               {/* Step 0: Basic info */}
               {activeStep === 0 && (
                 <div className="rounded-xl border border-zinc-200 bg-white p-6">
@@ -1948,9 +1948,9 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
               )}
             </div>
 
-            {/* Footer nav */}
-            <div className="sticky bottom-0 z-10 mt-6 border-t border-zinc-200 bg-white/95 backdrop-blur-sm px-0 py-3">
-              <div className="flex items-center justify-between gap-3">
+            {/* Footer nav — 하단 고정 액션 영역 */}
+            <div className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-white/95 backdrop-blur-sm py-3">
+              <div className="mx-auto max-w-screen-2xl px-6 flex items-center justify-between gap-3">
                 {/* 왼쪽: 단계 표시 */}
                 <p className="text-xs text-zinc-400">
                   <span className="font-semibold text-zinc-700">{activeStep + 1} / {STEPS.length}</span>
