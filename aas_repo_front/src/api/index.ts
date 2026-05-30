@@ -215,11 +215,12 @@ export async function getInstanceTargetList(params: GetInstanceTargetListParams)
 }
 
 export async function getInstanceList(params: GetInstanceListParams) {
-  // API: instance/list/instance/{category_seq|all}
+  // API: instance/list/{category_seq|all}/{pageNumber}/{pageSize}
+  // Response (after apiRequest unwraps top-level `data`): { data: Instance[], recordsTotal, recordsFiltered }
+  // Supported query params: searchKey, p, create_user_seq, user_seq
   const categorySeq = params.category_seq || "all";
-  const searchKey = (params.searchParams as any)?.searchKey;
-  const query = searchKey ? `?search=${encodeURIComponent(searchKey)}` : "";
-  const url = `instance/list/instance/${categorySeq}${query}`;
+  const qs = new URLSearchParams(params.searchParams ?? {}).toString();
+  const url = `instance/list/${categorySeq}/${params.pageNumber}/${params.pageSize}${qs ? `?${qs}` : ""}`;
   return apiRequest({ url, withToast: params.withToast });
 }
 

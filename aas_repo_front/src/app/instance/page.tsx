@@ -81,18 +81,21 @@ export default function InstancePage() {
     isAuthenticated ? ["instance-list", requestPage, searchKey, categoryFilter, showOnlyMine] : null,
     () =>
       getInstanceList({
-        category_seq: categoryFilter === "all" ? "0" : categoryFilter,
+        category_seq: categoryFilter === "all" ? "all" : categoryFilter,
         pageNumber: requestPage,
         pageSize: requestPageSize,
         searchParams,
       })
   );
 
+  // Backend returns DataTables shape: { recordsTotal, recordsFiltered, data: Instance[] }
   const rawInstances: any[] = Array.isArray(instanceData)
     ? instanceData
-    : Array.isArray(instanceData?.list)
-      ? instanceData.list
-      : [];
+    : Array.isArray(instanceData?.data)
+      ? instanceData.data
+      : Array.isArray(instanceData?.list)
+        ? instanceData.list
+        : [];
 
   // Client-side visibility enforcement: non-managers (and managers in "my" mode)
   // only ever see instances they created.
@@ -104,7 +107,7 @@ export default function InstancePage() {
 
   const totalCount: number = showOnlyMine
     ? scopedInstances.length
-    : (instanceData?.totalCount ?? instanceData?.total ?? rawInstances.length);
+    : (instanceData?.recordsFiltered ?? instanceData?.recordsTotal ?? rawInstances.length);
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   // For the scoped case we paginate the filtered list on the client.
