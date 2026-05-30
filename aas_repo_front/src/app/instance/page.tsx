@@ -7,25 +7,8 @@ import { getInstanceList, getCodeList, exportModel } from "@/api/index";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/constants/roles";
-import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,11 +16,36 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
-import { Plus, Search, Download, Pencil, ChevronDown, ChevronLeft, ChevronRight, Layers } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Download,
+  Pencil,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
+} from "lucide-react";
 
 const PAGE_SIZE = 20;
+
+function VerificationBadge({ value }: { value: string }) {
+  const ok = value === "success";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border",
+        ok
+          ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+          : "bg-red-50 border-red-200 text-red-600"
+      )}
+    >
+      <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", ok ? "bg-emerald-500" : "bg-red-400")} />
+      {value}
+    </span>
+  );
+}
 
 export default function InstancePage() {
   const { user, isAuthenticated } = useAuth();
@@ -87,6 +95,11 @@ export default function InstancePage() {
     setPage(1);
   }, [inputValue]);
 
+  const handleCategory = (val: string) => {
+    setCategoryFilter(val);
+    setPage(1);
+  };
+
   const handleExport = async (instance: any, format: "json" | "xml" | "aasx") => {
     await exportModel({
       modelType: "aasmodel",
@@ -100,227 +113,276 @@ export default function InstancePage() {
     user &&
     (user.user_group_seq === UserRole.User ||
       user.user_group_seq === UserRole.Manager);
+  const showUser = user && user.user_group_seq <= UserRole.Approvedor;
 
   return (
-    <div className="flex flex-col">
-      <PageHeader
-        title="My AAS Instance"
-        breadcrumbs={[
-          { label: "Home", href: "/" },
-          { label: "My AAS Instance" },
-        ]}
-        actions={
-          canCreate ? (
+    <div className="min-h-screen bg-zinc-50">
+      {/* ── Page header ── */}
+      <div className="bg-white border-b border-zinc-200 px-6 py-5">
+        <div className="mx-auto max-w-screen-xl flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold text-zinc-900">My AAS Instance</h1>
+            <p className="text-sm text-zinc-500 mt-0.5">
+              {isLoading ? "Loading..." : `${totalCount} instances`}
+            </p>
+          </div>
+          {canCreate && (
             <Link href="/instance/ins" className={cn(buttonVariants({ size: "sm" }))}>
-              <Plus className="size-3.5" data-icon="inline-start" />
+              <Plus className="w-3.5 h-3.5 mr-1.5" />
               Create AAS
             </Link>
-          ) : undefined
-        }
-      />
-
-      {/* Filters */}
-      <div className="border-b border-border/60 bg-muted/30 px-6 py-2.5">
-        <div className="mx-auto max-w-screen-2xl flex flex-wrap items-center gap-2.5">
-          {user && user.user_group_seq !== UserRole.User && (
-            <div className="flex rounded-md border border-border overflow-hidden text-sm">
-              {(["my", "all"] as const).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => { setSearchMode(mode); setPage(1); }}
-                  className={`px-3 py-1.5 capitalize transition-colors ${
-                    searchMode === mode
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-background text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  {mode === "my" ? "My Instances" : "All Instances"}
-                </button>
-              ))}
-            </div>
           )}
+        </div>
+      </div>
 
-          <Select
-            value={categoryFilter}
-            onValueChange={(val) => { setCategoryFilter(val ?? "all"); setPage(1); }}
-          >
-            <SelectTrigger className="h-8 w-44 text-sm">
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map((c: any) => (
-                <SelectItem key={c.category_seq ?? c.id} value={String(c.category_seq ?? c.id)}>
-                  {c.category_name ?? c.text}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <div className="relative flex-1 min-w-[200px] max-w-sm flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+      <div className="mx-auto max-w-screen-xl px-6 py-6 flex gap-6">
+        {/* ── Left sidebar ── */}
+        <aside className="w-52 shrink-0">
+          <div className="sticky top-6 space-y-1">
+            {/* Search */}
+            <div className="relative mb-4">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
               <Input
-                className="h-8 pl-8 text-sm"
-                placeholder="Please enter a search term"
+                className="h-8 pl-8 text-sm bg-white border-zinc-200 rounded-lg"
+                placeholder="Search..."
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               />
             </div>
-            <Button onClick={handleSearch}>
-              <Search className="size-3.5 mr-1.5" />검색
-            </Button>
+
+            {/* Scope toggle */}
+            {user && user.user_group_seq !== UserRole.User && (
+              <>
+                <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
+                  Scope
+                </p>
+                <div className="flex rounded-lg border border-zinc-200 bg-white overflow-hidden mb-4 text-sm">
+                  {(["my", "all"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => { setSearchMode(mode); setPage(1); }}
+                      className={cn(
+                        "flex-1 px-3 py-1.5 capitalize transition-colors",
+                        searchMode === mode
+                          ? "bg-zinc-900 text-white font-medium"
+                          : "text-zinc-600 hover:bg-zinc-100"
+                      )}
+                    >
+                      {mode === "my" ? "Mine" : "All"}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Category label */}
+            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
+              Category
+            </p>
+
+            {/* All */}
+            <button
+              onClick={() => handleCategory("all")}
+              className={cn(
+                "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm transition-colors",
+                categoryFilter === "all"
+                  ? "bg-zinc-900 text-white font-medium"
+                  : "text-zinc-600 hover:bg-zinc-100"
+              )}
+            >
+              <span>All</span>
+              <span className={cn("text-[11px] tabular-nums", categoryFilter === "all" ? "text-zinc-300" : "text-zinc-400")}>
+                {totalCount}
+              </span>
+            </button>
+
+            {categories.map((c: any) => {
+              const id = String(c.category_seq ?? c.id);
+              const active = categoryFilter === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => handleCategory(id)}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm transition-colors text-left",
+                    active
+                      ? "bg-zinc-900 text-white font-medium"
+                      : "text-zinc-600 hover:bg-zinc-100"
+                  )}
+                >
+                  <span className="truncate">{c.category_name ?? c.text}</span>
+                </button>
+              );
+            })}
           </div>
+        </aside>
+
+        {/* ── Main content ── */}
+        <div className="flex-1 min-w-0">
+          {/* toolbar */}
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-zinc-500">
+              {searchKey && <span className="text-zinc-900 font-medium">&quot;{searchKey}&quot; · </span>}
+              {isLoading ? "Loading..." : `${instances.length} of ${totalCount}`}
+            </p>
+          </div>
+
+          {/* error */}
+          {error && (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 mb-4">
+              Failed to load data. Please check your connection or try again.
+            </div>
+          )}
+
+          {/* loading */}
+          {isLoading ? (
+            <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="h-14 rounded-none border-b border-zinc-100 last:border-b-0" />
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-200 bg-zinc-50/60 text-left">
+                    <th className="px-4 py-3 w-36 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Category</th>
+                    <th className="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Instance Name</th>
+                    <th className="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider hidden lg:table-cell">Description</th>
+                    <th className="px-4 py-3 w-28 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Verification</th>
+                    {showUser && (
+                      <th className="px-4 py-3 w-44 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider hidden md:table-cell">User</th>
+                    )}
+                    {canCreate && (
+                      <th className="px-4 py-3 w-44 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider text-right">Actions</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {instances.map((instance: any) => {
+                    const hasPermission =
+                      user &&
+                      (user.user_group_seq === UserRole.Manager ||
+                        String(user.user_seq) === String(instance.create_user_seq));
+
+                    return (
+                      <tr
+                        key={instance.instance_seq}
+                        className="border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50 transition-colors"
+                      >
+                        <td className="px-4 py-3 text-zinc-500 align-middle">{instance.category_name}</td>
+                        <td className="px-4 py-3 align-middle">
+                          <Link
+                            href={ROUTES.INSTANCE.VIEW(instance.instance_seq)}
+                            className="font-medium text-zinc-900 hover:text-blue-600 transition-colors"
+                          >
+                            {instance.instance_name}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 align-middle text-zinc-400 hidden lg:table-cell">
+                          <span className="block max-w-[280px] truncate">{instance.description}</span>
+                        </td>
+                        <td className="px-4 py-3 align-middle">
+                          <VerificationBadge value={instance.verification} />
+                        </td>
+                        {showUser && (
+                          <td className="px-4 py-3 align-middle text-zinc-500 hidden md:table-cell">
+                            <span className="block max-w-[160px] truncate">{instance.user_id}</span>
+                          </td>
+                        )}
+                        {canCreate && (
+                          <td className="px-4 py-3 align-middle text-right">
+                            {hasPermission && (
+                              <div className="flex items-center justify-end gap-1.5">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger render={
+                                    <Button variant="outline" size="sm">
+                                      <Download className="size-3.5 mr-1.5" />
+                                      내보내기
+                                      <ChevronDown className="size-3 ml-1" />
+                                    </Button>
+                                  } />
+                                  <DropdownMenuContent align="end">
+                                    {(["json", "xml", "aasx"] as const).map((fmt) => (
+                                      <DropdownMenuItem
+                                        key={fmt}
+                                        onClick={() => handleExport(instance, fmt)}
+                                      >
+                                        {fmt}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+
+                                <Link
+                                  href={ROUTES.INSTANCE.EDIT(instance.instance_seq)}
+                                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                                >
+                                  <Pencil className="size-3.5 mr-1.5" />
+                                  수정
+                                </Link>
+                              </div>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                  {instances.length === 0 && (
+                    <tr>
+                      <td colSpan={3 + (showUser ? 1 : 0) + (canCreate ? 1 : 0)} className="h-40">
+                        <div className="flex flex-col items-center justify-center gap-2 text-zinc-400">
+                          <Layers className="size-8 opacity-30" />
+                          <p className="text-sm">No instances found.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* pagination */}
+          {totalPages > 1 && (
+            <div className="mt-8 flex items-center justify-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                const p = i + Math.max(1, Math.min(page - 3, totalPages - 6));
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={cn(
+                      "w-8 h-8 rounded-lg text-sm font-medium transition-colors",
+                      p === page
+                        ? "bg-zinc-900 text-white"
+                        : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
+                    )}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
-      </div>
-
-      {/* Table */}
-      <div className="mx-auto max-w-screen-2xl w-full px-6 py-6">
-        <p className="mb-4 text-sm text-muted-foreground">
-          {isLoading ? "Loading..." : `${totalCount} results found`}
-        </p>
-
-        {error && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive mb-4">
-            Failed to load data. Please check your connection or try again.
-          </div>
-        )}
-
-        {isLoading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full rounded" />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-lg border border-border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-32">Category</TableHead>
-                  <TableHead>Instance Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Reference Template ID</TableHead>
-                  <TableHead className="w-32">Verification</TableHead>
-                  {user && user.user_group_seq <= UserRole.Approvedor && (
-                    <TableHead className="w-24">User</TableHead>
-                  )}
-                  {canCreate && (
-                    <TableHead className="w-44">Actions</TableHead>
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {instances.map((instance: any) => {
-                  const hasPermission =
-                    user &&
-                    (user.user_group_seq === UserRole.Manager ||
-                      String(user.user_seq) === String(instance.create_user_seq));
-
-                  return (
-                    <TableRow key={instance.instance_seq}>
-                      <TableCell className="text-sm">{instance.category_name}</TableCell>
-                      <TableCell>
-                        <Link
-                          href={ROUTES.INSTANCE.VIEW(instance.instance_seq)}
-                          className="font-medium text-foreground hover:text-primary hover:underline"
-                        >
-                          {instance.instance_name}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {instance.description}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground truncate max-w-[180px]">
-                        {instance.aasmodel_template_id}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={instance.verification === "success" ? "default" : "destructive"}
-                        >
-                          {instance.verification}
-                        </Badge>
-                      </TableCell>
-                      {user && user.user_group_seq <= UserRole.Approvedor && (
-                        <TableCell className="text-sm">{instance.user_id}</TableCell>
-                      )}
-                      {canCreate && (
-                        <TableCell>
-                          {hasPermission && (
-                            <div className="flex items-center gap-1.5">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="outline">
-                                    <Download className="size-3.5 mr-1.5" />
-                                    내보내기
-                                    <ChevronDown className="size-3 ml-1" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  {(["json", "xml", "aasx"] as const).map((fmt) => (
-                                    <DropdownMenuItem
-                                      key={fmt}
-                                      onClick={() => handleExport(instance, fmt)}
-                                    >
-                                      {fmt}
-                                    </DropdownMenuItem>
-                                  ))}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-
-                              <Link
-                                href={ROUTES.INSTANCE.EDIT(instance.instance_seq)}
-                                className={buttonVariants({ variant: "outline", size: "sm" })}
-                              >
-                                <Pencil className="size-3.5 mr-1.5" />
-                                수정
-                              </Link>
-                            </div>
-                          )}
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  );
-                })}
-                {instances.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-40">
-                      <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                        <Layers className="size-8 opacity-30" />
-                        <p className="text-sm">No instances found.</p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-
-        {totalPages > 1 && (
-          <div className="mt-6 flex items-center justify-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              {page} / {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-        )}
       </div>
     </div>
   );
