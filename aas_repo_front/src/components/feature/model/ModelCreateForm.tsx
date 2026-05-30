@@ -127,6 +127,10 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
     undefined
   );
   const [verifying, setVerifying] = useState(false);
+  // Human-readable fallback message for non-structured verification failures.
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+  // Bumped to collapse all submodel tree nodes (e.g. before verification).
+  const [collapseSignal, setCollapseSignal] = useState(0);
 
   const modelFileRef = useRef<HTMLInputElement>(null);
   const thumbnailRef = useRef<HTMLInputElement>(null);
@@ -259,12 +263,15 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
     verificationRef.current = null;
     setVerificationActive(null);
     setVerification(undefined);
+    setVerificationError(null);
   };
 
   // Verify the imported model against the AAS server. On success the
   // verificationRef is cleared; on failure the structured error payload is
   // parsed and stored so VerifyDetailView can render the same error details.
   const verifyTemplate = async (): Promise<"success" | "fail"> => {
+    // Collapse all submodel tree nodes before running verification.
+    setCollapseSignal((n) => n + 1);
     const modelId = form.model_id || getModelId(metadata);
     let result: "success" | "fail";
     try {
@@ -273,10 +280,12 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
       result = "success";
       verificationRef.current = null;
       setVerificationActive(null);
+      setVerificationError(null);
       setVerification("success");
     } catch (error: any) {
       result = "fail";
       const json = error?.cause?.json;
+      let parsed = false;
       if (json && json.data && typeof json.data === "string") {
         try {
           const verificationData = JSON.parse(json.data);
@@ -288,17 +297,24 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
                 .filter(([key]) => key !== "summary")
                 .find(([, v]) => v?.count > 0)?.[0] ?? null;
             setVerificationActive(firstFail);
-          } else {
-            verificationRef.current = null;
-            setVerificationActive(null);
+            parsed = true;
           }
         } catch {
-          verificationRef.current = null;
-          setVerificationActive(null);
+          /* fall through to message handling below */
         }
-      } else {
+      }
+      if (!parsed) {
         verificationRef.current = null;
         setVerificationActive(null);
+        // Surface the raw API error/warning detail in the result card.
+        setVerificationError(
+          json?.message ||
+            json?.data ||
+            error?.message ||
+            "Verification request failed. Please try again.",
+        );
+      } else {
+        setVerificationError(null);
       }
       setVerification("fail");
     } finally {
@@ -674,7 +690,7 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
             </div>
 
             {treeData ? (
-              <TemplateBlueprint treeData={treeData} showValues />
+                <TemplateBlueprint treeData={treeData} showValues collapseSignal={collapseSignal} />
             ) : (
               <button
                 type="button"
@@ -715,11 +731,17 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
               <p className="text-xs text-zinc-400 mb-3">
                 Resolve the issues below, then save or register again.
               </p>
-              <VerifyDetailView
-                verificationRef={verificationRef}
-                verificationActive={verificationActive}
-                setVerificationActive={setVerificationActive}
-              />
+              {verificationRef.current ? (
+                <VerifyDetailView
+                  verificationRef={verificationRef}
+                  verificationActive={verificationActive}
+                  setVerificationActive={setVerificationActive}
+                />
+              ) : (
+                <pre className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-3 whitespace-pre-wrap break-words">
+                  {verificationError ?? "Verification failed."}
+                </pre>
+              )}
             </div>
           )}
         </div>

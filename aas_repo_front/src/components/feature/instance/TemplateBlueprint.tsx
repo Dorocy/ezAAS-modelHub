@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { ChevronRight, Layers, Box, List, Tag, FileText, Link2, ToggleLeft, Hash, Info } from "lucide-react";
@@ -445,13 +445,26 @@ function SubmodelSection({
   node,
   index,
   showValues,
+  collapseSignal = 0,
 }: {
   node: any;
   index: number;
   showValues: boolean;
+  collapseSignal?: number;
 }) {
   const [open, setOpen] = useState(true);
   const children: any[] = Array.isArray(node.children) ? node.children : [];
+
+  // Collapse this submodel node whenever the parent bumps the collapse signal
+  // (e.g. right before running verification). Skip the initial mount.
+  const didMount = useRef(false);
+  useEffect(() => {
+    if (!didMount.current) {
+      didMount.current = true;
+      return;
+    }
+    setOpen(false);
+  }, [collapseSignal]);
 
   /* stats for instance mode */
   const countLeaves = (n: any): number =>
@@ -545,9 +558,10 @@ function SubmodelSection({
 interface TemplateBlueprintProps {
   treeData: any[];
   showValues?: boolean;
+  collapseSignal?: number;
 }
 
-export default function TemplateBlueprint({ treeData, showValues = false }: TemplateBlueprintProps) {
+export default function TemplateBlueprint({ treeData, showValues = false, collapseSignal = 0 }: TemplateBlueprintProps) {
   if (!Array.isArray(treeData) || treeData.length === 0) {
     return (
       <p className="text-xs text-zinc-400 px-4 py-6 text-center">구조 데이터가 없습니다.</p>
@@ -638,6 +652,7 @@ export default function TemplateBlueprint({ treeData, showValues = false }: Temp
             node={sm}
             index={i}
             showValues={showValues}
+            collapseSignal={collapseSignal}
           />
         ))
       )}
