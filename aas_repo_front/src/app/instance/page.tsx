@@ -34,8 +34,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/ui/page-header";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
-import { Plus, Search, Download, Pencil, ChevronDown, ChevronLeft, ChevronRight, Layers } from "lucide-react";
+import { Plus, Search, Download, Pencil, ChevronDown, Layers } from "lucide-react";
 
 const PAGE_SIZE = 20;
 
@@ -53,24 +62,55 @@ export default function InstancePage() {
     () => getCodeList("category")
   );
 
+  // Only Managers may view instances created by other users.
+  // Everyone else (Approvedor, User) is restricted to their own instances.
+  const canViewAll = user?.user_group_seq === UserRole.Manager;
+  // Whether the current view should be scoped to the signed-in user's instances.
+  const showOnlyMine = !canViewAll || searchMode === "my";
+
   const searchParams: Record<string, string> = {};
   if (searchKey) searchParams.searchKey = searchKey;
-  if (searchMode === "my" && user) searchParams.user_seq = String(user.user_seq);
+  if (showOnlyMine && user) searchParams.user_seq = String(user.user_seq);
+
+  // When scoping to the current user we fetch a large page and filter/paginate
+  // on the client, since the backend list endpoint does not honor user_seq.
+  const requestPage = showOnlyMine ? 1 : page;
+  const requestPageSize = showOnlyMine ? 1000 : PAGE_SIZE;
 
   const { data: instanceData, isLoading, error } = useSWR(
-    isAuthenticated ? ["instance-list", page, searchKey, categoryFilter, searchMode] : null,
+    isAuthenticated ? ["instance-list", requestPage, searchKey, categoryFilter, showOnlyMine] : null,
     () =>
       getInstanceList({
         category_seq: categoryFilter === "all" ? "0" : categoryFilter,
-        pageNumber: page,
-        pageSize: PAGE_SIZE,
+        pageNumber: requestPage,
+        pageSize: requestPageSize,
         searchParams,
       })
   );
 
-  const instances: any[] = Array.isArray(instanceData) ? instanceData : (Array.isArray(instanceData?.list) ? instanceData.list : []);
-  const totalCount: number = instanceData?.totalCount ?? instanceData?.total ?? instances.length;
+  const rawInstances: any[] = Array.isArray(instanceData)
+    ? instanceData
+    : Array.isArray(instanceData?.list)
+      ? instanceData.list
+      : [];
+
+  // Client-side visibility enforcement: non-managers (and managers in "my" mode)
+  // only ever see instances they created.
+  const scopedInstances = showOnlyMine && user
+    ? rawInstances.filter(
+        (i: any) => String(i.create_user_seq) === String(user.user_seq)
+      )
+    : rawInstances;
+
+  const totalCount: number = showOnlyMine
+    ? scopedInstances.length
+    : (instanceData?.totalCount ?? instanceData?.total ?? rawInstances.length);
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+  // For the scoped case we paginate the filtered list on the client.
+  const instances: any[] = showOnlyMine
+    ? scopedInstances.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+    : scopedInstances;
 
   const handleSearch = useCallback(() => {
     setSearchKey(inputValue);
@@ -112,22 +152,19 @@ export default function InstancePage() {
       {/* Filters */}
       <div className="border-b border-border/60 bg-muted/30 px-6 py-2.5">
         <div className="mx-auto max-w-screen-2xl flex flex-wrap items-center gap-2.5">
-          {user && user.user_group_seq !== UserRole.User && (
-            <div className="flex rounded-md border border-border overflow-hidden text-sm">
-              {(["my", "all"] as const).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => { setSearchMode(mode); setPage(1); }}
-                  className={`px-3 py-1.5 capitalize transition-colors ${
-                    searchMode === mode
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-background text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  {mode === "my" ? "My Instances" : "All Instances"}
-                </button>
-              ))}
-            </div>
+          {canViewAll && (
+            <ToggleGroup
+              value={[searchMode]}
+              onValueChange={(vals) => {
+                const next = (vals as string[]).find((v) => v !== searchMode);
+                if (next) { setSearchMode(next as "my" | "all"); setPage(1); }
+              }}
+              variant="outline"
+              size="sm"
+            >
+              <ToggleGroupItem value="my">My Instances</ToggleGroupItem>
+              <ToggleGroupItem value="all">All Instances</ToggleGroupItem>
+            </ToggleGroup>
           )}
 
           <Select
@@ -290,29 +327,51 @@ export default function InstancePage() {
         )}
 
         {totalPages > 1 && (
-          <div className="mt-6 flex items-center justify-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              {page} / {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
+          <Pagination className="mt-6">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  aria-disabled={page === 1}
+                  className={cn(page === 1 && "pointer-events-none opacity-40")}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (page > 1) setPage((p) => p - 1);
+                  }}
+                />
+              </PaginationItem>
+
+              {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                const p = i + Math.max(1, Math.min(page - 3, totalPages - 6));
+                return (
+                  <PaginationItem key={p}>
+                    <PaginationLink
+                      href="#"
+                      isActive={p === page}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setPage(p);
+                      }}
+                    >
+                      {p}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  aria-disabled={page === totalPages}
+                  className={cn(page === totalPages && "pointer-events-none opacity-40")}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (page < totalPages) setPage((p) => p + 1);
+                  }}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         )}
       </div>
     </div>

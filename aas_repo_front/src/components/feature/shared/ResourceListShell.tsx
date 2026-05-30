@@ -4,11 +4,20 @@ import React from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
 import {
   Search,
-  ChevronLeft,
-  ChevronRight,
   LayoutGrid,
   AlignJustify,
   Table as TableIcon,
@@ -30,10 +39,10 @@ export function StatusBadge({ status, label }: { status?: string; label?: string
   const key = (status ?? "").toLowerCase();
   const s = STATUS_COLORS[key] ?? STATUS_COLORS.draft;
   return (
-    <span className={cn("inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border", s.bg, s.text)}>
+    <Badge variant="outline" className={cn("gap-1 rounded-full font-medium", s.bg, s.text)}>
       <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", s.dot)} />
       {label ?? status}
-    </span>
+    </Badge>
   );
 }
 
@@ -226,36 +235,32 @@ export function ResourceListShell({
               Category
             </p>
 
-            <button
+            <Button
+              variant={activeCategory === "all" ? "default" : "ghost"}
+              size="sm"
               onClick={() => onCategoryChange("all")}
-              className={cn(
-                "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm transition-colors",
-                activeCategory === "all"
-                  ? "bg-zinc-900 text-white font-medium"
-                  : "text-zinc-600 hover:bg-zinc-100"
-              )}
+              className="w-full justify-between font-normal data-[active=true]:font-medium"
+              data-active={activeCategory === "all"}
             >
               <span>All</span>
-              <span className={cn("text-[11px] tabular-nums", activeCategory === "all" ? "text-zinc-300" : "text-zinc-400")}>
+              <span className={cn("text-[11px] tabular-nums", activeCategory === "all" ? "text-primary-foreground/70" : "text-zinc-400")}>
                 {totalCount}
               </span>
-            </button>
+            </Button>
 
             {categories.map((c) => {
               const active = activeCategory === c.id;
               return (
-                <button
+                <Button
                   key={c.id}
+                  variant={active ? "default" : "ghost"}
+                  size="sm"
                   onClick={() => onCategoryChange(c.id)}
-                  className={cn(
-                    "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm transition-colors text-left",
-                    active
-                      ? "bg-zinc-900 text-white font-medium"
-                      : "text-zinc-600 hover:bg-zinc-100"
-                  )}
+                  className="w-full justify-start font-normal data-[active=true]:font-medium"
+                  data-active={active}
                 >
                   <span className="truncate">{c.label}</span>
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -267,24 +272,25 @@ export function ResourceListShell({
           <div className="flex items-center justify-between mb-4 gap-3">
             <p className="text-sm text-zinc-500 truncate">{resultText}</p>
             {views.length > 1 && (
-              <div className="flex items-center gap-1 bg-white border border-zinc-200 rounded-lg p-0.5 shrink-0">
+              <ToggleGroup
+                value={[view]}
+                onValueChange={(vals) => {
+                  const next = (vals as string[]).find((v) => v !== view) ?? view;
+                  onViewChange(next as ViewType);
+                }}
+                variant="outline"
+                size="sm"
+                className="shrink-0 bg-white"
+              >
                 {views.map((v) => {
                   const Icon = VIEW_ICONS[v];
                   return (
-                    <button
-                      key={v}
-                      onClick={() => onViewChange(v)}
-                      aria-label={`${v} view`}
-                      className={cn(
-                        "p-1.5 rounded-md transition-colors",
-                        view === v ? "bg-zinc-900 text-white" : "text-zinc-400 hover:text-zinc-600"
-                      )}
-                    >
+                    <ToggleGroupItem key={v} value={v} aria-label={`${v} view`}>
                       <Icon className="w-3.5 h-3.5" />
-                    </button>
+                    </ToggleGroupItem>
                   );
                 })}
-              </div>
+              </ToggleGroup>
             )}
           </div>
 
@@ -322,43 +328,51 @@ export function ResourceListShell({
 
           {/* pagination */}
           {totalPages > 1 && !isLoading && (
-            <div className="mt-8 flex items-center justify-center gap-2">
-              <button
-                onClick={() => onPageChange(Math.max(1, page - 1))}
-                disabled={page === 1}
-                aria-label="Previous page"
-                className="flex items-center justify-center w-8 h-8 rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
+            <Pagination className="mt-8">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    aria-disabled={page === 1}
+                    className={cn(page === 1 && "pointer-events-none opacity-40")}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (page > 1) onPageChange(page - 1);
+                    }}
+                  />
+                </PaginationItem>
 
-              {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
-                const p = i + Math.max(1, Math.min(page - 3, totalPages - 6));
-                return (
-                  <button
-                    key={p}
-                    onClick={() => onPageChange(p)}
-                    className={cn(
-                      "w-8 h-8 rounded-lg text-sm font-medium transition-colors",
-                      p === page
-                        ? "bg-zinc-900 text-white"
-                        : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
-                    )}
-                  >
-                    {p}
-                  </button>
-                );
-              })}
+                {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                  const p = i + Math.max(1, Math.min(page - 3, totalPages - 6));
+                  return (
+                    <PaginationItem key={p}>
+                      <PaginationLink
+                        href="#"
+                        isActive={p === page}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onPageChange(p);
+                        }}
+                      >
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
 
-              <button
-                onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-                disabled={page === totalPages}
-                aria-label="Next page"
-                className="flex items-center justify-center w-8 h-8 rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    aria-disabled={page === totalPages}
+                    className={cn(page === totalPages && "pointer-events-none opacity-40")}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (page < totalPages) onPageChange(page + 1);
+                    }}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           )}
         </div>
       </div>
