@@ -95,6 +95,7 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
   const [form, setForm] = useState({
     [nameKey]: "",
     description: "",
+    model_id: "",
     category_seq: "",
     creator: (user?.user_name as string) ?? "",
     asset_type: "",
@@ -134,6 +135,56 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
   const setField = (key: string, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
+  // ── Prefill editable fields from imported AAS metadata ──
+  const prefillFromMetadata = (
+    md: any,
+    filesByName: Record<string, File>,
+    filesByOriginalKey: Record<string, File>
+  ) => {
+    if (modelType !== "aasmodel") return;
+
+    const shell = md?.assetAdministrationShells?.[0];
+    if (!shell) return;
+
+    // description.text can be an array of { language, text } or a plain string
+    const extractText = (desc: any): string => {
+      if (!desc) return "";
+      if (typeof desc === "string") return desc;
+      if (Array.isArray(desc)) {
+        const first = desc.find((d) => d?.text) ?? desc[0];
+        return first?.text ?? "";
+      }
+      if (typeof desc.text === "string") return desc.text;
+      if (Array.isArray(desc.text)) {
+        const first = desc.text.find((d: any) => d?.text) ?? desc.text[0];
+        return typeof first === "string" ? first : first?.text ?? "";
+      }
+      return "";
+    };
+
+    setForm((prev) => ({
+      ...prev,
+      [nameKey]: shell.idShort ?? prev[nameKey],
+      description: extractText(shell.description) || prev.description,
+      model_id: shell.id ?? prev.model_id,
+    }));
+
+    // Resolve the thumbnail image from the imported attachments.
+    const thumbPath: string | undefined =
+      shell?.assetInformation?.defaultThumbnail?.path;
+    if (thumbPath) {
+      const cleanName = thumbPath.split("/").pop() || thumbPath;
+      const matched =
+        filesByOriginalKey[thumbPath] ||
+        filesByOriginalKey[thumbPath.replace(/^\/+/, "")] ||
+        filesByName[cleanName];
+      // Only use a real image file; never display the path string itself.
+      if (matched && matched.type.startsWith("image/")) {
+        setThumbnail(matched);
+      }
+    }
+  };
+
   // ── Import an AASX / XML / JSON file → metadata + attachments ──
   const handleImport = async (file: File | null) => {
     if (!file) return;
@@ -148,18 +199,27 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
           : result.metadata;
       setMetadata(parsed);
 
-      // Decode base64 attachments returned by the backend into File objects
+      // Decode base64 attachments returned by the backend into File objects.
+      // Keep both the cleaned (basename) and the original key so a thumbnail
+      // path from the metadata can be matched reliably.
       const files: Record<string, File> = {};
+      const filesByOriginalKey: Record<string, File> = {};
       const attachments = result.attachments;
       if (attachments) {
         for (const filename in attachments) {
           const fileData = attachments[filename];
           const cleanName = filename.split("/").pop() || filename;
           const decoded = base64ToFile(fileData.content, cleanName, fileData.type);
-          if (decoded) files[cleanName] = decoded;
+          if (decoded) {
+            files[cleanName] = decoded;
+            filesByOriginalKey[filename] = decoded;
+          }
         }
       }
       setImportedFiles(files);
+
+      // Prefill editable fields from the imported AAS metadata.
+      prefillFromMetadata(parsed, files, filesByOriginalKey);
     } catch (error: any) {
       console.error("[v0] import failed", error?.message);
     } finally {
@@ -171,6 +231,8 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
   const clearImport = () => {
     setMetadata(null);
     setImportedFiles({});
+    setThumbnail(null);
+    setForm((prev) => ({ ...prev, [nameKey]: "", description: "", model_id: "" }));
   };
 
   const getModelId = (md: any): string => {
@@ -197,7 +259,7 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
 
     const body: Record<string, any> = {
       [`${modelType}_seq`]: "",
-      [`${modelType}_id`]: getModelId(metadata),
+      [`${modelType}_id`]: form.model_id || getModelId(metadata),
       [publishKey]: "",
       [modelType === "aasmodel" ? "version" : `${modelType}_version`]: "",
       type: "",
@@ -368,6 +430,18 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
                     onChange={(e) => setField("description", e.target.value)}
                   />
                 </div>
+
+                {modelType === "aasmodel" && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="model_id">AAS ID</Label>
+                    <Input
+                      id="model_id"
+                      placeholder="urn:..."
+                      value={form.model_id}
+                      onChange={(e) => setField("model_id", e.target.value)}
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-1.5">
                   <Label>
