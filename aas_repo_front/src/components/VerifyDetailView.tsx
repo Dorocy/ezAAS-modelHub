@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { CheckCircle2, XCircle, Maximize2, X } from "lucide-react";
+import { CheckCircle2, XCircle, Maximize2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -30,6 +30,17 @@ export default function VerifyDetailView({
   const activeMessages = verificationActive
     ? (verificationRef.current[verificationActive]?.message ?? [])
     : [];
+
+  // 전체 보기에서 사용할, 오류가 있는 모든 그룹 (summary 등 비-그룹 항목 제외)
+  const failGroups = entries.filter(
+    ([, v]) =>
+      v &&
+      typeof v === "object" &&
+      Array.isArray(v.message) &&
+      typeof v.count === "number" &&
+      v.count > 0,
+  );
+  const totalFailCount = failGroups.reduce((sum, [, v]) => sum + v.count, 0);
 
   return (
     <div className="w-full flex flex-col gap-4 mt-2">
@@ -86,36 +97,61 @@ export default function VerifyDetailView({
               className="h-7 px-2 text-xs text-zinc-500 hover:text-zinc-800"
               onClick={() => setModalOpen(true)}
             >
-              <Maximize2 className="size-3.5 mr-1" />전체 보기
+              <Maximize2 className="size-3.5 mr-1" />전체 보기 (모든 그룹)
             </Button>
           </div>
           <div className="h-48 overflow-y-auto px-4 py-3 space-y-1.5">
             {activeMessages.map((msg, i) => (
-              <div key={i} className="flex items-start gap-2">
+              <div key={i} className="flex items-start gap-2 min-w-0">
                 <span className="text-[11px] text-red-300 font-mono shrink-0 pt-0.5">{String(i + 1).padStart(2, "0")}</span>
-                <p className="text-xs text-zinc-700 leading-relaxed break-words">{msg}</p>
+                <p className="text-xs text-zinc-700 leading-relaxed break-words whitespace-pre-wrap min-w-0">{msg}</p>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* 전체 보기 Dialog */}
+      {/* 전체 보기 Dialog — 모든 그룹의 오류를 한 번에 표시 */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-5xl w-[90vw] h-[80vh] flex flex-col p-0 gap-0">
+        <DialogContent className="max-w-[96vw] w-[96vw] xl:max-w-7xl h-[88vh] flex flex-col p-0 gap-0">
           <DialogHeader className="px-6 py-4 border-b shrink-0">
             <DialogTitle className="flex items-center gap-2 text-red-700">
               <XCircle className="size-4" />
-              {verificationActive} — 오류 전체 목록
+              검증 오류 전체 목록
+              <span className="text-xs font-normal text-red-400">
+                (총 {totalFailCount}건 · {failGroups.length}개 그룹)
+              </span>
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2">
-            {activeMessages.map((msg, i) => (
-              <div key={i} className="flex items-start gap-3 py-2 border-b border-zinc-100 last:border-b-0">
-                <span className="text-xs text-zinc-400 font-mono shrink-0 pt-0.5 w-6 text-right">{i + 1}</span>
-                <p className="text-sm text-zinc-700 leading-relaxed break-words">{msg}</p>
-              </div>
-            ))}
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+            {failGroups.length === 0 ? (
+              <p className="text-sm text-zinc-500">표시할 오류가 없습니다.</p>
+            ) : (
+              failGroups.map(([key, { count, message }]) => (
+                <section key={key}>
+                  <div className="flex items-center gap-2 mb-2 sticky top-0 bg-white py-1.5 border-b border-red-100">
+                    <XCircle className="size-4 text-red-500 shrink-0" />
+                    <h3 className="text-sm font-semibold text-red-700 break-words">{key}</h3>
+                    <span className="text-xs text-red-400 shrink-0">({count}건)</span>
+                  </div>
+                  <div className="space-y-1">
+                    {message.map((msg, i) => (
+                      <div
+                        key={i}
+                        className="flex items-start gap-3 py-2 border-b border-zinc-100 last:border-b-0"
+                      >
+                        <span className="text-xs text-zinc-400 font-mono shrink-0 pt-0.5 w-8 text-right">
+                          {i + 1}
+                        </span>
+                        <p className="text-sm text-zinc-700 leading-relaxed break-words whitespace-pre-wrap min-w-0">
+                          {msg}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))
+            )}
           </div>
         </DialogContent>
       </Dialog>
