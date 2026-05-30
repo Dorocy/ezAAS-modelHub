@@ -266,6 +266,44 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
     setVerificationError(null);
   };
 
+  // Parse an API error (from verify OR save) into the verification result card.
+  // The backend returns the detailed report as a JSON string in cause.json.data.
+  const applyVerificationFailure = (error: any) => {
+    const json = error?.cause?.json;
+    let parsed = false;
+    if (json && json.data && typeof json.data === "string") {
+      try {
+        const verificationData = JSON.parse(json.data);
+        if (verificationData && typeof verificationData === "object") {
+          verificationRef.current = verificationData;
+          // Activate the first failing item so its details are shown.
+          const firstFail =
+            Object.entries<any>(verificationData)
+              .filter(([key]) => key !== "summary")
+              .find(([, v]) => v?.count > 0)?.[0] ?? null;
+          setVerificationActive(firstFail);
+          parsed = true;
+        }
+      } catch {
+        /* not structured JSON — fall through to message handling */
+      }
+    }
+    if (!parsed) {
+      verificationRef.current = null;
+      setVerificationActive(null);
+      // Surface the raw API error/warning detail in the result card.
+      setVerificationError(
+        json?.message ||
+          (typeof json?.data === "string" ? json.data : undefined) ||
+          error?.message ||
+          "Verification failed. Please try again.",
+      );
+    } else {
+      setVerificationError(null);
+    }
+    setVerification("fail");
+  };
+
   // Verify the imported model against the AAS server. On success the
   // verificationRef is cleared; on failure the structured error payload is
   // parsed and stored so VerifyDetailView can render the same error details.
@@ -284,39 +322,7 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
       setVerification("success");
     } catch (error: any) {
       result = "fail";
-      const json = error?.cause?.json;
-      let parsed = false;
-      if (json && json.data && typeof json.data === "string") {
-        try {
-          const verificationData = JSON.parse(json.data);
-          if (verificationData) {
-            verificationRef.current = verificationData;
-            // Activate the first failing item so its details are shown.
-            const firstFail =
-              Object.entries<any>(verificationData)
-                .filter(([key]) => key !== "summary")
-                .find(([, v]) => v?.count > 0)?.[0] ?? null;
-            setVerificationActive(firstFail);
-            parsed = true;
-          }
-        } catch {
-          /* fall through to message handling below */
-        }
-      }
-      if (!parsed) {
-        verificationRef.current = null;
-        setVerificationActive(null);
-        // Surface the raw API error/warning detail in the result card.
-        setVerificationError(
-          json?.message ||
-            json?.data ||
-            error?.message ||
-            "Verification request failed. Please try again.",
-        );
-      } else {
-        setVerificationError(null);
-      }
-      setVerification("fail");
+      applyVerificationFailure(error);
     } finally {
       setVerifying(false);
     }
@@ -409,8 +415,15 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
         withToast: true,
       });
       router.push(ROUTES[routeKey].VIEW(String(modelSeq)));
-    } catch (error) {
-      console.error("[v0] template save failed", error);
+    } catch (error: any) {
+      // The save endpoint re-verifies the model. If it fails, surface the
+      // detailed report in the bottom result card and stay on the edit page.
+      applyVerificationFailure(error);
+      if (typeof window !== "undefined") {
+        requestAnimationFrame(() =>
+          window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }),
+        );
+      }
     } finally {
       setSubmitting(false);
     }
