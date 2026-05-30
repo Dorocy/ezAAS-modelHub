@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import imageCompression from "browser-image-compression";
 import toast from "react-hot-toast";
 
-import { importModel, upsertModel } from "@/api/index";
+import { importModel, upsertModel, verifyModel } from "@/api/index";
 import { ROUTES } from "@/constants/routes";
 import { base64ToFile } from "@/utils/index";
 import { addValuePaths, parsingAAS } from "@/utils/aas";
@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 import TemplateBlueprint from "@/components/feature/instance/TemplateBlueprint";
 import CategoryCombobox from "@/components/CategoryCombobox";
+import VerifyDetailView from "@/components/VerifyDetailView";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,6 +54,9 @@ import {
   Loader2,
   Save,
   Upload,
+  CheckCircle2,
+  ShieldAlert,
+  ShieldCheck,
 } from "lucide-react";
 
 type ModelType = "aasmodel" | "submodel";
@@ -112,6 +116,17 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
   const [guidePdf, setGuidePdf] = useState<File | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
+
+  // ── Verification (reuses Create AAS step 4 component + logic) ──
+  const verificationRef = useRef<Record<
+    string,
+    { count: number; message: string[] }
+  > | null>(null);
+  const [verificationActive, setVerificationActive] = useState<string | null>(null);
+  const [verification, setVerification] = useState<"success" | "fail" | undefined>(
+    undefined
+  );
+  const [verifying, setVerifying] = useState(false);
 
   const modelFileRef = useRef<HTMLInputElement>(null);
   const thumbnailRef = useRef<HTMLInputElement>(null);
@@ -199,6 +214,9 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
           : result.metadata;
       setMetadata(parsed);
 
+      // A freshly imported model must be re-verified before saving.
+      resetVerification();
+
       // Decode base64 attachments returned by the backend into File objects.
       // Keep both the cleaned (basename) and the original key so a thumbnail
       // path from the metadata can be matched reliably.
@@ -233,6 +251,60 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
     setImportedFiles({});
     setThumbnail(null);
     setForm((prev) => ({ ...prev, [nameKey]: "", description: "", model_id: "" }));
+    resetVerification();
+  };
+
+  // ── Verification helpers (mirrors Create AAS step 4) ──
+  const resetVerification = () => {
+    verificationRef.current = null;
+    setVerificationActive(null);
+    setVerification(undefined);
+  };
+
+  // Verify the imported model against the AAS server. On success the
+  // verificationRef is cleared; on failure the structured error payload is
+  // parsed and stored so VerifyDetailView can render the same error details.
+  const verifyTemplate = async (): Promise<"success" | "fail"> => {
+    const modelId = form.model_id || getModelId(metadata);
+    let result: "success" | "fail";
+    try {
+      setVerifying(true);
+      await verifyModel({ modelType, modelId, errorThrow: true, withToast: false });
+      result = "success";
+      verificationRef.current = null;
+      setVerificationActive(null);
+      setVerification("success");
+    } catch (error: any) {
+      result = "fail";
+      const json = error?.cause?.json;
+      if (json && json.data && typeof json.data === "string") {
+        try {
+          const verificationData = JSON.parse(json.data);
+          if (verificationData) {
+            verificationRef.current = verificationData;
+            // Activate the first failing item so its details are shown.
+            const firstFail =
+              Object.entries<any>(verificationData)
+                .filter(([key]) => key !== "summary")
+                .find(([, v]) => v?.count > 0)?.[0] ?? null;
+            setVerificationActive(firstFail);
+          } else {
+            verificationRef.current = null;
+            setVerificationActive(null);
+          }
+        } catch {
+          verificationRef.current = null;
+          setVerificationActive(null);
+        }
+      } else {
+        verificationRef.current = null;
+        setVerificationActive(null);
+      }
+      setVerification("fail");
+    } finally {
+      setVerifying(false);
+    }
+    return result;
   };
 
   const getModelId = (md: any): string => {
@@ -253,6 +325,13 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
       if (!form.aas_maturity_level) return toast("Select a maturity level", { icon: "⚠️" });
     }
     if (!metadata) return toast(`Import a ${modelType === "aasmodel" ? "AAS" : "Submodel"} file`, { icon: "⚠️" });
+
+    // Run verification before saving / registering — only proceed on success.
+    const verifyResult = await verifyTemplate();
+    if (verifyResult !== "success") {
+      toast("Verification failed. Resolve the errors before saving.", { icon: "⚠️" });
+      return;
+    }
 
     const publishKey =
       modelType === "aasmodel" ? `${modelType}_template_id` : `${modelType}_semantic_id`;
@@ -615,6 +694,37 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
         </div>
       </div>
 
+      {/* ── Verification results (same component as Create AAS step 4) ── */}
+      {verification && (
+        <div className="mx-auto max-w-screen-xl px-6 pb-6">
+          {verification === "success" && !verificationRef.current ? (
+            <div className="rounded-xl border border-green-200 bg-green-50 flex items-center gap-2 px-5 py-4">
+              <CheckCircle2 className="size-5 text-green-500 shrink-0" />
+              <p className="text-sm font-semibold text-green-700">
+                All verifications passed.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-white border border-zinc-200 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-1">
+                <ShieldAlert className="size-4 text-red-500" />
+                <h2 className="text-sm font-semibold text-zinc-900">
+                  Verification failed
+                </h2>
+              </div>
+              <p className="text-xs text-zinc-400 mb-3">
+                Resolve the issues below, then save or register again.
+              </p>
+              <VerifyDetailView
+                verificationRef={verificationRef}
+                verificationActive={verificationActive}
+                setVerificationActive={setVerificationActive}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Footer actions ── */}
       <div className="sticky bottom-0 border-t border-zinc-200 bg-white/80 backdrop-blur px-6 py-3">
         <div className="mx-auto max-w-screen-xl flex items-center justify-end gap-2">
@@ -628,7 +738,7 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
             type="button"
             variant="outline"
             size="sm"
-            disabled={submitting}
+            disabled={submitting || verifying}
             onClick={() => handleSubmit("temporary")}
           >
             <Save className="w-3.5 h-3.5 mr-1.5" />
@@ -637,11 +747,13 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
           <Button
             type="button"
             size="sm"
-            disabled={submitting}
+            disabled={submitting || verifying}
             onClick={() => handleSubmit("draft")}
           >
-            {submitting ? (
+            {submitting || verifying ? (
               <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+            ) : verification === "success" ? (
+              <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
             ) : (
               <Upload className="w-3.5 h-3.5 mr-1.5" />
             )}
