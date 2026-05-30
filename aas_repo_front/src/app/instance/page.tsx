@@ -248,8 +248,7 @@ export default function InstancePage() {
                 <thead>
                   <tr className="border-b border-zinc-200 bg-zinc-50/60 text-left">
                     <th className="px-4 py-3 w-36 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Category</th>
-                    <th className="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Instance Name</th>
-                    <th className="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider hidden lg:table-cell">Description</th>
+                    <th className="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Instance</th>
                     <th className="px-4 py-3 w-28 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Verification</th>
                     {showUser && (
                       <th className="px-4 py-3 w-44 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider hidden md:table-cell">User</th>
@@ -275,13 +274,15 @@ export default function InstancePage() {
                         <td className="px-4 py-3 align-middle">
                           <Link
                             href={ROUTES.INSTANCE.VIEW(instance.instance_seq)}
-                            className="font-medium text-zinc-900 hover:text-blue-600 transition-colors"
+                            className="block group"
                           >
-                            {instance.instance_name}
+                            <span className="block text-sm font-medium text-zinc-900 group-hover:text-blue-600 transition-colors truncate max-w-[320px]">
+                              {instance.instance_name}
+                            </span>
+                            <span className="block text-xs text-zinc-400 truncate mt-0.5 max-w-[320px]">
+                              {instance.description || "—"}
+                            </span>
                           </Link>
-                        </td>
-                        <td className="px-4 py-3 align-middle text-zinc-400 hidden lg:table-cell">
-                          <span className="block max-w-[280px] truncate">{instance.description}</span>
                         </td>
                         <td className="px-4 py-3 align-middle">
                           <VerificationBadge value={instance.verification} />
