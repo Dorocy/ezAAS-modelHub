@@ -1,7 +1,8 @@
 // @ts-nocheck
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { ChevronRight, Layers, Box, List, Tag, FileText, Link2, ToggleLeft, Hash, Info } from "lucide-react";
 
@@ -77,77 +78,130 @@ function ConceptHover({
   children: React.ReactNode;
 }) {
   const info = useMemo(() => extractConceptInfo(node), [node]);
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number; placement: "top" | "bottom"; maxH: number }>({
+    top: 0,
+    left: 0,
+    placement: "bottom",
+    maxH: 300,
+  });
+
   if (!info.hasInfo) return <>{children}</>;
 
   const { descEntries, preferredName, definition, unit, dataType, semId } = info;
   const meta = getMeta(node.modelType);
 
+  const CARD_W = 320;
+  const MARGIN = 8;
+
+  const show = () => {
+    const el = anchorRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // 가로: 화면 밖으로 넘치지 않도록 보정
+    let left = r.left;
+    if (left + CARD_W > vw - MARGIN) left = vw - CARD_W - MARGIN;
+    if (left < MARGIN) left = MARGIN;
+
+    // 세로: 위/아래 가용 공간 중 넓은 쪽에 배치하고, 그 공간에 맞춰 최대 높이를 제한(필요시 카드 내부 스크롤)
+    const spaceBelow = vh - r.bottom - MARGIN - 6;
+    const spaceAbove = r.top - MARGIN - 6;
+    const placement: "top" | "bottom" = spaceBelow >= spaceAbove ? "bottom" : "top";
+    const maxH = Math.max(140, Math.floor(placement === "bottom" ? spaceBelow : spaceAbove));
+    const top = placement === "bottom" ? r.bottom + 6 : r.top - 6;
+
+    setPos({ top, left, placement, maxH });
+    setOpen(true);
+  };
+  const hide = () => setOpen(false);
+
   return (
-    <span className="relative inline-flex items-center gap-1 group/concept max-w-full">
+    <span
+      ref={anchorRef}
+      className="inline-flex items-center gap-1 max-w-full align-middle"
+      onMouseEnter={show}
+      onMouseLeave={hide}
+    >
       <span className="truncate decoration-dotted decoration-zinc-300 underline-offset-2 underline cursor-help">
         {children}
       </span>
-      <Info className="size-3 text-zinc-300 shrink-0 group-hover/concept:text-primary transition-colors" />
-      {/* hover card */}
-      <span
-        role="tooltip"
-        className="pointer-events-none absolute left-0 top-full z-50 mt-1 w-80 origin-top-left scale-95 opacity-0 transition-all duration-100 group-hover/concept:scale-100 group-hover/concept:opacity-100"
-      >
-        <span className="block rounded-lg border border-zinc-200 bg-white shadow-lg overflow-hidden text-left">
-          {/* header */}
-          <span className="flex items-center gap-2 px-3 py-2 bg-zinc-50 border-b border-zinc-200">
-            <span className="text-[9px] font-bold text-white bg-primary rounded px-1.5 py-0.5 shrink-0">
-              {meta.label}
-            </span>
-            <span className="font-semibold text-zinc-900 text-[13px] truncate">{node.idShort}</span>
-          </span>
-          <span className="block px-3 py-2.5 space-y-2.5">
-            {preferredName.length > 0 && (
-              <span className="block">
-                <HoverLabel>선호 이름 (Preferred Name)</HoverLabel>
-                <MlBlock entries={preferredName} />
-              </span>
-            )}
-            {definition.length > 0 && (
-              <span className="block">
-                <HoverLabel>정의 (Definition)</HoverLabel>
-                <MlBlock entries={definition} />
-              </span>
-            )}
-            {descEntries.length > 0 && (
-              <span className="block">
-                <HoverLabel>설명 (Description)</HoverLabel>
-                <MlBlock entries={descEntries} />
-              </span>
-            )}
-            {(unit || dataType) && (
-              <span className="flex gap-4 flex-wrap">
-                {dataType && (
-                  <span className="block">
-                    <HoverLabel>데이터 타입</HoverLabel>
-                    <span className="text-[11px] font-mono bg-zinc-100 text-zinc-600 rounded px-1.5 py-0.5">{dataType}</span>
-                  </span>
+      <Info className={cn("size-3 shrink-0 transition-colors", open ? "text-primary" : "text-zinc-300")} />
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            role="tooltip"
+            style={{
+              position: "fixed",
+              top: pos.top,
+              left: pos.left,
+              width: CARD_W,
+              transform: pos.placement === "top" ? "translateY(-100%)" : undefined,
+              zIndex: 9999,
+            }}
+            className="pointer-events-none"
+          >
+            <div className="flex flex-col rounded-lg border border-zinc-200 bg-white shadow-xl overflow-hidden text-left" style={{ maxHeight: pos.maxH }}>
+              {/* header */}
+              <div className="flex items-center gap-2 px-3 py-2 bg-zinc-50 border-b border-zinc-200 shrink-0">
+                <span className="text-[9px] font-bold text-white bg-primary rounded px-1.5 py-0.5 shrink-0">
+                  {meta.label}
+                </span>
+                <span className="font-semibold text-zinc-900 text-[13px] truncate">{node.idShort}</span>
+              </div>
+              <div className="px-3 py-2.5 space-y-2.5 overflow-y-auto flex-1 min-h-0">
+                {preferredName.length > 0 && (
+                  <div>
+                    <HoverLabel>선호 이름 (Preferred Name)</HoverLabel>
+                    <MlBlock entries={preferredName} />
+                  </div>
                 )}
-                {unit && (
-                  <span className="block">
-                    <HoverLabel>단위</HoverLabel>
-                    <span className="text-xs font-semibold text-primary">{unit}</span>
-                  </span>
+                {definition.length > 0 && (
+                  <div>
+                    <HoverLabel>정의 (Definition)</HoverLabel>
+                    <MlBlock entries={definition} />
+                  </div>
                 )}
-              </span>
-            )}
-            {semId && (
-              <span className="block">
-                <HoverLabel>Semantic ID</HoverLabel>
-                <span className="block text-[10px] font-mono text-zinc-500 break-all leading-snug">{semId}</span>
-              </span>
-            )}
-            {preferredName.length === 0 && definition.length === 0 && descEntries.length === 0 && !unit && (
-              <span className="block text-[11px] text-zinc-400 italic">연결된 개념 설명 정보가 없습니다.</span>
-            )}
-          </span>
-        </span>
-      </span>
+                {descEntries.length > 0 && (
+                  <div>
+                    <HoverLabel>설명 (Description)</HoverLabel>
+                    <MlBlock entries={descEntries} />
+                  </div>
+                )}
+                {(unit || dataType) && (
+                  <div className="flex gap-4 flex-wrap">
+                    {dataType && (
+                      <div>
+                        <HoverLabel>데이터 타입</HoverLabel>
+                        <span className="text-[11px] font-mono bg-zinc-100 text-zinc-600 rounded px-1.5 py-0.5">{dataType}</span>
+                      </div>
+                    )}
+                    {unit && (
+                      <div>
+                        <HoverLabel>단위</HoverLabel>
+                        <span className="text-xs font-semibold text-primary">{unit}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {semId && (
+                  <div>
+                    <HoverLabel>Semantic ID</HoverLabel>
+                    <span className="block text-[10px] font-mono text-zinc-500 break-all leading-snug">{semId}</span>
+                  </div>
+                )}
+                {preferredName.length === 0 && definition.length === 0 && descEntries.length === 0 && !unit && (
+                  <div className="text-[11px] text-zinc-400 italic">연결된 개념 설명 정보가 없습니다.</div>
+                )}
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </span>
   );
 }
