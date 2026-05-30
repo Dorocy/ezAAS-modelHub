@@ -104,13 +104,14 @@ export async function apiRequest({
 
     if (!response.ok) {
       if (response.status === 401) {
-        await fetch(
-          `${isServer ? process.env.NEXT_PUBLIC_SITE_URL : ""}/api/logout`,
-          { method: "POST" }
-        );
         if (isServer) {
+          // 서버사이드: 자기 라우트를 fetch해도 Set-Cookie가 브라우저로 전달되지
+          // 않아 무의미하고, 절대 URL이 없으면 "undefined/api/logout"으로 파싱
+          // 에러가 발생한다. 따라서 그냥 로그인 페이지로 리다이렉트한다.
+          // (브라우저로 다시 진입하면 클라이언트 측 logout()이 쿠키를 정리한다.)
           redirect(ROUTES.LOGIN);
         } else {
+          await fetch("/api/logout", { method: "POST" });
           window.location.replace(ROUTES.LOGIN);
         }
       }
