@@ -310,6 +310,9 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     setInputState({
       instance_name: instance.instance_name,
       description: instance.description,
+      // 기존 작업 내용을 그대로 채운다 (백엔드 응답에 있으면 회사 URL/썸네일도 복원)
+      company_url: (instance as any).company_url ?? "",
+      thumbnail: (instance as any).thumbnail ?? undefined,
       verification: instance.verification,
       verification_log: instance.verification_log,
     });
