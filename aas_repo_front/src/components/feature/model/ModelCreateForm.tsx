@@ -18,7 +18,29 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+
+const ASSET_TYPE_OPTIONS = [
+  "Product",
+  "Sensor/Device",
+  "Equipment",
+  "Line/System",
+] as const;
+
+const MATURITY_LEVEL_OPTIONS = [
+  "L0 Minimal",
+  "L1 Descriptive",
+  "L2 Operational",
+  "L3 Analytical",
+  "L4 AI Applicable",
+] as const;
 import {
   ArrowLeft,
   FileStack,
@@ -164,6 +186,10 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
     if (!form[nameKey]) return toast("Enter the template name", { icon: "⚠️" });
     if (!form.description) return toast("Enter a description", { icon: "⚠️" });
     if (!form.category_seq) return toast("Select a category", { icon: "⚠️" });
+    if (modelType === "aasmodel") {
+      if (!form.asset_type) return toast("Select an asset type", { icon: "⚠️" });
+      if (!form.aas_maturity_level) return toast("Select a maturity level", { icon: "⚠️" });
+    }
     if (!metadata) return toast(`Import a ${modelType === "aasmodel" ? "AAS" : "Submodel"} file`, { icon: "⚠️" });
 
     const publishKey =
@@ -367,25 +393,45 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
                 {modelType === "aasmodel" && (
                   <>
                     <div className="space-y-1.5">
-                      <Label htmlFor="asset_type">Asset type</Label>
-                      <Input
-                        id="asset_type"
-                        placeholder="e.g. Type / Instance"
+                      <Label htmlFor="asset_type">
+                        Asset type <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
                         value={form.asset_type}
-                        onChange={(e) => setField("asset_type", e.target.value)}
-                      />
+                        onValueChange={(v) => setField("asset_type", v ?? "")}
+                      >
+                        <SelectTrigger id="asset_type" className="w-full">
+                          <SelectValue placeholder="Select asset type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ASSET_TYPE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt} value={opt}>
+                              {opt}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="aas_maturity_level">Maturity level</Label>
-                      <Input
-                        id="aas_maturity_level"
-                        placeholder="e.g. Draft / Released"
+                      <Label htmlFor="aas_maturity_level">
+                        Maturity level <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
                         value={form.aas_maturity_level}
-                        onChange={(e) =>
-                          setField("aas_maturity_level", e.target.value)
-                        }
-                      />
+                        onValueChange={(v) => setField("aas_maturity_level", v ?? "")}
+                      >
+                        <SelectTrigger id="aas_maturity_level" className="w-full">
+                          <SelectValue placeholder="Select maturity level" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {MATURITY_LEVEL_OPTIONS.map((opt) => (
+                            <SelectItem key={opt} value={opt}>
+                              {opt}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </>
                 )}
