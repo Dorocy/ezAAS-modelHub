@@ -1,9 +1,156 @@
 // @ts-nocheck
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { ChevronRight, Layers, Box, List, Tag, FileText, Link2, ToggleLeft, Hash } from "lucide-react";
+import { ChevronRight, Layers, Box, List, Tag, FileText, Link2, ToggleLeft, Hash, Info } from "lucide-react";
+
+/* ─────────────────────────────────────────────
+   ConceptDescription 개념 정보 호버
+   - parsingAAS 단계에서 각 노드에 idShort, description, semanticId,
+     그리고 semanticId 와 매칭된 ConceptDescription 객체가 붙는다.
+   - 엘리먼트에 마우스를 올리면 선호 이름/정의/설명/단위/데이터타입/식별자 등
+     개념의 의미를 바로 볼 수 있도록 호버 카드로 표시한다.
+───────────────────────────────────────────── */
+type MlEntry = { language: string; text: string };
+
+const normMultiLang = (v: any): MlEntry[] => {
+  if (!v) return [];
+  if (typeof v === "string") return v.trim() ? [{ language: "", text: v }] : [];
+  if (Array.isArray(v)) return v.filter((x: any) => x && (x.text ?? "").toString().trim());
+  return [];
+};
+
+const getCdSpecContent = (cd: any) => {
+  const specs = cd?.embeddedDataSpecifications;
+  if (!Array.isArray(specs) || specs.length === 0) return null;
+  return specs[0]?.dataSpecificationContent ?? null;
+};
+
+const extractConceptInfo = (node: any) => {
+  const cd = node?.ConceptDescription ?? null;
+  const ds = getCdSpecContent(cd);
+  const descEntries = normMultiLang(node?.description);
+  const preferredName = ds ? normMultiLang(ds.preferredName) : [];
+  const definition = ds ? normMultiLang(ds.definition) : [];
+  const unit = ds?.unit ?? "";
+  const dataType = ds?.dataType ?? node?.valueType ?? "";
+  const semId = node?.semanticId?.keys?.[0]?.value ?? "";
+  const hasInfo =
+    descEntries.length > 0 ||
+    preferredName.length > 0 ||
+    definition.length > 0 ||
+    !!unit ||
+    !!cd ||
+    !!semId;
+  return { cd, ds, descEntries, preferredName, definition, unit, dataType, semId, hasInfo };
+};
+
+const MlBlock = ({ entries }: { entries: MlEntry[] }) => {
+  if (entries.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-1">
+      {entries.map((e, i) => (
+        <div key={i} className="flex items-start gap-1.5">
+          {e.language && (
+            <span className="text-[9px] font-mono bg-zinc-100 text-zinc-500 rounded px-1 py-px shrink-0 mt-px">
+              {e.language}
+            </span>
+          )}
+          <span className="text-xs text-zinc-700 leading-relaxed break-words">{e.text}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const HoverLabel = ({ children }: { children: React.ReactNode }) => (
+  <div className="text-[9px] font-bold uppercase tracking-wide text-zinc-400 mb-1">{children}</div>
+);
+
+// 개념 정보 호버 카드. 정보가 있을 때만 idShort 라벨을 감싸 표시한다.
+function ConceptHover({
+  node,
+  children,
+}: {
+  node: any;
+  children: React.ReactNode;
+}) {
+  const info = useMemo(() => extractConceptInfo(node), [node]);
+  if (!info.hasInfo) return <>{children}</>;
+
+  const { descEntries, preferredName, definition, unit, dataType, semId } = info;
+  const meta = getMeta(node.modelType);
+
+  return (
+    <span className="relative inline-flex items-center gap-1 group/concept max-w-full">
+      <span className="truncate decoration-dotted decoration-zinc-300 underline-offset-2 underline cursor-help">
+        {children}
+      </span>
+      <Info className="size-3 text-zinc-300 shrink-0 group-hover/concept:text-primary transition-colors" />
+      {/* hover card */}
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-0 top-full z-50 mt-1 w-80 origin-top-left scale-95 opacity-0 transition-all duration-100 group-hover/concept:scale-100 group-hover/concept:opacity-100"
+      >
+        <span className="block rounded-lg border border-zinc-200 bg-white shadow-lg overflow-hidden text-left">
+          {/* header */}
+          <span className="flex items-center gap-2 px-3 py-2 bg-zinc-50 border-b border-zinc-200">
+            <span className="text-[9px] font-bold text-white bg-primary rounded px-1.5 py-0.5 shrink-0">
+              {meta.label}
+            </span>
+            <span className="font-semibold text-zinc-900 text-[13px] truncate">{node.idShort}</span>
+          </span>
+          <span className="block px-3 py-2.5 space-y-2.5">
+            {preferredName.length > 0 && (
+              <span className="block">
+                <HoverLabel>선호 이름 (Preferred Name)</HoverLabel>
+                <MlBlock entries={preferredName} />
+              </span>
+            )}
+            {definition.length > 0 && (
+              <span className="block">
+                <HoverLabel>정의 (Definition)</HoverLabel>
+                <MlBlock entries={definition} />
+              </span>
+            )}
+            {descEntries.length > 0 && (
+              <span className="block">
+                <HoverLabel>설명 (Description)</HoverLabel>
+                <MlBlock entries={descEntries} />
+              </span>
+            )}
+            {(unit || dataType) && (
+              <span className="flex gap-4 flex-wrap">
+                {dataType && (
+                  <span className="block">
+                    <HoverLabel>데이터 타입</HoverLabel>
+                    <span className="text-[11px] font-mono bg-zinc-100 text-zinc-600 rounded px-1.5 py-0.5">{dataType}</span>
+                  </span>
+                )}
+                {unit && (
+                  <span className="block">
+                    <HoverLabel>단위</HoverLabel>
+                    <span className="text-xs font-semibold text-primary">{unit}</span>
+                  </span>
+                )}
+              </span>
+            )}
+            {semId && (
+              <span className="block">
+                <HoverLabel>Semantic ID</HoverLabel>
+                <span className="block text-[10px] font-mono text-zinc-500 break-all leading-snug">{semId}</span>
+              </span>
+            )}
+            {preferredName.length === 0 && definition.length === 0 && descEntries.length === 0 && !unit && (
+              <span className="block text-[11px] text-zinc-400 italic">연결된 개념 설명 정보가 없습니다.</span>
+            )}
+          </span>
+        </span>
+      </span>
+    </span>
+  );
+}
 
 /* ─────────────────────────────────────────────
    Type icons & labels  (no per-type colors —
@@ -83,9 +230,11 @@ function PropertyRow({
       {/* col 1: name + icon */}
       <div className="flex items-center gap-2 min-w-0">
         <Icon className="size-3.5 text-zinc-400 shrink-0" />
-        <span className="text-zinc-700 font-medium truncate" title={node.idShort}>
-          {node.idShort}
-        </span>
+        <ConceptHover node={node}>
+          <span className="text-zinc-700 font-medium truncate" title={node.idShort}>
+            {node.idShort}
+          </span>
+        </ConceptHover>
         {typeLabel && (
           <span className="text-[10px] font-mono text-zinc-400 shrink-0 hidden sm:block">
             {typeLabel}
@@ -152,7 +301,7 @@ function GroupBlock({
         />
         <Icon className="size-3.5 text-zinc-500 shrink-0" />
         <span className="text-sm font-semibold text-zinc-800 truncate flex-1 min-w-0">
-          {node.idShort}
+          <ConceptHover node={node}>{node.idShort}</ConceptHover>
         </span>
         <span className="text-[10px] font-medium text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded shrink-0">
           {meta.label}
@@ -283,7 +432,9 @@ function SubmodelSection({
         {/* name + id */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-zinc-900 truncate">{node.idShort}</span>
+            <span className="text-sm font-semibold text-zinc-900 truncate">
+              <ConceptHover node={node}>{node.idShort}</ConceptHover>
+            </span>
             {node.id && (
               <span className="text-[10px] font-mono text-zinc-400 truncate hidden md:block max-w-[220px]">
                 {node.id}
