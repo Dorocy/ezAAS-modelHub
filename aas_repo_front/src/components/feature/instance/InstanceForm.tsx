@@ -73,8 +73,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { ChevronDown, List, FilePlus, Plus, Trash2, ShieldCheck, Save, Pencil, CheckCircle2 } from "lucide-react";
+import { ChevronDown, List, FilePlus, Plus, Trash2, ShieldCheck, Save, Pencil, CheckCircle2, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /* ─────────────────────────────── types ─────────────────────────── */
@@ -116,11 +117,31 @@ const initialState = { aasmodel: { aasmodel: "", aasmodel_metadata: {} } };
 
 /* ─────────────────────── Stepper component ─────────────────────── */
 const STEPS = [
-  { label: "기본정보 입력", desc: "Basic Information" },
-  { label: "세부 설정", desc: "Detailed Settings" },
-  { label: "미리보기", desc: "Preview" },
-  { label: "검증", desc: "Validation" },
-  { label: "완료", desc: "Complete" },
+  {
+    label: "기본 정보",
+    desc: "인스턴스 이름과 설명을 입력합니다.",
+    hint: "AAS 인스턴스를 구분할 이름과 간단한 설명을 입력하세요. 이름은 필수 항목입니다.",
+  },
+  {
+    label: "데이터 입력",
+    desc: "템플릿을 선택하고 값을 입력합니다.",
+    hint: "AAS 템플릿을 선택한 뒤 각 서브모델의 프로퍼티 값을 입력하세요. 서브모델별로 폼이 구성됩니다.",
+  },
+  {
+    label: "미리보기",
+    desc: "입력한 데이터를 확인합니다.",
+    hint: "지금까지 입력한 데이터를 서브모델별로 확인하세요. 미입력 항목이 표시되며, 이전 단계로 돌아가 수정할 수 있습니다.",
+  },
+  {
+    label: "검증",
+    desc: "AAS 구조와 데이터를 검증합니다.",
+    hint: "검증 실행 버튼을 눌러 AAS 데이터의 유효성을 확인하세요. 검증에 실패해도 저장은 가능합니다.",
+  },
+  {
+    label: "저장",
+    desc: "인스턴스를 저장하고 완료합니다.",
+    hint: "모든 설정이 완료됐습니다. 아래 저장 버튼을 눌러 AAS 인스턴스를 생성하세요.",
+  },
 ];
 
 function StepIndicator({
@@ -130,50 +151,61 @@ function StepIndicator({
   active: number;
   onStepClick: (i: number) => void;
 }) {
+  const currentStep = STEPS[active];
   return (
-    <div className="flex items-center gap-0 overflow-x-auto pb-1">
-      {STEPS.map((step, i) => {
-        const done = i < active;
-        const current = i === active;
-        return (
-          <React.Fragment key={i}>
-            <button
-              onClick={() => onStepClick(i)}
-              className={cn(
-                "flex flex-col items-center min-w-[80px] px-2 py-1 rounded transition-colors",
-                current && "text-primary",
-                done && "text-muted-foreground",
-                !current && !done && "text-muted-foreground/50"
-              )}
-            >
-              <div
-                className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border-2 mb-1",
-                  current && "border-primary bg-primary text-primary-foreground",
-                  done && "border-primary bg-primary/10 text-primary",
-                  !current && !done && "border-border bg-muted text-muted-foreground"
-                )}
+    <div className="flex flex-col gap-3">
+      {/* 스텝 목록 */}
+      <div className="flex items-center overflow-x-auto">
+        {STEPS.map((step, i) => {
+          const done = i < active;
+          const current = i === active;
+          return (
+            <React.Fragment key={i}>
+              <button
+                onClick={() => onStepClick(i)}
+                className="flex items-center gap-2.5 min-w-fit px-1 py-1 rounded transition-colors"
               >
-                {done ? "✓" : i + 1}
-              </div>
-              <span className="text-xs font-medium text-center leading-tight">
-                {step.label}
-              </span>
-              <span className="text-[10px] text-muted-foreground text-center">
-                {step.desc}
-              </span>
-            </button>
-            {i < STEPS.length - 1 && (
-              <div
-                className={cn(
-                  "flex-1 h-0.5 mx-1 min-w-[16px]",
-                  i < active ? "bg-primary" : "bg-border"
-                )}
-              />
-            )}
-          </React.Fragment>
-        );
-      })}
+                <div
+                  className={cn(
+                    "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all",
+                    current && "bg-zinc-900 text-white ring-2 ring-zinc-900 ring-offset-2",
+                    done && "bg-zinc-900 text-white",
+                    !current && !done && "bg-zinc-100 text-zinc-400 border border-zinc-200"
+                  )}
+                >
+                  {done ? (
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  ) : i + 1}
+                </div>
+                <div className="text-left hidden sm:block">
+                  <p className={cn(
+                    "text-xs font-semibold leading-none whitespace-nowrap",
+                    current && "text-zinc-900",
+                    done && "text-zinc-600",
+                    !current && !done && "text-zinc-400"
+                  )}>{step.label}</p>
+                </div>
+              </button>
+              {i < STEPS.length - 1 && (
+                <div className={cn(
+                  "flex-1 h-px mx-2 min-w-[20px]",
+                  i < active ? "bg-zinc-900" : "bg-zinc-200"
+                )} />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+      {/* 현재 스텝 안내 — 구분선 + 한 줄 */}
+      {currentStep && (
+        <div className="border-t border-zinc-100 pt-3 flex items-center gap-2">
+          <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">Step {active + 1}</span>
+          <span className="text-zinc-200">·</span>
+          <span className="text-xs text-zinc-500">{currentStep.hint}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -225,9 +257,11 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
   const [inputState, setInputState] = useState<{
     instance_name: string;
     description: string;
+    company_url?: string;
+    thumbnail?: string; // base64 data URL
     verification: "fail" | "success" | undefined;
     verification_log?: { total: number; success: number; fail: number };
-  }>({ instance_name: "", description: "", verification: undefined });
+  }>({ instance_name: "", description: "", company_url: "", thumbnail: undefined, verification: undefined });
 
   const [loading, setLoading] = useState(false);
   const [selectedNode, setSelectedNode] = useState<{ node: any; rootId: string } | null>(null);
@@ -441,7 +475,8 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         try {
           const verificationData = JSON.parse(json.data);
           if (verificationData) {
-            setVerificationActive(0);
+            const firstKey = Object.keys(verificationData).find(k => verificationData[k]?.count > 0) ?? Object.keys(verificationData)[0] ?? null;
+            setVerificationActive(firstKey);
             verificationRef.current = verificationData;
             setInputState((prev) => ({ ...prev, verification: "fail", verification_log: verificationData?.summary }));
           } else {
@@ -469,9 +504,11 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
   };
 
   const handleSubmit = async () => {
-    if (!(await confirmSave("Do you want to Save?"))) return;
-    for (const key in inputState) {
-      if ((inputState as any)[key] === "") return showToast.error(`Please check ${key} field`);
+    if (!(await confirmSave("저장하시겠습니까?"))) return;
+    // 필수 입력값만 검증한다. description, company_url, thumbnail 등은 선택 입력이므로
+    // 비어 있어도 저장을 막지 않는다. (이전에는 모든 필드를 검사해 선택 필드가 비면 저장이 중단됐음)
+    if (!inputState.instance_name?.trim()) {
+      return showToast.error("인스턴스 이름을 입력해주세요.");
     }
     let verification: "success" | "fail";
     if (inputState.verification === "success" || inputState.verification === "fail") {
@@ -480,56 +517,65 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
       verification = await verifyInstance();
     }
     if (verification === "fail") {
-      if (!(await confirmSave("Validation has failed. Would you like to continue anyway?"))) return;
+      showToast.error("검증이 실패했지만 저장을 진행합니다. 이후 검증을 다시 실행해주세요.");
     }
-    const payloadAASmodel = {
-      ...aasmodel,
-      aasmodel_metadata: JSON.stringify(applyMetadata("aasmodel", aasmodel.aasmodel_metadata)),
-    };
-    const submodelsFromAAS = ((aasmodel.aasmodel_metadata as any)?.submodels as any[])?.map((sm) => {
-      const referencedCDs = new Set<string>();
-      function findSemanticIds(element: any) {
-        if (typeof element !== "object" || element === null) return;
-        if (element.semanticId?.keys) element.semanticId.keys.forEach((k: any) => k.value && referencedCDs.add(k.value));
-        if (element.isCaseOf) element.isCaseOf.forEach((ref: any) => ref.keys?.forEach((k: any) => k.value && referencedCDs.add(k.value)));
-        if (element.submodelElements) element.submodelElements.forEach(findSemanticIds);
-        if (element.statements) element.statements.forEach(findSemanticIds);
-        if (element.value && typeof element.value === "object") {
-          if (Array.isArray(element.value)) element.value.forEach(findSemanticIds);
-          else findSemanticIds(element.value);
-        }
-      }
-      findSemanticIds(sm);
-      const allCDs = (aasmodel.aasmodel_metadata as any)?.conceptDescriptions || [];
-      return {
-        submodel_seq: sm.submodel_seq || null,
-        submodel_metadata: JSON.stringify({
-          assetAdministrationShells: [],
-          submodels: [sm],
-          conceptDescriptions: allCDs.filter((cd: any) => cd.id && referencedCDs.has(cd.id)),
-        }),
-      };
-    }) || [];
-    const submodelsToSend = submodelsFromAAS.length > 0 ? submodelsFromAAS : [{ submodel_seq: null, submodel_metadata: "{}" }];
 
-    let body: InstanceSavePayload;
-    if (mode === "create") {
-      body = { ...inputState, verification, instance_seq: "", aasmodel_seq: payloadAASmodel.aasmodel_seq, aasmodel_metadata: payloadAASmodel.aasmodel_metadata, status: "Y", submodels: submodelsToSend };
-    } else {
-      body = { ...inputState, verification, instance_seq: instance!.instance_seq, aasmodel_seq: payloadAASmodel.aasmodel_seq, aasmodel_metadata: payloadAASmodel.aasmodel_metadata, status: "Y", submodels: submodelsToSend };
-    }
-    const formData = new FormData();
-    formData.append("body", JSON.stringify(body));
-    const allFilesToUpload: File[] = [];
-    Object.values(treeDataRef.current).forEach((rootChanges: any) => {
-      Object.values(rootChanges).forEach((change: any) => { if (change instanceof File) allFilesToUpload.push(change); });
-    });
-    for (const file of allFilesToUpload) formData.append("attachments", file);
+    // body 생성부터 API 호출까지 모두 try로 감싼다.
+    // (이전에는 body 생성이 try 밖에 있어, 여기서 에러가 나면 토스트도 없고
+    //  API도 호출되지 않은 채 조용히 중단됐다 — "API가 아예 안 나간다"의 원인)
     try {
       setLoading(true);
+
+      const payloadAASmodel = {
+        ...aasmodel,
+        aasmodel_metadata: JSON.stringify(applyMetadata("aasmodel", aasmodel.aasmodel_metadata)),
+      };
+      const submodelsFromAAS = ((aasmodel.aasmodel_metadata as any)?.submodels as any[])?.map((sm) => {
+        const referencedCDs = new Set<string>();
+        function findSemanticIds(element: any) {
+          if (typeof element !== "object" || element === null) return;
+          if (element.semanticId?.keys) element.semanticId.keys.forEach((k: any) => k.value && referencedCDs.add(k.value));
+          if (element.isCaseOf) element.isCaseOf.forEach((ref: any) => ref.keys?.forEach((k: any) => k.value && referencedCDs.add(k.value)));
+          if (element.submodelElements) element.submodelElements.forEach(findSemanticIds);
+          if (element.statements) element.statements.forEach(findSemanticIds);
+          if (element.value && typeof element.value === "object") {
+            if (Array.isArray(element.value)) element.value.forEach(findSemanticIds);
+            else findSemanticIds(element.value);
+          }
+        }
+        findSemanticIds(sm);
+        const allCDs = (aasmodel.aasmodel_metadata as any)?.conceptDescriptions || [];
+        return {
+          submodel_seq: sm.submodel_seq || null,
+          submodel_metadata: JSON.stringify({
+            assetAdministrationShells: [],
+            submodels: [sm],
+            conceptDescriptions: allCDs.filter((cd: any) => cd.id && referencedCDs.has(cd.id)),
+          }),
+        };
+      }) || [];
+      const submodelsToSend = submodelsFromAAS.length > 0 ? submodelsFromAAS : [{ submodel_seq: null, submodel_metadata: "{}" }];
+
+      let body: InstanceSavePayload;
+      if (mode === "create") {
+        body = { ...inputState, verification, instance_seq: "", aasmodel_seq: payloadAASmodel.aasmodel_seq, aasmodel_metadata: payloadAASmodel.aasmodel_metadata, status: "Y", submodels: submodelsToSend };
+      } else {
+        body = { ...inputState, verification, instance_seq: instance!.instance_seq, aasmodel_seq: payloadAASmodel.aasmodel_seq, aasmodel_metadata: payloadAASmodel.aasmodel_metadata, status: "Y", submodels: submodelsToSend };
+      }
+      const formData = new FormData();
+      formData.append("body", JSON.stringify(body));
+      const allFilesToUpload: File[] = [];
+      Object.values(treeDataRef.current).forEach((rootChanges: any) => {
+        Object.values(rootChanges).forEach((change: any) => { if (change instanceof File) allFilesToUpload.push(change); });
+      });
+      for (const file of allFilesToUpload) formData.append("attachments", file);
+
       await upsertInstance({ formData, withToast: true });
       router.push(ROUTES.INSTANCE.LIST);
-    } catch {}
+    } catch (e) {
+      console.error("instance upsert failed:", e);
+      showToast.error("저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+    }
     finally { setLoading(false); }
   };
 
@@ -898,13 +944,14 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
 
     const instanceName = mode === "view" ? instance?.instance_name  : inputState.instance_name;
     const description  = mode === "view" ? instance?.description    : inputState.description;
+    const userThumbnail = mode === "view" ? instance?.thumbnail : inputState.thumbnail;
     const categoryName = mode === "view" ? instance?.category_name  : (aasmodel as any)?.category_name;
     const version      = mode === "view" ? instance?.aasmodel_version : (aasmodel as any)?.version;
     const assetKind    = treeData?.[0]?.AssetAdministrationShell?.assetInformation?.assetKind;
     const createDate   = mode === "view" && instance?.create_date
       ? new Intl.DateTimeFormat("ko-KR").format(new Date(instance.create_date)) : null;
 
-    const totalMissing = totalProps - totalFilled;
+
 
     return (
       <div key={mode === "view" ? instance?.instance_seq : "create-preview"} className="flex flex-col gap-4">
@@ -912,11 +959,11 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         {/* ── 헤더 ── */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-start gap-4 min-w-0">
-            {/* 썸네일 — 이미지 있으면 크게, 없으면 작은 placeholder */}
-            {thumbnailPath ? (
+            {/* 썸네일 — 사용자 업로드 > AAS 트리 이미지 > placeholder */}
+            {(userThumbnail || thumbnailPath) ? (
               <div className="w-20 h-20 rounded-xl overflow-hidden border border-zinc-200 bg-zinc-50 shrink-0">
                 <img
-                  src={thumbnailPath}
+                  src={userThumbnail || thumbnailPath!}
                   alt={instanceName || "thumbnail"}
                   className="object-cover w-full h-full"
                   onError={(e) => { (e.target as HTMLImageElement).src = "/assets/media/aas/aas_blank.jpg"; }}
@@ -955,25 +1002,11 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                 </DropdownMenuContent>
               </DropdownMenu>
               <Link href={ROUTES.INSTANCE.EDIT(instance?.instance_seq)}>
-                <Button size="sm" className="h-7 text-xs"><Pencil className="size-3 mr-1" />Edit</Button>
+                <Button><Pencil className="size-3.5 mr-1.5" />수정</Button>
               </Link>
             </div>
           )}
         </div>
-
-        {/* ── 미입력 경고 배너 ── */}
-        {totalMissing > 0 && (
-          <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-            <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-            <p className="text-sm text-amber-700">
-              <span className="font-semibold">{totalMissing}개 항목</span>이 아직 입력되지 않았습니다.{" "}
-              {submodels
-                .filter((sm: any) => collectProps(sm.children ?? []).some((x: any) => !resolveValue(x)))
-                .map((sm: any) => sm.idShort)
-                .join(", ")} 서브모델을 확인하세요.
-            </p>
-          </div>
-        )}
 
         {/* ── 서브모델 accordion ── */}
         <Accordion type="multiple" defaultValue={submodels.map((_: any, i: number) => `sm-${i}`)}>
@@ -1005,16 +1038,12 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       <p className="text-sm font-semibold text-zinc-800 leading-none">{sm.idShort}</p>
                       {smDesc && <p className="text-[11px] text-zinc-400 mt-1 leading-snug line-clamp-1">{smDesc}</p>}
                     </div>
-                    {/* 완료 / 미완료 배지 */}
+                    {/* 입력 현황 */}
                     <div className="shrink-0 flex items-center gap-2">
                       <span className="text-[11px] text-zinc-400">{filled}/{props.length}</span>
-                      {isComplete ? (
+                      {isComplete && props.length > 0 && (
                         <span className="text-[11px] font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full px-2.5 py-0.5">
                           완료
-                        </span>
-                      ) : (
-                        <span className="text-[11px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded-full px-2.5 py-0.5">
-                          미완료
                         </span>
                       )}
                     </div>
@@ -1039,7 +1068,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                           return (
                             <div
                               key={pi}
-                              className={`flex items-start gap-3 px-4 py-2.5 border-b border-r border-zinc-100 last:border-r-0 ${!val ? "bg-amber-50/50" : ""}`}
+                              className="flex items-start gap-3 px-4 py-2.5 border-b border-r border-zinc-100 last:border-r-0"
                             >
                               <span className="text-[11px] text-zinc-400 w-28 shrink-0 pt-0.5 leading-tight truncate">{prop.idShort}</span>
                               {val ? (
@@ -1187,7 +1216,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     }
   }, [previewModel]);
 
-  /* 카테고리 목록 (lv:1 만 표시) */
+  /* 카테고리 ���록 (lv:1 만 표시) */
   const categoryItems = useMemo(() => {
     const list = Array.isArray(categorys) ? categorys : [];
     return list.filter((c: any) => c.lv === 1);
@@ -1211,12 +1240,11 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              size="sm"
               onClick={() => { setModalOpen(false); setModelSeq(""); setPreviewModel(null); }}
             >
               Cancel
             </Button>
-            <Button size="sm" disabled={!modelSeq} onClick={handleTemplateConfirm}>
+            <Button disabled={!modelSeq} onClick={handleTemplateConfirm}>
               선택 완료
             </Button>
           </div>
@@ -1431,47 +1459,51 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     <div>
       {/* Toolbar */}
       <div className="py-4 border-b mb-6">
-        <div className="container-xxl mx-auto px-4 flex items-center justify-between flex-wrap gap-3">
+        <div className="mx-auto max-w-screen-2xl px-6 flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-lg font-bold text-foreground">
-              My AAS Instance — {mode === "create" ? "Create" : mode.toUpperCase()}
+              {mode === "create" ? "AAS 인스턴스 생성" : mode === "edit" ? "AAS 인스턴스 수정" : "AAS 인스턴스 상세"}
             </h1>
             <nav className="text-xs text-muted-foreground flex gap-1">
-              <Link href="/" className="hover:text-foreground">Home</Link>
+              <Link href="/" className="hover:text-foreground">홈</Link>
               <span>/</span>
-              <span>My AAS Instance — {mode === "create" ? "Create" : mode.toUpperCase()}</span>
+              <Link href="/instance" className="hover:text-foreground">인스턴스 목록</Link>
+              <span>/</span>
+              <span>{mode === "create" ? "생성" : mode === "edit" ? "수정" : "상세"}</span>
             </nav>
           </div>
           <div className="flex gap-2 items-center">
             <Link href="/instance">
-              <Button variant="outline" size="sm"><List className="size-3.5 mr-1" />List</Button>
+              <Button variant="outline"><List className="size-3.5 mr-1" />목록</Button>
             </Link>
             {mode === "create" && activeStep === 1 && (
-              <Button size="sm" onClick={() => { setModalOpen(true); setModelType("aasmodel"); }}>
-                <FilePlus className="size-3.5 mr-1" />Select AAS Template
+              <Button onClick={() => { setModalOpen(true); setModelType("aasmodel"); }}>
+                <FilePlus className="size-3.5 mr-1" />AAS 템플릿 선택
               </Button>
             )}
           </div>
         </div>
       </div>
 
-      <div className="container-xxl mx-auto px-4">
+      <div className="mx-auto max-w-screen-2xl px-6 py-6">
         {mode === "view" ? (
           <>
             {combinedModelDialog}
             {/* foot buttons for view mode */}
             <div className="flex gap-2 mb-4">
-              <Button variant="outline" size="sm" onClick={() => { if (combinedAASTreeData) setCombinedModalOpen(true); }}>
-                View Combined Model
+              <Button variant="outline" onClick={() => { if (combinedAASTreeData) setCombinedModalOpen(true); }}>
+                통합 모델 보기
               </Button>
               {user?.user_seq === instance?.create_user_seq && (
                 <>
                   <Link href={ROUTES.INSTANCE.EDIT(instance?.instance_seq)}>
-                    <Button variant="outline" size="sm"><Pencil className="size-3 mr-1" />Edit</Button>
+                    <Button variant="outline"><Pencil className="size-3.5 mr-1.5" />수정</Button>
                   </Link>
                   <DropdownMenu>
-                    <DropdownMenuTrigger className="inline-flex h-8 items-center gap-1 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground">
-                      Export <ChevronDown className="size-3" />
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">
+                        <Download className="size-3.5 mr-1.5" />내보내기 <ChevronDown className="size-3 ml-1" />
+                      </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       {["json", "xml", "aasx"].map((fmt) => (
@@ -1488,27 +1520,114 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
           <>
             {templateSelectDialog}
             {/* Stepper */}
-            <Card className="mb-6 p-4">
+            <div className="mb-4 rounded-xl border border-zinc-200 bg-white px-5 py-4">
               <StepIndicator active={activeStep} onStepClick={setActiveStep} />
-            </Card>
+            </div>
 
             {/* Step content */}
             <div className="space-y-4">
               {/* Step 0: Basic info */}
               {activeStep === 0 && (
-                <Card>
-                  <CardHeader><CardTitle>Instance info</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                      <label className="text-sm font-semibold">Instance name <span className="text-destructive">*</span></label>
-                      <Input value={inputState.instance_name ?? ""} placeholder="Please enter" onChange={(e) => setInputState((prev) => ({ ...prev, instance_name: e.target.value }))} />
+                <div className="rounded-xl border border-zinc-200 bg-white p-6">
+                  <div className="grid grid-cols-[1fr_1fr_200px] gap-6 items-stretch">
+
+                    {/* ── 열 1: 인스턴스 이름 + 회사 URL ── */}
+                    <div className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-semibold text-zinc-800">
+                          인스턴스 이름 <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          value={inputState.instance_name ?? ""}
+                          placeholder="예: 로봇암_라인A_001"
+                          onChange={(e) => setInputState((prev) => ({ ...prev, instance_name: e.target.value }))}
+                        />
+                        <p className="text-[11px] text-zinc-400">이 AAS 인스턴스를 구분할 고유한 이름</p>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-semibold text-zinc-800">회사 URL</label>
+                        <Input
+                          value={inputState.company_url ?? ""}
+                          placeholder="https://company.com"
+                          onChange={(e) => setInputState((prev) => ({ ...prev, company_url: e.target.value }))}
+                        />
+                        <p className="text-[11px] text-zinc-400">제조사 또는 운영사 웹사이트 주소</p>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                      <label className="text-sm font-semibold">Description</label>
-                      <Input value={inputState.description ?? ""} placeholder="Please enter" onChange={(e) => setInputState((prev) => ({ ...prev, description: e.target.value }))} />
+
+                    {/* ── 열 2: 설명 ── */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-sm font-semibold text-zinc-800">설명</label>
+                      <Textarea
+                        value={inputState.description ?? ""}
+                        placeholder="이 인스턴스가 나타내는 자산에 대한 설명을 입력하세요.&#10;&#10;예) A라인 1번 로봇암으로 2024년 도입된 용접 전용 장비입니다."
+                        className="resize-none flex-1 text-sm leading-relaxed"
+                        style={{ minHeight: "130px" }}
+                        onChange={(e) => setInputState((prev) => ({ ...prev, description: e.target.value }))}
+                      />
+                      <p className="text-[11px] text-zinc-400">AAS 인스턴스에 대한 설명을 상세하게 입력해주세요.</p>
                     </div>
-                  </CardContent>
-                </Card>
+
+                    {/* ── 열 3: 썸네일 ── */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-sm font-semibold text-zinc-800">장비 이미지</label>
+                      <label className="cursor-pointer group relative flex-1">
+                        <div className={cn(
+                          "w-full h-full min-h-[130px] rounded-xl border-2 border-dashed transition-all duration-200 flex flex-col items-center justify-center gap-3 overflow-hidden",
+                          inputState.thumbnail
+                            ? "border-zinc-200"
+                            : "border-zinc-300 bg-zinc-50 group-hover:border-zinc-900 group-hover:bg-zinc-100"
+                        )}>
+                          {inputState.thumbnail ? (
+                            <>
+                              <img src={inputState.thumbnail} alt="thumbnail" className="absolute inset-0 object-cover w-full h-full rounded-xl" />
+                              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex flex-col items-center justify-center gap-2">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                  <polyline points="17 8 12 3 7 8"/>
+                                  <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                                <span className="text-white text-xs font-semibold">이미지 변경</span>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="w-12 h-12 rounded-full bg-zinc-200 group-hover:bg-zinc-900 transition-colors flex items-center justify-center">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500 group-hover:text-white transition-colors">
+                                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                  <polyline points="17 8 12 3 7 8"/>
+                                  <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                              </div>
+                              <div className="text-center">
+                                <p className="text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 transition-colors">이미지 업로드</p>
+                                <p className="text-[11px] text-zinc-400 mt-0.5">JPG, PNG, WEBP</p>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                        <input type="file" accept="image/*" className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = (ev) => setInputState((prev) => ({ ...prev, thumbnail: ev.target?.result as string }));
+                            reader.readAsDataURL(file);
+                          }}
+                        />
+                      </label>
+                      {inputState.thumbnail && (
+                        <button type="button"
+                          className="text-[11px] text-zinc-400 hover:text-red-500 transition-colors text-center"
+                          onClick={() => setInputState((prev) => ({ ...prev, thumbnail: undefined }))}
+                        >
+                          이미지 삭제
+                        </button>
+                      )}
+                    </div>
+
+                  </div>
+                </div>
               )}
 
               {/* Step 1: Detailed settings — template select + tree + details */}
@@ -1524,11 +1643,11 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                         <div className="text-center">
                           <h3 className="font-semibold text-lg">AAS 템플릿을 선택하세요</h3>
                           <p className="text-sm text-muted-foreground mt-1">
-                            템플릿을 선택하면 트리 구조가 표시되고 각 항목의 값을 입력할 수 있습니다.
+                            템플릿을 ���택하면 트리 구조가 표시되고 각 항목의 값을 입력할 수 있습니다.
                           </p>
                         </div>
-                        <Button size="lg" onClick={() => { setModalOpen(true); setModelType("aasmodel"); }}>
-                          <FilePlus className="size-4 mr-2" />Select AAS Template
+                        <Button onClick={() => { setModalOpen(true); setModelType("aasmodel"); }}>
+                          <FilePlus className="size-3.5 mr-1.5" />AAS 템플릿 선택
                         </Button>
                       </CardContent>
                     </Card>
@@ -1558,8 +1677,8 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                               mode={mode}
                             />
                             {mode === "create" && (
-                              <Button variant="outline" size="sm" onClick={removeAASModel} className="text-destructive border-destructive/40 hover:bg-destructive/10">
-                                <Trash2 className="size-3.5 mr-1" />템��릿 변경
+                              <Button variant="destructive" onClick={removeAASModel}>
+                                <Trash2 className="size-3.5 mr-1.5" />템플릿 변경
                               </Button>
                             )}
                           </div>
@@ -1596,10 +1715,10 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                                     <CardHeader className="flex-row items-center justify-between pb-2 shrink-0 px-4 py-3 border-b">
                                       <CardTitle className="text-sm font-semibold text-primary">AAS Tree</CardTitle>
                                       <div className="flex items-center gap-2">
-                                        <Button size="sm" variant="outline" onClick={() => { setModalOpen(true); setModelType("submodel"); }}>
+                                        <Button variant="outline" onClick={() => { setModalOpen(true); setModelType("submodel"); }}>
                                           <Plus className="size-3.5 mr-1" />Submodel 추가
                                         </Button>
-                                        <Button size="sm" variant="ghost" onClick={() => setShowAdvancedTree(false)} className="text-xs text-muted-foreground">
+                                        <Button variant="ghost" onClick={() => setShowAdvancedTree(false)} className="text-xs text-muted-foreground">
                                           Simple view
                                         </Button>
                                       </div>
@@ -1640,8 +1759,8 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                                       </div>
                                       {selectedNode && (
                                         <div className="flex gap-2 shrink-0">
-                                          <Button size="sm" onClick={handleDetailSave}>저장</Button>
-                                          <Button size="sm" variant="destructive" onClick={handleDelete}
+                                          <Button onClick={handleDetailSave}>저장</Button>
+                                          <Button variant="destructive" onClick={handleDelete}
                                             disabled={selectedNode.node.modelType !== "Submodel"}>
                                             삭제
                                           </Button>
@@ -1728,7 +1847,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       {inputState.verification && verificationBadge(inputState.verification)}
-                      <Button size="sm" disabled={loading} onClick={verifyInstance}>
+                      <Button disabled={loading} onClick={verifyInstance}>
                         <ShieldCheck className="size-4 mr-2" />검증 실행
                       </Button>
                     </div>
@@ -1766,48 +1885,99 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
 
               {/* Step 4: Complete */}
               {activeStep === 4 && (
-                <Card>
-                  <CardHeader><CardTitle>Complete</CardTitle></CardHeader>
-                  <CardContent className="text-center space-y-3">
-                    <p className="text-base">You have completed all the steps.</p>
-                    <p className="text-sm text-muted-foreground mb-4">Click the button below to finalize your instance.</p>
-                    <div className="flex justify-center gap-2">
+                <div className="flex flex-col gap-3">
+                  {/* 검증 상태 안내 */}
+                  {inputState.verification === "success" && (
+                    <div className="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
+                      <CheckCircle2 className="size-5 text-green-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-green-700">검증을 통과했습니다.</p>
+                        <p className="text-xs text-green-600 mt-0.5">AAS 구조와 ��이터가 모두 유효합니다. 저장 후 배포할 수 있습니다.</p>
+                      </div>
+                    </div>
+                  )}
+                  {inputState.verification === "fail" && (
+                    <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                      <ShieldCheck className="size-5 text-amber-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-amber-700">검증이 실패했습니다.</p>
+                        <p className="text-xs text-amber-600 mt-0.5">검증 실패 상태로도 저장할 수 있습니다. 저장 후 3단계로 돌아가 검증을 다시 실행하거나, 2단계에서 데이터를 수정할 수 있습니다.</p>
+                      </div>
+                    </div>
+                  )}
+                  {!inputState.verification && (
+                    <div className="flex items-start gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
+                      <ShieldCheck className="size-5 text-zinc-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-zinc-600">검증을 실행하지 않았습니다.</p>
+                        <p className="text-xs text-zinc-400 mt-0.5">검증 없이도 저장할 수 있습니다. 3단계로 돌아가 검증을 먼저 실행하는 것을 권장합니다.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 저장 패널 */}
+                  <div className="rounded-lg border border-zinc-200 bg-white px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                      <p className="text-sm font-semibold text-zinc-900">
+                        {mode === "create" ? "인스턴스 생성" : "변경 사항 저장"}
+                      </p>
+                      <p className="text-xs text-zinc-400 mt-0.5">
+                        {mode === "create"
+                          ? "저장하면 AAS 인스턴스가 생성되고 목록에 등록됩니다."
+                          : "저장하면 변경 사항이 즉시 반영됩니다."}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {mode === "edit" && (
+                        <Button variant="destructive" disabled={loading} onClick={async () => {
+                          const isConfirm = await confirmSave("정말 삭제��시겠습니까?", { labels: { confirm: "삭제", cancel: "취소" }, confirmProps: { color: "red.8" } });
+                          if (isConfirm) { await deleteModel({ modelType: "instance", modelSeq: instance?.instance_seq }); router.replace(ROUTES.INSTANCE.LIST); }
+                        }}>
+                          <Trash2 className="size-3.5 mr-1" />삭제
+                        </Button>
+                      )}
                       {((mode === "create" && (user?.user_group_seq === UserRole.User || user?.user_group_seq === UserRole.Manager)) ||
                         (mode === "edit" && (user?.user_group_seq === UserRole.Manager || user?.user_seq === instance?.create_user_seq))) && (
                         <Button disabled={loading} onClick={() => handleSubmit()}>
-                          <Save className="size-3.5 mr-1" />{mode === "create" ? "Create" : "Save"}
-                        </Button>
-                      )}
-                      {mode === "edit" && (
-                        <Button variant="destructive" disabled={loading} onClick={async () => {
-                          const isConfirm = await confirmSave("Are you sure you want to delete it?", { labels: { confirm: "Delete", cancel: "Cancel" }, confirmProps: { color: "red.8" } });
-                          if (isConfirm) { await deleteModel({ modelType: "instance", modelSeq: instance?.instance_seq }); router.replace(ROUTES.INSTANCE.LIST); }
-                        }}>
-                          <Trash2 className="size-3.5 mr-1" />Delete
+                          <Save className="size-3.5 mr-1" />{mode === "create" ? "저장하고 생성" : "저장"}
                         </Button>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               )}
             </div>
 
             {/* Footer nav */}
-            <Card className="mt-6">
-              <CardContent className="flex justify-end gap-2 py-4">
-                <CancelButton />
-                {activeStep > 0 && (
-                  <Button variant="outline" onClick={() => setActiveStep(activeStep - 1)}>Back</Button>
-                )}
-                {activeStep < 4 && (
-                  <Button onClick={() => {
-                    if (activeStep === 0 && !inputState.instance_name) return showToast.error("Please enter an instance name.");
-                    if (activeStep === 1 && !Array.isArray(treeData)) return showToast.error("Please select an AAS Template.");
-                    setActiveStep(activeStep + 1);
-                  }}>Next</Button>
-                )}
-              </CardContent>
-            </Card>
+            <div className="sticky bottom-0 z-10 mt-6 border-t border-zinc-200 bg-white/95 backdrop-blur-sm px-0 py-3">
+              <div className="flex items-center justify-between gap-3">
+                {/* 왼쪽: 단계 표시 */}
+                <p className="text-xs text-zinc-400">
+                  <span className="font-semibold text-zinc-700">{activeStep + 1} / {STEPS.length}</span>
+                  {" "}— {STEPS[activeStep]?.label}
+                </p>
+                {/* 오른쪽: 버튼 */}
+                <div className="flex items-center gap-2">
+                  <CancelButton />
+                  {activeStep > 0 && (
+                    <Button variant="outline" onClick={() => setActiveStep(activeStep - 1)}>
+                      이전
+                    </Button>
+                  )}
+                  {activeStep < STEPS.length - 1 && (
+                    <Button
+                      onClick={() => {
+                        if (activeStep === 0 && !inputState.instance_name) return showToast.error("인스턴스 이름을 입력해주세요.");
+                        if (activeStep === 1 && !Array.isArray(treeData)) return showToast.error("AAS 템플릿을 선택해주세요.");
+                        setActiveStep(activeStep + 1);
+                      }}
+                    >
+                      다음 단계
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
           </>
         )}
       </div>

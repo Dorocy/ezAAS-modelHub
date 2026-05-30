@@ -7,15 +7,19 @@ import { getModelList, getCodeList } from "@/api/index";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/constants/roles";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { CategorySidebar, ViewToggle, ListPagination } from "@/components/feature/shared/ListControls";
 import { cn } from "@/lib/utils";
 import {
   Plus,
+  Search,
+  ChevronLeft,
+  ChevronRight,
   FileStack,
   ArrowUpRight,
+  LayoutGrid,
+  AlignJustify,
 } from "lucide-react";
 
 const PAGE_SIZE = 24;
@@ -30,10 +34,10 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> =
 function StatusBadge({ status, label }: { status: string; label: string }) {
   const s = STATUS_COLORS[status] ?? STATUS_COLORS.draft;
   return (
-    <Badge variant="outline" className={cn("gap-1 rounded-full font-medium", s.bg, s.text)}>
+    <span className={cn("inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border", s.bg, s.text)}>
       <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", s.dot)} />
       {label}
-    </Badge>
+    </span>
   );
 }
 
@@ -161,18 +165,61 @@ export default function AASPage() {
 
       <div className="mx-auto max-w-screen-xl px-6 py-6 flex gap-6">
         {/* ── Left sidebar ── */}
-        <CategorySidebar
-          searchValue={inputValue}
-          onSearchChange={setInputValue}
-          onSearchSubmit={handleSearch}
-          categories={categories.map((c: any) => ({
-            id: String(c.category_seq ?? c.id),
-            label: c.category_name ?? c.text,
-          }))}
-          activeCategory={activeCategory}
-          onCategoryChange={handleCategory}
-          totalCount={totalCount}
-        />
+        <aside className="w-52 shrink-0">
+          <div className="sticky top-6 space-y-1">
+            {/* Search */}
+            <div className="relative mb-4">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+              <Input
+                className="h-8 pl-8 text-sm bg-white border-zinc-200 rounded-lg"
+                placeholder="Search..."
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              />
+            </div>
+
+            {/* Category label */}
+            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
+              Category
+            </p>
+
+            {/* All */}
+            <button
+              onClick={() => handleCategory("all")}
+              className={cn(
+                "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm transition-colors",
+                activeCategory === "all"
+                  ? "bg-zinc-900 text-white font-medium"
+                  : "text-zinc-600 hover:bg-zinc-100"
+              )}
+            >
+              <span>All</span>
+              <span className={cn("text-[11px] tabular-nums", activeCategory === "all" ? "text-zinc-300" : "text-zinc-400")}>
+                {totalCount}
+              </span>
+            </button>
+
+            {categories.map((c: any) => {
+              const id = String(c.category_seq ?? c.id);
+              const active = activeCategory === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => handleCategory(id)}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm transition-colors text-left",
+                    active
+                      ? "bg-zinc-900 text-white font-medium"
+                      : "text-zinc-600 hover:bg-zinc-100"
+                  )}
+                >
+                  <span className="truncate">{c.category_name ?? c.text}</span>
+                </button>
+              );
+            })}
+          </div>
+        </aside>
 
         {/* ── Main content ── */}
         <div className="flex-1 min-w-0">
@@ -182,7 +229,20 @@ export default function AASPage() {
               {searchKey && <span className="text-zinc-900 font-medium">&quot;{searchKey}&quot; · </span>}
               {isLoading ? "Loading..." : `${models.length} of ${totalCount}`}
             </p>
-            <ViewToggle value={layoutType} onChange={setLayoutType} />
+            <div className="flex items-center gap-1 bg-white border border-zinc-200 rounded-lg p-0.5">
+              <button
+                onClick={() => setLayoutType("grid")}
+                className={cn("p-1.5 rounded-md transition-colors", layoutType === "grid" ? "bg-zinc-900 text-white" : "text-zinc-400 hover:text-zinc-600")}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setLayoutType("list")}
+                className={cn("p-1.5 rounded-md transition-colors", layoutType === "list" ? "bg-zinc-900 text-white" : "text-zinc-400 hover:text-zinc-600")}
+              >
+                <AlignJustify className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           {/* error */}
@@ -240,7 +300,43 @@ export default function AASPage() {
           )}
 
           {/* pagination */}
-          <ListPagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          {totalPages > 1 && (
+            <div className="mt-8 flex items-center justify-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                const p = i + Math.max(1, Math.min(page - 3, totalPages - 6));
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={cn(
+                      "w-8 h-8 rounded-lg text-sm font-medium transition-colors",
+                      p === page
+                        ? "bg-zinc-900 text-white"
+                        : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
+                    )}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

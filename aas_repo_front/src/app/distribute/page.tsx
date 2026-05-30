@@ -147,8 +147,8 @@ export default function DistributePage() {
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               />
             </div>
-            <Button size="sm" className="h-8" onClick={handleSearch}>
-              Search
+            <Button onClick={handleSearch}>
+              <Search className="size-3.5 mr-1.5" />검색
             </Button>
           </div>
         </div>
@@ -228,13 +228,10 @@ export default function DistributePage() {
                           modelType: model.ty as "aasmodel" | "submodel",
                           targetSeq: model.target_seq,
                         })}
-                        className={cn(
-                          buttonVariants({ variant: "outline", size: "sm" }),
-                          "h-7 text-xs"
-                        )}
+                        className={buttonVariants({ variant: "outline", size: "sm" })}
                       >
-                        <Pencil className="size-3" data-icon="inline-start" />
-                        Edit
+                        <Pencil className="size-3.5 mr-1.5" />
+                        수정
                       </Link>
                     </TableCell>
                   </TableRow>
@@ -256,7 +253,6 @@ export default function DistributePage() {
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
             >
@@ -268,7 +264,6 @@ export default function DistributePage() {
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
             >

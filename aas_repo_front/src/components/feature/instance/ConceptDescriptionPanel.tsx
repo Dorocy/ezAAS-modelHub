@@ -418,7 +418,7 @@ export default function ConceptDescriptionPanel({
           <p className="text-xs text-zinc-400 mt-1">ConceptDescriptions가 포함되어 있지 않습니다.</p>
         </div>
         {editMode && onAdd && (
-          <Button size="sm" variant="outline" onClick={onAdd}>
+          <Button variant="outline" onClick={onAdd}>
             <Plus size={14} className="mr-1.5" />CD 추가
           </Button>
         )}
@@ -472,7 +472,7 @@ export default function ConceptDescriptionPanel({
         </nav>
         {editMode && onAdd && (
           <div className="p-2.5 border-t border-zinc-100 shrink-0">
-            <Button size="sm" variant="outline" className="w-full text-xs" onClick={onAdd}>
+            <Button variant="outline" className="w-full text-xs" onClick={onAdd}>
               <Plus size={12} className="mr-1" />CD 추가
             </Button>
           </div>

@@ -134,8 +134,8 @@ export default function SignUpPage() {
             {matchError && <p className="text-xs text-destructive">Passwords do not match.</p>}
           </div>
 
-          <Button onClick={handleSignUp} disabled={loading} className="w-full mt-1">
-            {loading ? "Creating account..." : "Sign up"}
+          <Button onClick={handleSignUp} disabled={loading} className="w-full">
+            {loading ? "계정 생성 중..." : "Sign up"}
           </Button>
 
           <Separator />

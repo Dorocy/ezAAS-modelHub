@@ -139,16 +139,12 @@ export function parsingAAS(json) {
 
     treeNode["Submodel"] = tempNode;
 
-    // semanticId 의 key value 로 ConceptDescription 을 매칭한다.
-    // 실제 AAS 데이터는 key type 이 "ConceptDescription" 이 아니라
-    // "GlobalReference"/"ExternalReference" 인 경우가 대부분이므로,
-    // type 에 의존하지 않고 모든 key value 를 CD id 와 비교한다.
     if (obj.semanticId?.keys?.length > 0) {
-      for (const key of obj.semanticId.keys) {
-        const find = conceptDescriptions.find((item) => item.id == key.value);
+      const { type, value } = obj.semanticId.keys[0];
+      if (type === "ConceptDescription") {
+        const find = conceptDescriptions.find((item) => item.id == value);
         if (find != null) {
           treeNode["ConceptDescription"] = find;
-          break;
         }
       }
     }

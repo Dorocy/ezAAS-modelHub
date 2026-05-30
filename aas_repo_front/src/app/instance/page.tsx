@@ -34,17 +34,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/ui/page-header";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
-import { Plus, Search, Download, Pencil, ChevronDown, Layers } from "lucide-react";
+import { Plus, Search, Download, Pencil, ChevronDown, ChevronLeft, ChevronRight, Layers } from "lucide-react";
 
 const PAGE_SIZE = 20;
 
@@ -62,58 +53,34 @@ export default function InstancePage() {
     () => getCodeList("category")
   );
 
-  // Only Managers may view instances created by other users.
-  // Everyone else (Approvedor, User) is restricted to their own instances.
-  const canViewAll = user?.user_group_seq === UserRole.Manager;
-  // Whether the current view should be scoped to the signed-in user's instances.
-  const showOnlyMine = !canViewAll || searchMode === "my";
-
   const searchParams: Record<string, string> = {};
   if (searchKey) searchParams.searchKey = searchKey;
-  if (showOnlyMine && user) searchParams.user_seq = String(user.user_seq);
-
-  // When scoping to the current user we fetch a large page and filter/paginate
-  // on the client, since the backend list endpoint does not honor user_seq.
-  const requestPage = showOnlyMine ? 1 : page;
-  const requestPageSize = showOnlyMine ? 1000 : PAGE_SIZE;
+  if (searchMode === "my" && user) searchParams.user_seq = String(user.user_seq);
 
   const { data: instanceData, isLoading, error } = useSWR(
-    isAuthenticated ? ["instance-list", requestPage, searchKey, categoryFilter, showOnlyMine] : null,
+    isAuthenticated ? ["instance-list", page, searchKey, categoryFilter, searchMode] : null,
     () =>
       getInstanceList({
+        // 백엔드는 전체 조회 시 "all"을 기대한다. "0"을 보내면 빈 목록이 반환된다.
         category_seq: categoryFilter === "all" ? "all" : categoryFilter,
-        pageNumber: requestPage,
-        pageSize: requestPageSize,
+        pageNumber: page,
+        pageSize: PAGE_SIZE,
         searchParams,
       })
   );
 
-  // Backend returns DataTables shape: { recordsTotal, recordsFiltered, data: Instance[] }
-  const rawInstances: any[] = Array.isArray(instanceData)
-    ? instanceData
-    : Array.isArray(instanceData?.data)
-      ? instanceData.data
-      : Array.isArray(instanceData?.list)
-        ? instanceData.list
+  // 응답 구조: { result, msg, data: { recordsTotal, recordsFiltered, data: [...instances] } }
+  // 다양한 형태를 방어적으로 처리한다.
+  const payload = instanceData?.data ?? instanceData;
+  const instances: any[] = Array.isArray(payload?.data)
+    ? payload.data
+    : Array.isArray(payload)
+      ? payload
+      : Array.isArray(instanceData)
+        ? instanceData
         : [];
-
-  // Client-side visibility enforcement: non-managers (and managers in "my" mode)
-  // only ever see instances they created.
-  const scopedInstances = showOnlyMine && user
-    ? rawInstances.filter(
-        (i: any) => String(i.create_user_seq) === String(user.user_seq)
-      )
-    : rawInstances;
-
-  const totalCount: number = showOnlyMine
-    ? scopedInstances.length
-    : (instanceData?.recordsFiltered ?? instanceData?.recordsTotal ?? rawInstances.length);
+  const totalCount: number = payload?.recordsTotal ?? payload?.recordsFiltered ?? instances.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-
-  // For the scoped case we paginate the filtered list on the client.
-  const instances: any[] = showOnlyMine
-    ? scopedInstances.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-    : scopedInstances;
 
   const handleSearch = useCallback(() => {
     setSearchKey(inputValue);
@@ -155,19 +122,22 @@ export default function InstancePage() {
       {/* Filters */}
       <div className="border-b border-border/60 bg-muted/30 px-6 py-2.5">
         <div className="mx-auto max-w-screen-2xl flex flex-wrap items-center gap-2.5">
-          {canViewAll && (
-            <ToggleGroup
-              value={[searchMode]}
-              onValueChange={(vals) => {
-                const next = (vals as string[]).find((v) => v !== searchMode);
-                if (next) { setSearchMode(next as "my" | "all"); setPage(1); }
-              }}
-              variant="outline"
-              size="sm"
-            >
-              <ToggleGroupItem value="my">My Instances</ToggleGroupItem>
-              <ToggleGroupItem value="all">All Instances</ToggleGroupItem>
-            </ToggleGroup>
+          {user && user.user_group_seq !== UserRole.User && (
+            <div className="flex rounded-md border border-border overflow-hidden text-sm">
+              {(["my", "all"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => { setSearchMode(mode); setPage(1); }}
+                  className={`px-3 py-1.5 capitalize transition-colors ${
+                    searchMode === mode
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {mode === "my" ? "My Instances" : "All Instances"}
+                </button>
+              ))}
+            </div>
           )}
 
           <Select
@@ -198,8 +168,8 @@ export default function InstancePage() {
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               />
             </div>
-            <Button size="sm" className="h-8" onClick={handleSearch}>
-              Search
+            <Button onClick={handleSearch}>
+              <Search className="size-3.5 mr-1.5" />검색
             </Button>
           </div>
         </div>
@@ -280,10 +250,12 @@ export default function InstancePage() {
                           {hasPermission && (
                             <div className="flex items-center gap-1.5">
                               <DropdownMenu>
-                                <DropdownMenuTrigger className="inline-flex h-7 items-center justify-center gap-1 rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs hover:bg-accent hover:text-accent-foreground">
-                                  <Download className="size-3" />
-                                  Export
-                                  <ChevronDown className="size-3" />
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline">
+                                    <Download className="size-3.5 mr-1.5" />
+                                    내보내기
+                                    <ChevronDown className="size-3 ml-1" />
+                                  </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   {(["json", "xml", "aasx"] as const).map((fmt) => (
@@ -299,13 +271,10 @@ export default function InstancePage() {
 
                               <Link
                                 href={ROUTES.INSTANCE.EDIT(instance.instance_seq)}
-                                className={cn(
-                                  buttonVariants({ variant: "outline", size: "sm" }),
-                                  "h-7 text-xs"
-                                )}
+                                className={buttonVariants({ variant: "outline", size: "sm" })}
                               >
-                                <Pencil className="size-3" data-icon="inline-start" />
-                                Edit
+                                <Pencil className="size-3.5 mr-1.5" />
+                                수정
                               </Link>
                             </div>
                           )}
@@ -330,51 +299,27 @@ export default function InstancePage() {
         )}
 
         {totalPages > 1 && (
-          <Pagination className="mt-6">
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  href="#"
-                  aria-disabled={page === 1}
-                  className={cn(page === 1 && "pointer-events-none opacity-40")}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (page > 1) setPage((p) => p - 1);
-                  }}
-                />
-              </PaginationItem>
-
-              {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
-                const p = i + Math.max(1, Math.min(page - 3, totalPages - 6));
-                return (
-                  <PaginationItem key={p}>
-                    <PaginationLink
-                      href="#"
-                      isActive={p === page}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setPage(p);
-                      }}
-                    >
-                      {p}
-                    </PaginationLink>
-                  </PaginationItem>
-                );
-              })}
-
-              <PaginationItem>
-                <PaginationNext
-                  href="#"
-                  aria-disabled={page === totalPages}
-                  className={cn(page === totalPages && "pointer-events-none opacity-40")}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (page < totalPages) setPage((p) => p + 1);
-                  }}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+          <div className="mt-6 flex items-center justify-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              {page} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
         )}
       </div>
     </div>

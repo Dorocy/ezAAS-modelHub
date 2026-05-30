@@ -13,6 +13,7 @@ import {
 } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
 import { showToast } from "@/utils/toast";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { MantineProvider } from "@mantine/core";
 
 import Footer from "./Footer";
@@ -73,6 +74,7 @@ export default function ClientLayout({
         containerStyle={{ marginTop: "5rem" }}
         reverseOrder={false}
       />
+      <ReactQueryDevtools />
     </QueryClientProvider>
   );
 }
