@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import imageCompression from "browser-image-compression";
 import toast from "react-hot-toast";
 
-import { importModel, upsertModel, verifyModel } from "@/api/index";
+import { importModel, upsertModel, verifyModel, apiVerifyInstance } from "@/api/index";
 import { ROUTES } from "@/constants/routes";
 import { base64ToFile } from "@/utils/index";
 import { addValuePaths, parsingAAS } from "@/utils/aas";
@@ -129,6 +129,8 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
   const [verifying, setVerifying] = useState(false);
   // Human-readable fallback message for non-structured verification failures.
   const [verificationError, setVerificationError] = useState<string | null>(null);
+  // Summary line returned by the backend verification API (e.g. counts).
+  const [verificationSummary, setVerificationSummary] = useState<string | null>(null);
   // Bumped to collapse all submodel tree nodes (e.g. before verification).
   const [collapseSignal, setCollapseSignal] = useState(0);
 
@@ -264,6 +266,7 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
     setVerificationActive(null);
     setVerification(undefined);
     setVerificationError(null);
+    setVerificationSummary(null);
   };
 
   // Parse an API error (from verify OR save) into the verification result card.
@@ -276,6 +279,9 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
         const verificationData = JSON.parse(json.data);
         if (verificationData && typeof verificationData === "object") {
           verificationRef.current = verificationData;
+          setVerificationSummary(
+            typeof verificationData.summary === "string" ? verificationData.summary : null,
+          );
           // Activate the first failing item so its details are shown.
           const firstFail =
             Object.entries<any>(verificationData)
@@ -314,11 +320,25 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
     let result: "success" | "fail";
     try {
       setVerifying(true);
-      await verifyModel({ modelType, modelId, errorThrow: true, withToast: false });
+      let summary: string | undefined;
+      if (modelType === "aasmodel") {
+        // Real structure verification via the backend /instance/verification
+        // endpoint — same API used by Create AAS step 4.
+        const res: any = await apiVerifyInstance({
+          instance_seq: "",
+          aasmodel: metadata,
+          submodels: [],
+        });
+        summary = res?.data?.summary;
+      } else {
+        // Standalone submodels only have an ID-uniqueness check.
+        await verifyModel({ modelType, modelId, errorThrow: true, withToast: false });
+      }
       result = "success";
       verificationRef.current = null;
       setVerificationActive(null);
       setVerificationError(null);
+      setVerificationSummary(summary ?? null);
       setVerification("success");
     } catch (error: any) {
       result = "fail";
@@ -727,11 +747,18 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
       {verification && (
         <div className="mx-auto max-w-screen-xl px-6 pb-6">
           {verification === "success" && !verificationRef.current ? (
-            <div className="rounded-xl border border-green-200 bg-green-50 flex items-center gap-2 px-5 py-4">
-              <CheckCircle2 className="size-5 text-green-500 shrink-0" />
-              <p className="text-sm font-semibold text-green-700">
-                All verifications passed.
-              </p>
+            <div className="rounded-xl border border-green-200 bg-green-50 flex items-start gap-2 px-5 py-4">
+              <CheckCircle2 className="size-5 text-green-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-green-700">
+                  All verifications passed.
+                </p>
+                {verificationSummary && (
+                  <p className="text-xs text-green-600 mt-1 whitespace-pre-wrap break-words">
+                    {verificationSummary}
+                  </p>
+                )}
+              </div>
             </div>
           ) : (
             <div className="bg-white border border-zinc-200 rounded-xl p-5">
@@ -742,7 +769,7 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
                 </h2>
               </div>
               <p className="text-xs text-zinc-400 mb-3">
-                Resolve the issues below, then save or register again.
+                {verificationSummary ?? "Resolve the issues below, then save or register again."}
               </p>
               {verificationRef.current ? (
                 <VerifyDetailView
