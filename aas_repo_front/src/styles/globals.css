@@ -1,15 +1,273 @@
-/* @import "../metronic/vendors/keenicons/duotone/style.css";
-@import "../metronic/vendors/keenicons/filled/style.css";
-@import "../metronic/vendors/keenicons/solid/style.css";
-@import "../metronic/vendors/keenicons/outline/style.css";
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
-@import "../metronic/css/styles.css";
-*/
-/* @import "@/styles/webfont.css";
-@import "@/styles/custom.css"; */
-@import 'custom.css';
-@import 'webfont.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-#__next {
-    display: contents;
+@layer base {
+  :root {
+    /* ── KETI ezAAS Model Hub — Neutral/Blue design system ── */
+
+    /* Surface */
+    --background:    0 0% 98.5%;        /* #fbfbfb — near-white page bg */
+    --foreground:    220 13% 10%;       /* #16181c — near-black text */
+
+    /* Card / Popover — pure white */
+    --card:          0 0% 100%;
+    --card-foreground: 220 13% 10%;
+    --popover:       0 0% 100%;
+    --popover-foreground: 220 13% 10%;
+
+    /* Primary — #0070f3 (Vercel blue) */
+    --primary:       211 100% 47%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary — subtle blue-tinted gray */
+    --secondary:     220 14% 94%;
+    --secondary-foreground: 220 13% 18%;
+
+    /* Muted — light gray surfaces */
+    --muted:         220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+
+    /* Accent — hover states */
+    --accent:        220 14% 94%;
+    --accent-foreground: 220 13% 18%;
+
+    /* Status */
+    --destructive:   0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success:       142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    /* Chrome */
+    --border:        220 13% 91%;       /* #e5e7eb */
+    --input:         220 13% 91%;
+    --ring:          211 100% 47%;
+
+    /* Shape */
+    --radius:        0.5rem;
+
+    /* Sidebar — slightly off-white */
+    --sidebar:       220 14% 97%;
+    --sidebar-border: 220 13% 91%;
+  }
+
+  .dark {
+    --background:    220 18% 8%;
+    --foreground:    210 17% 96%;
+    --card:          220 17% 11%;
+    --card-foreground: 210 17% 96%;
+    --popover:       220 17% 11%;
+    --popover-foreground: 210 17% 96%;
+    --primary:       211 100% 57%;
+    --primary-foreground: 0 0% 100%;
+    --secondary:     220 15% 18%;
+    --secondary-foreground: 210 17% 80%;
+    --muted:         220 15% 16%;
+    --muted-foreground: 220 10% 55%;
+    --accent:        220 15% 18%;
+    --accent-foreground: 210 17% 80%;
+    --destructive:   0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border:        220 15% 20%;
+    --input:         220 15% 20%;
+    --ring:          211 100% 57%;
+    --sidebar:       220 17% 9%;
+    --sidebar-border: 220 15% 20%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Pretendard', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-feature-settings: 'kern' 1, 'liga' 1;
+    line-height: 1.5;
+  }
+
+  /* Smooth focus rings */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+/* ── Typography helpers ────────────────────────────────────────────── */
+@layer utilities {
+  .font-heading {
+    font-family: 'Pretendard', 'Inter', ui-sans-serif, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
+  .text-page-title {
+    @apply text-2xl font-semibold tracking-tight text-foreground;
+  }
+
+  /* Active nav underline */
+  .nav-active {
+    color: hsl(var(--foreground));
+    font-weight: 500;
+  }
+}
+
+/* ── Legacy classes (mantine-react-table compatibility) ────────────── */
+.tree_ass1 {
+  color: #005f9f;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 2px 8px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+}
+.tree_aas_title1,
+.tree_aas_title2 {
+  font-weight: 600;
+  font-size: 15px;
+  padding-right: 12px;
+}
+.sm_title_box1,
+.sm_title_box3 {
+  color: #fff;
+  font-size: 9px;
+  padding: 2px 7px;
+  background: #9ea3a9;
+  border-radius: 4px;
+  font-weight: 400;
+}
+.sm_title_box2 {
+  color: #fff;
+  font-size: 11px;
+  padding: 2px 7px;
+  background: #7d8392;
+  border-radius: 4px;
+}
+.bage_body {
+  border-radius: 0 0 4px 4px !important;
+  background-color: #f3f4f6 !important;
+}
+
+/* ── AAS Details Panel: override Mantine styles to match design system ── */
+.aas-details-panel {
+  font-family: 'Pretendard', 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Flatten Mantine Group/Flex wrappers */
+.aas-details-panel .mantine-Group-root,
+.aas-details-panel .mantine-Flex-root {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  padding: 0;
+}
+
+/* Label pill */
+.aas-details-panel > div > [style*="backgroundColor: \"#f9f9f9\""],
+.aas-details-panel div > [style*="backgroundColor: rgb(249, 249, 249)"] {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 4px !important;
+  padding: 3px 8px 3px 10px !important;
+  margin-right: 8px !important;
+}
+
+/* Mantine Text inside label pill */
+.aas-details-panel .mantine-Text-root {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #475569 !important;
+  min-width: 100px !important;
+}
+
+/* Section headers (Title order=3 — semanticId, description, arrays) */
+.aas-details-panel .mantine-Title-root {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #334155 !important;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 5px !important;
+  padding: 5px 12px !important;
+  margin-bottom: 4px !important;
+  letter-spacing: 0.01em !important;
+}
+
+/* Collapsible icon overrides (Font Awesome inside Title) */
+.aas-details-panel .mantine-Title-root i {
+  color: #94a3b8 !important;
+}
+
+/* Row spacing */
+.aas-details-panel .mantine-Group-root {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 4px 0 !important;
+}
+.aas-details-panel .mantine-Group-root:last-child {
+  border-bottom: none;
+}
+
+/* Native input (form-control) */
+.aas-details-panel input.form-control {
+  height: 30px !important;
+  font-size: 12px !important;
+  padding: 2px 8px !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 5px !important;
+  background: #fff !important;
+  color: #0f172a !important;
+  outline: none !important;
+  box-shadow: none !important;
+  transition: border-color 120ms !important;
+}
+.aas-details-panel input.form-control:focus {
+  border-color: #0070f3 !important;
+  box-shadow: 0 0 0 2px #bfdbfe60 !important;
+}
+.aas-details-panel input.form-control[readonly] {
+  background: #f8fafc !important;
+  color: #94a3b8 !important;
+  cursor: default !important;
+}
+
+/* Value display (view mode fw=600 Text) */
+.aas-details-panel span[style*="fontWeight: 600"],
+.aas-details-panel .mantine-Text-root[style*="fw"] {
+  font-size: 13px !important;
+  color: #0f172a !important;
+}
+
+/* Mantine TextInput (MLP lang/text fields) */
+.aas-details-panel .mantine-TextInput-input {
+  height: 28px !important;
+  font-size: 12px !important;
+  border-color: #e2e8f0 !important;
+  border-radius: 4px !important;
+  background: #fff !important;
+}
+.aas-details-panel .mantine-TextInput-input:focus {
+  border-color: #0070f3 !important;
+}
+
+/* Mantine Button (미리보기) */
+.aas-details-panel .mantine-Button-root {
+  height: 28px !important;
+  font-size: 12px !important;
+  padding: 0 10px !important;
+  border-radius: 5px !important;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #334155 !important;
+}
+.aas-details-panel .mantine-Button-root:hover {
+  background: #f1f5f9 !important;
 }

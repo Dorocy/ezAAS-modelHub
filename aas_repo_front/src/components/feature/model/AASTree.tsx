@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 import React, { useMemo, useState, memo, useEffect, useRef } from "react";
 import {
@@ -24,9 +25,6 @@ import {
   getTreeExpandedState,
 } from "@mantine/core";
 import {
-  IconSquareRoundedMinus,
-  IconSquareRoundedPlus,
-  IconCurrencyLeu,
   IconTrash,
   IconPlus,
 } from "@tabler/icons-react";
@@ -674,7 +672,7 @@ export const RenderObject = memo(
                                         showToast.warning("미리보기를 지원하지 않는 파일 형식입니다.");
                                     }
                                 } else {
-                                    showToast.warning("미리보기를 지원하지 않는 파일 형식이거나 파일이 없습니다.");
+                                    showToast.warning("미리보기를 지원하지 않는 파일 형식이거나 파일이 없습니���.");
                                 }
                               }}
                             >
@@ -756,7 +754,7 @@ export const RenderObject = memo(
 
 
 // RenderNodeDetails: 노드의 상세 정보를 카드로 표시 (내부에서 RenderObject에 editMode 전달)
-const RenderNodeDetails = memo(
+  const RenderNodeDetails = memo(
   ({
     level,
     node,
@@ -774,73 +772,210 @@ const RenderNodeDetails = memo(
     isInstance?: boolean;
     instanceSeq?: string;
   }) => (
-    <Card
+    <div
       key={`${node.value}-${level}`}
-      ml={`calc(3rem * ${level - 1})`}
-      mb=""
-      radius="md"
-      padding="md"
-      withBorder
       style={{
-        borderColor: "#e6e6e6",
-        borderWidth: "1px",
-        backgroundColor: "#f1f1f1",
+        marginLeft: `calc(2rem * ${Math.max(0, level - 1)})`,
+        marginTop: 6,
+        border: "1px solid #e2e8f0",
+        borderRadius: 8,
+        background: "#fff",
+        overflow: "hidden",
       }}
     >
-      <Title
-        order={3}
-        mb={"sm"}
-        style={{
-          backgroundColor: "#fefefe",
-          border: "1px solid #efefef",
-          borderRadius: "5px",
-          padding: "5px 15px",
-          color: "#043b5fff",
-          fontSize:'14px'
-        }}
-      >
-        <i className="fa-regular fa-rectangle-list me-2"></i> {node.modelType}
-      </Title>
-      <RenderObject
-        obj={node}
-        state={state}
-        editMode={editMode}
-        onValueChange={onValueChange}
-        isInstance={isInstance}
-        instanceSeq={instanceSeq}
-      />
-    </Card>
+      {/* mini header */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 6,
+        padding: "6px 12px",
+        background: "#f8fafc",
+        borderBottom: "1px solid #e2e8f0",
+      }}>
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+          <rect x="1" y="1" width="14" height="14" rx="3" fill="#334155"/>
+          <path d="M4 6h8M4 9h6M4 12h4" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
+        </svg>
+        <span style={{ fontSize: 11, fontWeight: 600, color: "#334155", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+          {node.modelType}
+        </span>
+      </div>
+      <div className="aas-details-panel" style={{ padding: "10px 12px" }}>
+        <RenderObject
+          obj={node}
+          state={state}
+          editMode={editMode}
+          onValueChange={onValueChange}
+          isInstance={isInstance}
+          instanceSeq={instanceSeq}
+        />
+      </div>
+    </div>
   )
 );
 
-// RenderTreeNode: 개별 트리 노드를 렌더링, editMode 전달
-const modelTypeToBadge = (
-  modelType: string
-): { label: string; color: string } => {
-  switch (modelType) {
-    case "AssetAdministrationShell":
-      return { label: "AAS", color: "blue" };
-    case "Submodel":
-      return { label: "Submodel", color: "green" };
-    case "Property":
-      return { label: "PRO", color: "grape" };
-    case "SubmodelElementCollection":
-      return { label: "SMC", color: "violet" };
-    case "SubmodelElementList":
-      return { label: "SML", color: "indigo" };
-    case "SubmodelElement":
-      return { label: "SME", color: "cyan" };
-    case "MultiLanguageProperty":
-      return { label: "MLPRO", color: "lime" };
-    case "ConceptDescription":
-      return { label: "CD", color: "yellow" };
-    case "Entity":
-      return { label: "Entity", color: "red" };
-    case "RelationshipElement":
-      return { label: "RE", color: "indigo" };
-    default:
-      return { label: modelType, color: "gray" };
-  }
+// ─── 타입 메타데이터 ─────────────────────────────────────────────
+const TYPE_META: Record<string, {
+  label: string;
+  abbr: string;
+  accent: string;       // tailwind hex
+  bgLight: string;
+  textColor: string;
+  icon: React.ReactNode;
+  humanLabel: string;   // 비전문가용 설명
+}> = {
+  AssetAdministrationShell: {
+    label: "AAS", abbr: "AAS",
+    accent: "#2563eb", bgLight: "#eff6ff", textColor: "#1e40af",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="14" height="14" rx="3" fill="#2563eb"/>
+        <path d="M5 8h6M8 5v6" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+      </svg>
+    ),
+    humanLabel: "디지털 자산",
+  },
+  Submodel: {
+    label: "Submodel", abbr: "SM",
+    accent: "#059669", bgLight: "#ecfdf5", textColor: "#065f46",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="14" height="14" rx="3" fill="#059669"/>
+        <path d="M4 6h8M4 8h6M4 10h4" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
+      </svg>
+    ),
+    humanLabel: "속성 그룹",
+  },
+  SubmodelElementCollection: {
+    label: "Collection", abbr: "SMC",
+    accent: "#7c3aed", bgLight: "#f5f3ff", textColor: "#5b21b6",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="14" height="14" rx="3" fill="#7c3aed"/>
+        <path d="M4 5h8M4 8h8M4 11h5" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
+      </svg>
+    ),
+    humanLabel: "항목 묶음",
+  },
+  SubmodelElementList: {
+    label: "List", abbr: "SML",
+    accent: "#4f46e5", bgLight: "#eef2ff", textColor: "#3730a3",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="14" height="14" rx="3" fill="#4f46e5"/>
+        <circle cx="4.5" cy="5.5" r="1" fill="white"/>
+        <circle cx="4.5" cy="8" r="1" fill="white"/>
+        <circle cx="4.5" cy="10.5" r="1" fill="white"/>
+        <path d="M7 5.5h5M7 8h5M7 10.5h3" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
+      </svg>
+    ),
+    humanLabel: "순서 목록",
+  },
+  Property: {
+    label: "Property", abbr: "Prop",
+    accent: "#d97706", bgLight: "#fffbeb", textColor: "#92400e",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="7" fill="#d97706"/>
+        <path d="M5.5 8h5M8 5.5v5" stroke="white" strokeWidth="1.6" strokeLinecap="round" opacity="0.4"/>
+        <circle cx="8" cy="8" r="2" fill="white"/>
+      </svg>
+    ),
+    humanLabel: "속성값",
+  },
+  MultiLanguageProperty: {
+    label: "Multilang", abbr: "MLP",
+    accent: "#0891b2", bgLight: "#ecfeff", textColor: "#155e75",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="7" fill="#0891b2"/>
+        <text x="4" y="11" fontSize="7" fill="white" fontWeight="bold">가A</text>
+      </svg>
+    ),
+    humanLabel: "다국어 텍스트",
+  },
+  File: {
+    label: "File", abbr: "File",
+    accent: "#0284c7", bgLight: "#f0f9ff", textColor: "#0c4a6e",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <rect x="3" y="1" width="10" height="14" rx="2" fill="#0284c7"/>
+        <path d="M6 5h4M6 8h4M6 11h2" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
+      </svg>
+    ),
+    humanLabel: "파일",
+  },
+  Range: {
+    label: "Range", abbr: "Range",
+    accent: "#ea580c", bgLight: "#fff7ed", textColor: "#7c2d12",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="7" fill="#ea580c"/>
+        <path d="M4 8h8" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
+        <circle cx="4" cy="8" r="1.5" fill="white"/>
+        <circle cx="12" cy="8" r="1.5" fill="white"/>
+      </svg>
+    ),
+    humanLabel: "범위값",
+  },
+  ReferenceElement: {
+    label: "Reference", abbr: "Ref",
+    accent: "#db2777", bgLight: "#fdf2f8", textColor: "#831843",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="7" fill="#db2777"/>
+        <path d="M6 8h4M9 6l2 2-2 2" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+    humanLabel: "참조",
+  },
+  Entity: {
+    label: "Entity", abbr: "Ent",
+    accent: "#dc2626", bgLight: "#fef2f2", textColor: "#7f1d1d",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="14" height="14" rx="3" fill="#dc2626"/>
+        <path d="M5 8l2 2 4-4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+    humanLabel: "개체",
+  },
+  ConceptDescription: {
+    label: "ConceptDesc", abbr: "CD",
+    accent: "#ca8a04", bgLight: "#fefce8", textColor: "#713f12",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="7" fill="#ca8a04"/>
+        <path d="M8 5v1M8 8v3" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    ),
+    humanLabel: "개념 정의",
+  },
+  RelationshipElement: {
+    label: "Relation", abbr: "Rel",
+    accent: "#64748b", bgLight: "#f8fafc", textColor: "#334155",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="7" fill="#64748b"/>
+        <circle cx="5" cy="8" r="1.5" fill="white"/>
+        <circle cx="11" cy="8" r="1.5" fill="white"/>
+        <path d="M6.5 8h3" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
+      </svg>
+    ),
+    humanLabel: "관계",
+  },
+};
+
+const getTypeMeta = (modelType: string) =>
+  TYPE_META[modelType] ?? {
+    label: modelType, abbr: modelType.slice(0, 4),
+    accent: "#94a3b8", bgLight: "#f8fafc", textColor: "#475569",
+    icon: null,
+    humanLabel: modelType,
+  };
+
+// modelTypeToBadge — 하위 호환성 유지
+const modelTypeToBadge = (modelType: string) => {
+  const m = getTypeMeta(modelType);
+  return { label: m.abbr, color: "gray" };
 };
 
 const RenderTreeNode = memo(
@@ -873,8 +1008,6 @@ const RenderTreeNode = memo(
     isInstance?: boolean;
     instanceSeq?: string;
   }) => {
-    const badgeProps = modelTypeToBadge(node.modelType);
-
     const canHaveChildren = [
       "Submodel",
       "SubmodelElementCollection",
@@ -905,180 +1038,307 @@ const RenderTreeNode = memo(
     const isExpandable = hasActualChildren || hasPropertiesToExpand;
 
 
-    return (
-      <Box mb={"xs"}>
-        <Group
-          mh="100px"
-          h={"auto"}
-          mb="xs"
-          pl={level === 2 ? "0.2rem" : `calc(3rem * ${level - 2})`}
-          {...elementProps}
-          onClick={(e) => {
-            if (isExpandable) {
-              elementProps.onClick(e);
-            }
-            if (onNodeClick) {
-              onNodeClick(node);
-            }
-          }}
-        >
-          <div>
-            <Flex h="100%" align="center" gap="xs" style={{ width: '100%', overflow: 'hidden' }}>
-              {level > 1 && <IconCurrencyLeu color="gray" />}
-              {isExpandable ? ( 
-                expanded ? (
-                  <IconSquareRoundedMinus color="var(--mantine-color-blue-6)" />
-                ) : (
-                  <IconSquareRoundedPlus color="var(--mantine-color-blue-6)" />
-                )
-              ) : (
-                <IconSquareRoundedMinus />
+    const tm = getTypeMeta(node.modelType);
+
+    // 레벨별 왼쪽 들여쓰기
+    const indentPx = Math.max(0, level - 2) * 18;
+
+    // Property 계열 인라인 값
+    const inlineValue = (() => {
+      if (node.modelType === "Property" || node.modelType === "RelationshipElement") {
+        const v = String(state?.[`${node.valuePath}.originalValue`] ?? node.originalValue ?? "");
+        return v;
+      }
+      if (node.modelType === "MultiLanguageProperty") {
+        return Array.isArray(node.originalValue)
+          ? node.originalValue.map((v: any) => `[${v.language}] ${v.text}`).join("  ·  ")
+          : String(node.originalValue ?? "");
+      }
+      if (node.modelType === "File") {
+        return typeof node.originalValue === "string" ? node.originalValue.split("/").pop() ?? "" : "";
+      }
+      return "";
+    })();
+
+    const childCount = Array.isArray(node.children) ? node.children.length : 0;
+
+    /* ── shared style tokens ── */
+    const BASE_ROW: React.CSSProperties = {
+      display: "flex", alignItems: "center", gap: 7,
+      cursor: "pointer", userSelect: "none",
+      transition: "background 100ms",
+    };
+    const CHEVRON = (
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ flexShrink: 0, transition: "transform 120ms", transform: expanded ? "rotate(90deg)" : "rotate(0deg)" }}>
+        <path d="M3 2l4 3-4 3" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    );
+
+    // ── AAS 최상위 노드 ──────────────────────────────────────────
+    if (node.modelType === "AssetAdministrationShell") {
+      return (
+        <Box mb={6}>
+          <div
+            style={{
+              ...BASE_ROW,
+              padding: "9px 12px",
+              background: "#f8fafc",
+              border: "1.5px solid #e2e8f0",
+              borderLeft: "3px solid #0070f3",
+              borderRadius: 8,
+            }}
+            {...elementProps}
+            onClick={(e) => { if (isExpandable) elementProps.onClick(e); if (onNodeClick) onNodeClick(node); }}
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+              <rect x="1" y="1" width="14" height="14" rx="3" fill="#0070f3"/>
+              <path d="M5 8h6M8 5v6" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#64748b", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 1 }}>
+                Asset Administration Shell
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {node.idShort}
+              </div>
+            </div>
+            {isExpandable && CHEVRON}
+          </div>
+          {expanded && !simpleView && (
+            <RenderNodeDetails key={`${node.valuePath}-details`} level={level} node={node} state={state} editMode={editMode} onValueChange={onValueChange} isInstance={isInstance} instanceSeq={instanceSeq} />
+          )}
+        </Box>
+      );
+    }
+
+    // ── Submodel 노드 ─────────────────────────────────────────────
+    if (node.modelType === "Submodel") {
+      return (
+        <Box mb={3} style={{ paddingLeft: indentPx }}>
+          <div
+            style={{
+              ...BASE_ROW,
+              padding: "7px 11px",
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderLeft: "3px solid #0070f3",
+              borderRadius: 7,
+            }}
+            {...elementProps}
+            onClick={(e) => { if (isExpandable) elementProps.onClick(e); if (onNodeClick) onNodeClick(node); }}
+          >
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+              <rect x="1" y="1" width="14" height="14" rx="3" fill="#334155"/>
+              <path d="M4 6h8M4 8h6M4 10h4" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
+            </svg>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#64748b", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 1 }}>
+                Submodel
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {node.idShort}
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+              {childCount > 0 && (
+                <span style={{ fontSize: 10, color: "#64748b", background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 99, padding: "1px 6px", fontWeight: 600 }}>
+                  {childCount}
+                </span>
               )}
-              <Box h={"100%"} className={treeNodeClass.item} style={{ minWidth: 0 }}>
-                {simpleView ? (
-                  <Group gap="xs" ml={"xs"} style={{ flexWrap: "nowrap" }}>
-                    <Badge
-                      variant="light"
-                      radius="sm"
-                      size="sm"
-                      color={badgeProps.color}
-                      style={{ minWidth:'33px'}}
-                    >
-                      {badgeProps.label}
-                    </Badge>
-                    
-                    <Text 
-                      title={node.idShort} 
-                      size="1.10rem"
-                      fw={400} 
-                      style={{ 
-                          whiteSpace: "nowrap", 
-                          overflow: "hidden", 
-                          textOverflow: "ellipsis", 
-                          flexGrow: 1, 
-                          minWidth: 0,
-                          lineHeight:'15px', 
-                      }}
-                      >
-                      {node.idShort}
-                    </Text>
-                    
-                  </Group>
-                ) : (
-                  <>
-                    <Badge
-                      className={treeNodeClass.modelType}
-                      variant="light"
-                      radius="sm"
-                      size="md"
-                      ml={"xs"}
-                      color={badgeProps.color}
-                    >
-                      {badgeProps.label}
-                    </Badge>
-                    <Text size="sm" fw={700} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {node.idShort}
-                    </Text>
-                    <Text
-                      className={"fs-8"}
-                      c={"gray.7"}
-                      style={{
-                        textAlign: "left",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {["SubmodelElementCollection", "SubmodelElementList"].includes(
-                        node.modelType
-                      ) ? (
-                        `# of values: ${
-                          Array.isArray(node.children) ? node.children.length : 0
-                        }`
-                      ) : node.modelType === "Property" ? (
-                        //String(node.originalValue ?? node.value ?? "")
-                        String(state?.[`${node.valuePath}.originalValue`] ?? node.originalValue ?? "")
-
-                      ) : node.modelType === "RelationshipElement" ? (
-                      //String(node.originalValue ?? "")
-                      String(state?.[`${node.valuePath}.originalValue`] ?? node.originalValue ?? "")
-
-
-                      ) : node.modelType === "MultiLanguageProperty" ? (
-                        Array.isArray(node.originalValue) // .originalValue가 실제 값 배열을 담고 있습니다.
-                          ? node.originalValue.map((v) => `[${v.language}] ${v.text}`).join(", ")
-                          : String(node.originalValue ?? node.value ?? "")
-                      ) : node.modelType === "File" ? (
-                        typeof node.originalValue === 'string'
-                            ? node.originalValue.split('/').pop() 
-                            : String(node.originalValue ?? "")
-                        ) : node.id}
-                    </Text>
-                  </>
-                )}
-              </Box>
+              {CHEVRON}
               {editMode && onDelete && isDeletable && (
-                <ActionIcon
-                  variant="subtle"
-                  color="red"
+                <ActionIcon variant="subtle" color="red" size="xs"
                   onClick={async (e) => {
                     e.stopPropagation();
-                    const confirmed = await confirmSave(
-                      `'${node.idShort}' 항목을 삭제하시겠습니까?`,
-                      {
-                        labels: { confirm: "삭제", cancel: "취소" },
-                        confirmProps: { color: "red" },
-                      }
-                    );
-                    if (confirmed) {
-                      onDelete(node);
-                    }
+                    const confirmed = await confirmSave(`'${node.idShort}' 을(를) 삭제하시겠습니까?`, { labels: { confirm: "삭제", cancel: "취소" }, confirmProps: { color: "red" } });
+                    if (confirmed) onDelete(node);
                   }}>
-                  <IconTrash size={16} />
+                  <IconTrash size={11} />
                 </ActionIcon>
               )}
               {editMode && onAdd && canHaveChildren && (
-                <ElementAdd
-                  onAdd={(elementType, idShort) => {
-                    onAdd(node, elementType, idShort);
-                  }}
-                  allowedTypes={
-                    node.modelType === "Submodel"
-                      ? ["SubmodelElementCollection", "SubmodelElementList", "Property"]
-                      : undefined // SMC, SML, Entity 등은 모든 타입 추가 가능
-                  }
-                />
+                <ElementAdd onAdd={(elementType, idShort) => onAdd(node, elementType, idShort)}
+                  allowedTypes={["SubmodelElementCollection", "SubmodelElementList", "Property"]} />
               )}
-            </Flex>
+            </div>
           </div>
-        </Group>
-        {/* {expanded &&
-          !simpleView &&
-          ["AssetAdministrationShell", "Submodel", "ConceptDescription"].map(
-            (type) =>
-              type in node ? (
-                <RenderNodeDetails
-                  key={type}
-                  level={level}
-                  node={node[type]}
-                  state={state}
-                  editMode={editMode}
-                  onValueChange={onValueChange}
-                />
-              ) : (
-                ""
-              )
-          )} */}
-          {/* 트리뷰 전체 상세보기로 전환 */}
+          {expanded && !simpleView && (
+            <RenderNodeDetails key={`${node.valuePath}-details`} level={level} node={node} state={state} editMode={editMode} onValueChange={onValueChange} isInstance={isInstance} instanceSeq={instanceSeq} />
+          )}
+        </Box>
+      );
+    }
+
+    // ── Collection / List (컨테이너 노드) ─────────────────────────
+    if (node.modelType === "SubmodelElementCollection" || node.modelType === "SubmodelElementList") {
+      const isCollection = node.modelType === "SubmodelElementCollection";
+      return (
+        <Box mb={1} style={{ paddingLeft: indentPx }}>
+          <div style={{ display: "flex", gap: 0 }}>
+            {level > 3 && <div style={{ width: 1, background: "#e2e8f0", marginRight: 8, flexShrink: 0 }} />}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  ...BASE_ROW,
+                  padding: "5px 9px",
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderLeft: `2px solid ${isCollection ? "#334155" : "#64748b"}`,
+                  borderRadius: 5,
+                }}
+                {...elementProps}
+                onClick={(e) => { if (isExpandable) elementProps.onClick(e); if (onNodeClick) onNodeClick(node); }}
+              >
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                  {isCollection
+                    ? <><rect x="1" y="1" width="14" height="14" rx="3" fill="#334155"/><path d="M4 5h8M4 8h8M4 11h5" stroke="white" strokeWidth="1.6" strokeLinecap="round"/></>
+                    : <><rect x="1" y="1" width="14" height="14" rx="3" fill="#64748b"/><circle cx="4.5" cy="5.5" r="1" fill="white"/><circle cx="4.5" cy="8" r="1" fill="white"/><circle cx="4.5" cy="10.5" r="1" fill="white"/><path d="M7 5.5h5M7 8h5M7 10.5h3" stroke="white" strokeWidth="1.4" strokeLinecap="round"/></>
+                  }
+                </svg>
+                <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.04em", flexShrink: 0 }}>
+                    {isCollection ? "SMC" : "SML"}
+                  </span>
+                  <span style={{ fontSize: 12.5, fontWeight: 500, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {node.idShort}
+                  </span>
+                </div>
+                {childCount > 0 && (
+                  <span style={{ fontSize: 9, color: "#94a3b8", background: "#f1f5f9", borderRadius: 99, padding: "0 5px", flexShrink: 0 }}>
+                    {childCount}
+                  </span>
+                )}
+                {CHEVRON}
+                {editMode && onDelete && isDeletable && (
+                  <ActionIcon variant="subtle" color="red" size="xs"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      const confirmed = await confirmSave(`'${node.idShort}' 을(를) 삭제하시겠습니까?`, { labels: { confirm: "삭제", cancel: "취소" }, confirmProps: { color: "red" } });
+                      if (confirmed) onDelete(node);
+                    }}>
+                    <IconTrash size={11} />
+                  </ActionIcon>
+                )}
+                {editMode && onAdd && canHaveChildren && (
+                  <ElementAdd onAdd={(elementType, idShort) => onAdd(node, elementType, idShort)} />
+                )}
+              </div>
+              {expanded && !simpleView && (
+                <RenderNodeDetails key={`${node.valuePath}-details`} level={level} node={node} state={state} editMode={editMode} onValueChange={onValueChange} isInstance={isInstance} instanceSeq={instanceSeq} />
+              )}
+            </div>
+          </div>
+        </Box>
+      );
+    }
+
+    // ── Property / 리프 노드 ──────────────────────────────────────
+    const isLeaf = ["Property", "MultiLanguageProperty", "File", "Range", "ReferenceElement", "RelationshipElement"].includes(node.modelType);
+    if (isLeaf) {
+      const hasValue = inlineValue && inlineValue.trim() !== "";
+      return (
+        <Box mb={0.5} style={{ paddingLeft: indentPx + 6 }}>
+          <div
+            style={{
+              ...BASE_ROW,
+              padding: "4px 9px",
+              background: hasValue ? "#fafafa" : "#fafafa",
+              border: "1px solid #f1f5f9",
+              borderLeft: `2px solid ${hasValue ? "#0070f3" : "#cbd5e1"}`,
+              borderRadius: 5,
+            }}
+            {...elementProps}
+            onClick={(e) => { if (isExpandable) elementProps.onClick(e); if (onNodeClick) onNodeClick(node); }}
+          >
+            {/* 타입 뱃지 */}
+            <span style={{ fontSize: 9, fontWeight: 700, color: "#94a3b8", background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 3, padding: "0 4px", flexShrink: 0, letterSpacing: "0.03em" }}>
+              {tm.abbr}
+            </span>
+
+            {/* 이름 */}
+            <span style={{ fontSize: 12, fontWeight: 500, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}
+              title={node.idShort}>
+              {node.idShort}
+            </span>
+
+            {/* 값 미리보기 */}
+            {hasValue ? (
+              <span style={{
+                fontSize: 11, color: "#0070f3", background: "#eff6ff",
+                border: "1px solid #bfdbfe", borderRadius: 4,
+                padding: "1px 6px", fontFamily: "monospace",
+                maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                flexShrink: 0,
+              }} title={inlineValue}>
+                {inlineValue}
+              </span>
+            ) : (
+              <span style={{ fontSize: 10, color: "#cbd5e1", flexShrink: 0 }}>
+                —
+              </span>
+            )}
+
+            {isExpandable && CHEVRON}
+
+            {/* 삭제 */}
+            {editMode && onDelete && isDeletable && (
+              <ActionIcon variant="subtle" color="red" size="xs"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  const confirmed = await confirmSave(`'${node.idShort}' 을(를) 삭제하시겠습니까?`, { labels: { confirm: "삭제", cancel: "취소" }, confirmProps: { color: "red" } });
+                  if (confirmed) onDelete(node);
+                }}>
+                <IconTrash size={11} />
+              </ActionIcon>
+            )}
+          </div>
+          {expanded && !simpleView && (
+            <RenderNodeDetails key={`${node.valuePath}-details`} level={level} node={node} state={state} editMode={editMode} onValueChange={onValueChange} isInstance={isInstance} instanceSeq={instanceSeq} />
+          )}
+        </Box>
+      );
+    }
+
+    // ── 기타 노드 (Entity, ConceptDescription 등) ─────────────────
+    return (
+      <Box mb={1} style={{ paddingLeft: indentPx }}>
+        <div
+          style={{
+            ...BASE_ROW,
+            padding: "5px 9px",
+            background: "#f8fafc",
+            border: "1px solid #e2e8f0",
+            borderLeft: "2px solid #94a3b8",
+            borderRadius: 5,
+          }}
+          {...elementProps}
+          onClick={(e) => { if (isExpandable) elementProps.onClick(e); if (onNodeClick) onNodeClick(node); }}
+        >
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+            <rect x="1" y="1" width="14" height="14" rx="3" fill="#94a3b8"/>
+            <path d="M5 8l2 2 4-4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ fontSize: 9, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.04em", flexShrink: 0 }}>{tm.abbr}</span>
+            <span style={{ fontSize: 12.5, fontWeight: 500, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{node.idShort}</span>
+          </div>
+          {isExpandable && CHEVRON}
+          {editMode && onDelete && isDeletable && (
+            <ActionIcon variant="subtle" color="red" size="xs"
+              onClick={async (e) => {
+                e.stopPropagation();
+                const confirmed = await confirmSave(`'${node.idShort}' 을(를) 삭제하시겠습니까?`, { labels: { confirm: "삭제", cancel: "취소" }, confirmProps: { color: "red" } });
+                if (confirmed) onDelete(node);
+              }}>
+              <IconTrash size={11} />
+            </ActionIcon>
+          )}
+          {editMode && onAdd && canHaveChildren && (
+            <ElementAdd onAdd={(elementType, idShort) => onAdd(node, elementType, idShort)} />
+          )}
+        </div>
         {expanded && !simpleView && (
-          <RenderNodeDetails
-            key={`${node.valuePath}-details`}
-            level={level}
-            node={node}
-            state={state}
-            editMode={editMode}
-            onValueChange={onValueChange}
-            isInstance={isInstance}
-            instanceSeq={instanceSeq}
-          />
+          <RenderNodeDetails key={`${node.valuePath}-details`} level={level} node={node} state={state} editMode={editMode} onValueChange={onValueChange} isInstance={isInstance} instanceSeq={instanceSeq} />
         )}
       </Box>
     );

@@ -1,398 +1,345 @@
-/*
- * 파일명: src/pages/aas/index.tsx
- * 작성자: 김태훈
- * 작성일: 2024-03-15
- * 최종수정일: 2024-03-29
- *
- * 저작권: (c) 2025 IMPIX. 모든 권리 보유.
- *
- * 설명: AAS 템플릿 목록 페이지를 제공합니다.
- */
-
 "use client";
 
-import { exportModel, getCodeList, getModelList, verifyModel } from "@/api";
-import CategoryCombobox from "@/components/CategoryCombobox";
-import CustomCombobox from "@/components/CustomCombobox";
-import ModelCard from "@/components/feature/model/ModelCard";
-import FlexTable from "@/components/FlexTable";
-import SearchBox from "@/components/SearchBox";
-import { UserRole } from "@/constants/roles";
+import React, { useState, useCallback, useMemo } from "react";
+import Link from "next/link";
+import useSWR from "swr";
+import { getModelList, getCodeList } from "@/api/index";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/contexts/AuthContext";
-import { confirmSave } from "@/utils/modal";
-import { Badge, Flex, Anchor, Button, Menu, Text } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
-import { size } from "lodash";
+import { UserRole } from "@/constants/roles";
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import {
-  MRT_PaginationState,
-  MRT_RowData,
-  useMantineReactTable,
-} from "mantine-react-table";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import React, { useState, useEffect, useRef, useMemo } from "react";
+  Plus,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
+  ArrowUpRight,
+  LayoutGrid,
+  AlignJustify,
+} from "lucide-react";
 
-// export const metadata = { title: "AAS 템플릿 목록" };
+const PAGE_SIZE = 24;
 
-export default function Page() {
-  const router = useRouter();
-  const { user } = useAuth();
+const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
+  published: { bg: "bg-emerald-50 border-emerald-200", text: "text-emerald-700", dot: "bg-emerald-500" },
+  draft:     { bg: "bg-zinc-100 border-zinc-200",      text: "text-zinc-600",    dot: "bg-zinc-400" },
+  temporary: { bg: "bg-amber-50 border-amber-200",     text: "text-amber-700",   dot: "bg-amber-400" },
+  deprecated:{ bg: "bg-red-50 border-red-200",         text: "text-red-600",     dot: "bg-red-400" },
+};
 
-  useEffect(() => {
-    document.title = "Submodel 템플릿 목록";
-  }, []);
-  const modelType = "submodel";
+function StatusBadge({ status, label }: { status: string; label: string }) {
+  const s = STATUS_COLORS[status] ?? STATUS_COLORS.draft;
+  return (
+    <span className={cn("inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border", s.bg, s.text)}>
+      <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", s.dot)} />
+      {label}
+    </span>
+  );
+}
 
-  // 검색 박스 상태 값
-  const [searchState, setSearchState] = useState({
-    category_seq: "",
-    searchKey: "",
-  });
+function TemplateCard({ model }: { model: any }) {
+  return (
+    <Link href={ROUTES.SUBMODEL.VIEW(model.submodel_seq)} className="group block">
+      <div className="relative flex flex-col h-full bg-white border border-zinc-200 rounded-xl p-5 hover:border-zinc-400 hover:shadow-sm transition-all duration-150">
+        {/* top row */}
+        <div className="flex items-start justify-between gap-3 mb-3">
+          {/* icon */}
+          <div className="w-9 h-9 rounded-lg bg-zinc-100 flex items-center justify-center shrink-0">
+            <Layers className="w-4 h-4 text-zinc-500" />
+          </div>
+          <ArrowUpRight className="w-4 h-4 text-zinc-300 group-hover:text-zinc-500 transition-colors shrink-0 mt-0.5" />
+        </div>
 
-  // enter or click button
-  const searchRef = useRef({
-    searchKey: "",
-  });
+        {/* name */}
+        <h3 className="text-sm font-semibold text-zinc-900 leading-snug line-clamp-2 mb-1.5">
+          {model.submodel_name}
+        </h3>
 
-  const [layoutType, setLayoutType] = useState<"flex" | "table">("flex");
-  const [pagination, setPagination] = useState<MRT_PaginationState>({
-    pageIndex: 0,
-    pageSize: 8,
-  });
+        {/* description */}
+        <p className="text-xs text-zinc-500 leading-relaxed line-clamp-2 flex-1 mb-4">
+          {model.description || "No description provided."}
+        </p>
 
-  const { data: categorys = [] } = useQuery({
-    queryKey: ["common/code"],
-    queryFn: () => getCodeList("category"),
-    // retry:false,
-  });
+        {/* footer */}
+        <div className="flex items-center justify-between gap-2 pt-3 border-t border-zinc-100">
+          <span className="text-[11px] text-zinc-400 font-medium truncate">
+            {model.category_name || "—"}
+          </span>
+          <StatusBadge status={model.status} label={model.status_nm ?? model.status} />
+        </div>
 
-  const {
-    data: models,
-    isFetching: isFetchingModels,
-    isSuccess,
-    refetch,
-  } = useQuery({
-    queryKey: [modelType, pagination, searchState],
-    queryFn: () =>
-      getModelList({
-        modelType,
-        pageNumber: pagination.pageIndex + 1,
-        pageSize: pagination.pageSize,
-        searchParams: {
-          ...searchState,
+        {/* semantic id */}
+        {model.submodel_semantic_id && (
+          <p className="mt-2 text-[10px] font-mono text-zinc-400 truncate">
+            {model.submodel_semantic_id}
+          </p>
+        )}
+      </div>
+    </Link>
+  );
+}
 
-          p: "p",
-        },
-      }),
-  });
+function TemplateRow({ model }: { model: any }) {
+  return (
+    <Link href={ROUTES.SUBMODEL.VIEW(model.submodel_seq)} className="group flex items-center gap-4 px-4 py-3 border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50 transition-colors">
+      <div className="w-7 h-7 rounded-md bg-zinc-100 flex items-center justify-center shrink-0">
+        <Layers className="w-3.5 h-3.5 text-zinc-400" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-zinc-900 truncate group-hover:text-blue-600 transition-colors">
+            {model.submodel_name}
+          </span>
+        </div>
+        <p className="text-xs text-zinc-400 truncate mt-0.5">{model.description || "—"}</p>
+      </div>
+      <span className="text-xs text-zinc-400 shrink-0 hidden md:block">{model.category_name}</span>
+      <StatusBadge status={model.status} label={model.status_nm ?? model.status} />
+      <ArrowUpRight className="w-3.5 h-3.5 text-zinc-300 group-hover:text-zinc-500 shrink-0 transition-colors" />
+    </Link>
+  );
+}
 
-  const modelsData = models?.data ?? [];
+export default function SubmodelPage() {
+  const { user, isAuthenticated } = useAuth();
 
-  const handleExport = (format, model) => {
-    exportModel({
-      modelType,
-      format,
-      modelSeq: model[`${modelType}_seq`],
-      filename: model[`${modelType}_name`],
-    });
+  const [inputValue, setInputValue]   = useState("");
+  const [searchKey, setSearchKey]     = useState("");
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [layoutType, setLayoutType]   = useState<"grid" | "list">("grid");
+  const [page, setPage]               = useState(1);
+
+  const { data: categories = [] } = useSWR(
+    isAuthenticated ? "categories-submodel" : null,
+    () => getCodeList("category")
+  );
+
+  const searchParams: Record<string, string> = {};
+  if (searchKey) searchParams.searchKey = searchKey;
+  if (activeCategory !== "all") searchParams.category_seq = activeCategory;
+
+  const { data: modelData, isLoading, error } = useSWR(
+    isAuthenticated ? ["submodel-list", page, searchKey, activeCategory] : null,
+    () => getModelList({ modelType: "submodel", pageNumber: page, pageSize: PAGE_SIZE, searchParams })
+  );
+
+  const models: any[] = Array.isArray(modelData)
+    ? modelData
+    : Array.isArray(modelData?.list) ? modelData.list : [];
+  const totalCount: number = modelData?.totalCount ?? modelData?.total ?? models.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+  const handleSearch = useCallback(() => {
+    setSearchKey(inputValue);
+    setPage(1);
+  }, [inputValue]);
+
+  const handleCategory = (val: string) => {
+    setActiveCategory(val);
+    setPage(1);
   };
-
-  const handleSearch = () => {
-    const keyword = searchRef.current.searchKey;
-
-    if (searchState.searchKey === keyword) {
-      refetch();
-    } else {
-      setSearchState((prev) => ({ ...prev, searchKey: keyword }));
-    }
-  };
-
-  const renderGridItem = (model: any, i: number) => {
-    return (
-      <ModelCard
-        key={model[`${modelType}_seq`] ?? i}
-        model={model}
-        modelType={modelType}
-        i={i}
-      />
-    );
-  };
-
-  const tableColumns = useMemo(() => {
-    const columns = [
-      {
-        accessorKey: "status",
-        header: "Status",
-        size: 100,
-        Cell: ({ row }) => (
-          <Badge
-            mt={4}
-            mr={4}
-            color={
-              row.original.status === "temporary"
-                ? "blue"
-                : row.original.status === "draft"
-                  ? "red.4"
-                  : row.original.status === "published"
-                    ? "green"
-                    : "dark.1"
-            }
-            radius="sm"
-          >
-            {row.original.status}
-          </Badge>
-        ),
-      },
-      {
-        accessorKey: `${modelType}_name`,
-        header: "TEMPLATE NAME",
-        size: 150,
-        Cell: ({ row }) => (
-          <Flex align="center" gap="md">
-            <Anchor
-              onClick={(e) => {
-                e.preventDefault();
-                user != null &&
-                  router.push(
-                    ROUTES[modelType.toUpperCase()].VIEW(
-                      row.original[`${modelType}_seq`]
-                    )
-                  );
-              }}
-            >
-              <Text>{row.original[`${modelType}_name`]}</Text>
-            </Anchor>
-          </Flex>
-        ),
-      },
-      { accessorKey: "description", header: "description" },
-      { accessorKey: "category_name", header: "CATEGORY", size: 140 },
-      {
-        accessorKey: `${modelType}_semantic_id`,
-        header: "SEMANTIC ID",
-        size: 240,
-        Cell: ({ cell }) => {
-          return cell.getValue();
-        },
-      },
-    ];
-
-    if (user) {
-      columns.push({
-        accessorKey: "externalButtons",
-        header: "Download",
-        size: 135,
-        Cell: ({ row }) => (
-          <Flex align={"center"} gap={"xs"}>
-            {user?.user_group_seq <= UserRole.Approvedor && (
-              <button
-                // href={ROUTES.AASMODEL.EDIT(row.original[`${modelType}_seq`])}
-                className="btn btn-light-success btn-sm"
-                onClick={async () => {
-                  const { data: existSeq } = await verifyModel({
-                    modelType,
-                    modelId: row.original[`${modelType}_id`],
-                    errorThrow: false,
-                  });
-                  if (
-                    existSeq != undefined &&
-                    existSeq != "" &&
-                    existSeq != row.original[`${modelType}_seq`]
-                  ) {
-                    const isConfirm = await confirmSave(
-                      `This model is already being edited in sequence ${existSeq}. Would you like to continue with that task?`,
-                      {
-                        labels: {
-                          confirm: "Confirm",
-                          cancel: "Cancel",
-                        },
-                      }
-                    );
-                    if (isConfirm) {
-                      router.push(
-                        ROUTES[modelType.toUpperCase()].EDIT(existSeq)
-                      );
-                    }
-                  } else {
-                    router.push(
-                      ROUTES[modelType.toUpperCase()].EDIT(
-                        row.original[`${modelType}_seq`]
-                      )
-                    );
-                  }
-                }}
-              >
-                <i className="fa-regular fa-pen-to-square"></i> Edit
-              </button>
-            )}
-            {user != null && (
-              <Menu shadow="md" width={200}>
-                <Menu.Target>
-                  <button
-                    className="btn btn-success btn-sm dropdown-toggle"
-                    type="button"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                  >
-                    Export
-                  </button>
-                </Menu.Target>
-                <Menu.Dropdown>
-                  {["json", "xml", "aasx"].map((format) => (
-                    <Menu.Item
-                      key={format}
-                      onClick={() => handleExport(format, row.original)}
-                    >
-                      {format}
-                    </Menu.Item>
-                  ))}
-                </Menu.Dropdown>
-              </Menu>
-            )}
-          </Flex>
-        ),
-      });
-    }
-    return columns;
-  }, [user, isFetchingModels]);
-
-  const table = useMantineReactTable({
-    columns: tableColumns,
-    data: modelsData as MRT_RowData[],
-    rowCount: models?.recordsTotal ?? 0,
-    state: {
-      pagination,
-      showSkeletons: isFetchingModels,
-    },
-    enableColumnPinning: true,
-    initialState: {
-      columnPinning: {
-        // right: ["externalButtons"],
-      },
-    },
-    layoutMode: "grid",
-    onPaginationChange: setPagination,
-    mantineTableBodyCellProps: {
-      styles: {
-        td: {
-          wordBreak: "break-all",
-          overflowWrap: "break-word",
-        },
-      },
-    },
-  });
 
   return (
-    <>
-      {/* begin::Toolbar */}
-      <div className="toolbar py-5 py-lg-5" id="kt_toolbar">
-        {/* begin::Container */}
-        <div
-          id="kt_toolbar_container"
-          className="container-xxl d-flex flex-stack flex-wrap"
-        >
-          {/* begin::Page title */}
-          <div className="page-title d-flex flex-column me-3">
-            {/* begin::Title */}
-            <h1 className="d-flex text-gray-900 fw-bold my-1 fs-3">
-              Submodel Template
-            </h1>
-            {/* end::Title */}
-            {/* begin::Breadcrumb */}
-            <ul className="breadcrumb breadcrumb-dot fw-semibold text-gray-600 fs-7 my-1">
-              {/* begin::Item */}
-              <li className="breadcrumb-item text-gray-600">
-                <Link href="/" className="text-gray-600 text-hover-primary">
-                  Home
-                </Link>
-              </li>
-              {/* end::Item */}
-              {/* begin::Item */}
-              <li className="breadcrumb-item text-gray-600">
-                Submodel Template
-              </li>
-              {/* end::Item */}
-            </ul>
-            {/* end::Breadcrumb */}
-          </div>
-          {/* end::Page title */}
-          {/* begin::Actions */}
-          <div className="d-flex align-items-center py-2 py-md-1">
-            {/* begin::Button */}
-            {user?.user_group_seq <= UserRole.Approvedor && (
-              <Link
-                href={ROUTES.SUBMODEL.CREATE}
-                className="btn btn-success fw-bold"
-              >
-                <i className="fa-solid fa-tablet"></i>SM Register
-              </Link>
-            )}
-            {/* end::Button */}
-          </div>
-          {/* end::Actions */}
-        </div>
-        {/* end::Container */}
-      </div>
-      {/* end::Toolbar */}
-      {/* begin::Container */}
-      <div
-        id="kt_content_container"
-        className="d-flex flex-column-fluid align-items-start container-xxl"
-      >
-        {/* begin::Post */}
-        <div className="content flex-row-fluid" id="kt_content">
+    <div className="min-h-screen bg-zinc-50">
+      {/* ── Page header ── */}
+      <div className="bg-white border-b border-zinc-200 px-6 py-5">
+        <div className="mx-auto max-w-screen-xl flex items-center justify-between">
           <div>
-            <div>
-              <SearchBox onSearch={handleSearch}>
-                <div className="col-lg-3 d-flex align-items-center mb-lg-0">
-                  <i className="ki-outline ki-element-11 fs-1 text-gray-500 me-1"></i>
-
-                  <CategoryCombobox
-                    className="border-0"
-                    code="sm_category"
-                    value={searchState.category_seq}
-                    setValue={(value) =>
-                      setSearchState((prev) => ({
-                        ...prev,
-                        category_seq: value ?? "",
-                        searchKey: searchRef.current.searchKey,
-                      }))
-                    }
-                  />
-                </div>
-
-                {/* Search Input */}
-                <div className="position-relative w-md-400px me-md-2">
-                  <i className="ki-outline ki-magnifier fs-3 text-gray-500 position-absolute top-50 translate-middle ms-6"></i>
-                  <input
-                    type="text"
-                    className="form-control form-control-solid ps-10"
-                    name="search"
-                    onChange={(e) => {
-                      searchRef.current.searchKey = e.target.value;
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key == "Enter") {
-                        handleSearch();
-                      }
-                    }}
-                    placeholder="Keyword Search"
-                  />
-                </div>
-              </SearchBox>
-            </div>
-            <FlexTable
-              layoutType={layoutType}
-              setLayoutType={setLayoutType}
-              renderGridItem={renderGridItem}
-              table={table}
-            />
+            <h1 className="text-lg font-bold text-zinc-900">Submodel Templates</h1>
+            <p className="text-sm text-zinc-500 mt-0.5">
+              {isLoading ? "Loading..." : `${totalCount} templates available`}
+            </p>
           </div>
+          {user && user.user_group_seq <= UserRole.Approvedor && (
+            <Link href={ROUTES.SUBMODEL.CREATE} className={cn(buttonVariants({ size: "sm" }))}>
+              <Plus className="w-3.5 h-3.5 mr-1.5" />
+              New Template
+            </Link>
+          )}
         </div>
-        {/* end::Post */}
       </div>
-      {/* end::Container */}
-    </>
+
+      <div className="mx-auto max-w-screen-xl px-6 py-6 flex gap-6">
+        {/* ── Left sidebar ── */}
+        <aside className="w-52 shrink-0">
+          <div className="sticky top-6 space-y-1">
+            {/* Search */}
+            <div className="relative mb-4">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+              <Input
+                className="h-8 pl-8 text-sm bg-white border-zinc-200 rounded-lg"
+                placeholder="Search..."
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              />
+            </div>
+
+            {/* Category label */}
+            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
+              Category
+            </p>
+
+            {/* All */}
+            <button
+              onClick={() => handleCategory("all")}
+              className={cn(
+                "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm transition-colors",
+                activeCategory === "all"
+                  ? "bg-zinc-900 text-white font-medium"
+                  : "text-zinc-600 hover:bg-zinc-100"
+              )}
+            >
+              <span>All</span>
+              <span className={cn("text-[11px] tabular-nums", activeCategory === "all" ? "text-zinc-300" : "text-zinc-400")}>
+                {totalCount}
+              </span>
+            </button>
+
+            {categories.map((c: any) => {
+              const id = String(c.category_seq ?? c.id);
+              const active = activeCategory === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => handleCategory(id)}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm transition-colors text-left",
+                    active
+                      ? "bg-zinc-900 text-white font-medium"
+                      : "text-zinc-600 hover:bg-zinc-100"
+                  )}
+                >
+                  <span className="truncate">{c.category_name ?? c.text}</span>
+                </button>
+              );
+            })}
+          </div>
+        </aside>
+
+        {/* ── Main content ── */}
+        <div className="flex-1 min-w-0">
+          {/* toolbar */}
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-zinc-500">
+              {searchKey && <span className="text-zinc-900 font-medium">"{searchKey}" · </span>}
+              {isLoading ? "Loading..." : `${models.length} of ${totalCount}`}
+            </p>
+            <div className="flex items-center gap-1 bg-white border border-zinc-200 rounded-lg p-0.5">
+              <button
+                onClick={() => setLayoutType("grid")}
+                className={cn("p-1.5 rounded-md transition-colors", layoutType === "grid" ? "bg-zinc-900 text-white" : "text-zinc-400 hover:text-zinc-600")}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setLayoutType("list")}
+                className={cn("p-1.5 rounded-md transition-colors", layoutType === "list" ? "bg-zinc-900 text-white" : "text-zinc-400 hover:text-zinc-600")}
+              >
+                <AlignJustify className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* error */}
+          {error && (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 mb-4">
+              Failed to load templates. Please check your connection and try again.
+            </div>
+          )}
+
+          {/* loading skeletons */}
+          {isLoading && layoutType === "grid" && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 9 }).map((_, i) => (
+                <Skeleton key={i} className="h-44 rounded-xl" />
+              ))}
+            </div>
+          )}
+          {isLoading && layoutType === "list" && (
+            <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="h-14 rounded-none border-b border-zinc-100 last:border-b-0" />
+              ))}
+            </div>
+          )}
+
+          {/* grid view */}
+          {!isLoading && layoutType === "grid" && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {models.map((model: any) => (
+                <TemplateCard key={model.submodel_seq} model={model} />
+              ))}
+              {models.length === 0 && (
+                <div className="col-span-full flex flex-col items-center justify-center py-24 text-zinc-400">
+                  <Layers className="w-10 h-10 mb-3 opacity-30" />
+                  <p className="text-sm font-medium">No templates found</p>
+                  <p className="text-xs mt-1">Try adjusting your search or category filter</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* list view */}
+          {!isLoading && layoutType === "list" && (
+            <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
+              {models.map((model: any) => (
+                <TemplateRow key={model.submodel_seq} model={model} />
+              ))}
+              {models.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-24 text-zinc-400">
+                  <Layers className="w-10 h-10 mb-3 opacity-30" />
+                  <p className="text-sm font-medium">No templates found</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* pagination */}
+          {totalPages > 1 && (
+            <div className="mt-8 flex items-center justify-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                const p = i + Math.max(1, Math.min(page - 3, totalPages - 6));
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={cn(
+                      "w-8 h-8 rounded-lg text-sm font-medium transition-colors",
+                      p === page
+                        ? "bg-zinc-900 text-white"
+                        : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
+                    )}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

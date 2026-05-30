@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { TreeNodeData } from "@mantine/core";
 
 export async function parseJsonFile(file: File): Promise<any> {

@@ -1,8 +1,5 @@
-import ModelForm from "@/components/feature/model/ModelForm";
-import React from "react";
+import ModelCreateForm from "@/components/feature/model/ModelCreateForm";
 
-function page() {
-  return <ModelForm mode={"create"} modelType={"aasmodel"} />;
+export default function Page() {
+  return <ModelCreateForm modelType="aasmodel" />;
 }
-
-export default page;

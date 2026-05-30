@@ -1,6 +1,11 @@
 "use client";
 
-import { Modal, Box, Text } from "@mantine/core";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface FilePreviewModalProps {
   opened: boolean;
@@ -18,15 +23,24 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   const isPdf = fileType.toLowerCase().includes("pdf");
 
   return (
-    <Modal opened={opened} onClose={onClose} title="File Preview" size="xl" centered>
-      <Box style={{ height: "70vh" }}>
-        {isPdf ? (
-          <iframe src={fileUrl} width="100%" height="100%" title="File Preview" />
-        ) : (
-          <img src={fileUrl} alt="File Preview" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
-        )}
-      </Box>
-    </Modal>
+    <Dialog open={opened} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-3xl w-full">
+        <DialogHeader>
+          <DialogTitle>File Preview</DialogTitle>
+        </DialogHeader>
+        <div className="h-[70vh]">
+          {isPdf ? (
+            <iframe src={fileUrl} width="100%" height="100%" title="File Preview" className="rounded" />
+          ) : (
+            <img
+              src={fileUrl}
+              alt="File Preview"
+              className="max-w-full max-h-full object-contain mx-auto"
+            />
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

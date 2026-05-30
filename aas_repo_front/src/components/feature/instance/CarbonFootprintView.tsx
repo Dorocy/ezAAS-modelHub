@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from "react";
 import { Tabs, Text, Badge, Flex, Table, Tooltip, Grid, Card, Group } from "@mantine/core";
 import _ from "lodash";

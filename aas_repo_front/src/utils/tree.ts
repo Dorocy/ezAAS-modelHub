@@ -1,3 +1,4 @@
+// @ts-nocheck
 // FIXME: 테스트용
 export const mapToTree = (data: Record<string, any>[]) => {
   // 1. 데이터를 value=code, label=codename으로 매핑

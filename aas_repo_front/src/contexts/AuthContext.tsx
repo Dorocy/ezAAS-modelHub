@@ -2,24 +2,37 @@
 "use client";
 
 import React, { createContext, useState, useContext, useEffect, useCallback } from "react";
-import { useRouter, usePathname, redirect } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { ROUTES, canAccessPath } from "@/constants/routes";
 import type { AuthTokenData, TokenPayload, TokenProfile } from "@/types/auth";
 import { showToast } from "@/utils/toast";
-import { signUp, loginWithCredentials } from "@/api";
+import { signUp, loginWithCredentials } from "@/api/index";
 import { jwtDecode } from "jwt-decode";
 import { useLanguage } from "./LanguageContext";
+import { setClientToken } from "@/app/tokenStore";
 
 interface AuthContextType {
   user: TokenProfile | null;
   isAuthenticated: boolean;
   authToken: AuthTokenData | undefined;
-  login: (email: string, password: string, redirectUrl?: string) => Promise<void>;
+  login: (email: string, password: string, redirectUrl?: string) => Promise<string | void>;
   logout: () => Promise<void>;
   loginWithSocial: (social: "google" | "naver") => void;
   signUpWithCredential: (email: string, password: string) => Promise<void>;
   language: ReturnType<typeof useLanguage>;
 }
+
+// ── 개발용 Mock Admin ──────────────────────────────────────────────────────
+// NEXT_PUBLIC_MOCK_ADMIN=true 환경변수가 설정되어 있을 때만 활성화.
+// ngrok 등 실제 백엔드가 연결된 경우에는 비활성화.
+const MOCK_ADMIN_PROFILE: TokenProfile = {
+  user_seq: 1,
+  user_id: "admin",
+  user_name: "Admin",
+  user_group_seq: 1,
+  user_group_name: "Manager",
+  user_photo_url: undefined,
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -30,11 +43,14 @@ export const AuthProvider = ({
   tokenMessage: string;
   children: React.ReactNode;
 }) => {
+  const isMockMode = process.env.NEXT_PUBLIC_MOCK_ADMIN === "true";
+
   const [authToken, setAuthToken] = useState<AuthTokenData | undefined>(() => {
+    if (isMockMode) return { target: "AASREPO_MOCK", payload: { jwt_access_token: "" } } as any;
     let authToken: AuthTokenData | undefined;
     try {
       authToken = JSON.parse(tokenMessage);
-      if (!authToken?.target.startsWith("AASREPO")) {
+      if (typeof authToken?.target !== "string" || !authToken.target.startsWith("AASREPO")) {
         authToken = undefined;
       }
     } catch (error) {
@@ -43,17 +59,26 @@ export const AuthProvider = ({
     }
   });
   const [payload, setPayload] = useState<TokenPayload | undefined>(() => {
+    if (isMockMode) return undefined;
     return authToken
       ? jwtDecode<TokenPayload>(authToken.payload.jwt_access_token)
       : undefined;
   });
   const [user, setUser] = useState<TokenProfile | null>(() => {
+    if (isMockMode) return MOCK_ADMIN_PROFILE;
     return payload ? payload.profile : null;
   });
 
   const router = useRouter();
   const pathname = usePathname();
   const language = useLanguage();
+
+  // 페이지 새로고침 시 authToken이 있으면 클라이언트 토큰 복원
+  useEffect(() => {
+    if (authToken) {
+      setClientToken(JSON.stringify(authToken));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isAuthenticated = !!user;
   const allowRender = canAccessPath(pathname, user?.user_group_seq);
@@ -96,7 +121,12 @@ export const AuthProvider = ({
       return showToast.error("로그인 정보가 올바르지 않습니다.");
     }
 
-    // 쿠키 설정을 위한 API 호출
+    // 메모리 토큰 저장 (프록시 Authorization 헤더에 사용)
+    setClientToken(JSON.stringify(token));
+
+    // 쿠키 설정을 위한 API 호출 (서버사이드 렌더링용)
+    // 반드시 await 한다. 그렇지 않으면 아래 router.replace로 페이지가 이동/리렌더될 때
+    // 이전(만료/무효) 쿠키가 남아있어 서버사이드 요청이 옛 토큰으로 나가 401이 발생할 수 있다.
     await fetch("/api/auth/cookie", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -128,6 +158,7 @@ export const AuthProvider = ({
   // 로그아웃 함수 (서버에 쿠키 삭제 요청)
   const logout = useCallback(async () => {
     await fetch("/api/logout", { method: "POST" });
+    setClientToken(null);
     setAuthToken(undefined);
     setUser(null);
     setPayload(undefined);
@@ -188,18 +219,13 @@ export const AuthProvider = ({
         const token = event.data.token;
         if (!token) return;
 
-        console.log("[DEBUG] Login: Sending token to /api/auth/cookie:", token);
-        fetch("/api/auth/cookie", { 
+        fetch("/api/auth/cookie", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token }),
         }).then((response) => {
-          console.log("[DEBUG] Login: Response status:", response.status);
           return response.json();
-        }).then((data) => {
-
-          console.log("[DEBUG] Login: Response data:", data);
-          
+        }).then(() => {
           setAuthToken(token);
           const payload = jwtDecode<TokenPayload>(
             token.payload.jwt_access_token
@@ -221,8 +247,8 @@ export const AuthProvider = ({
 
 
   useEffect(() => {
-    // 로그인 페이지에서는 세션 만료 체크를 하지 않음
-    if (pathname === ROUTES.LOGIN) {
+    // mock 모드 또는 로그인 페이지에서는 세션 만료 체크를 하지 않음
+    if (isMockMode || pathname === ROUTES.LOGIN) {
       return;
     }
 
@@ -304,6 +330,10 @@ export const AuthProvider = ({
     return null;
   }
 
+  // mock 모드이거나 인증된 경우 항상 children 렌더링
+  // (forbidden 체크는 위의 useEffect에서 리다이렉트로 처리)
+  const shouldRender = isMockMode || allowRender === "allow";
+
   return (
     <AuthContext.Provider
       value={{
@@ -317,7 +347,7 @@ export const AuthProvider = ({
         language,
       }}
     >
-      {allowRender === "allow" && children}
+      {shouldRender && children}
     </AuthContext.Provider>
   );
 };

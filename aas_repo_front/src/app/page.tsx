@@ -1,328 +1,249 @@
-/*
- * 파일명: src/app/page.tsx
- * 작성자: 김태훈
- * 작성일: 2024-03-15
- * 최종수정일: 2024-03-29
- *
- * 저작권: (c) 2025 IMPIX. 모든 권리 보유.
- *
- * 설명: KETI ezAAS Model Hub의 메인 페이지입니다.
- * 이 페이지는 다음과 같은 주요 기능을 제공합니다:
- * - AAS 템플릿, 서브모델, 인스턴스에 대한 통계 및 빠른 접근
- * - 통합 검색 기능
- * - KETI ezAAS Model Hub 소개 및 주요 기능 설명
- * - 제품 소개 비디오
- */
 import { getPublishedCount } from "@/api";
 import AASSearchBar from "@/components/feature/app/AASSearchBar";
+import VideoEmbed from "@/components/feature/app/VideoEmbed";
+import Link from "next/link";
+import {
+  LayoutTemplate,
+  Puzzle,
+  Layers,
+  ArrowRight,
+  FileStack,
+  Activity,
+  Cpu,
+} from "lucide-react";
 
 export const metadata = { title: "KETI ezAAS Model Hub" };
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  let publishedCount = await getPublishedCount();
-  if (Array.isArray(publishedCount)) {
-    publishedCount = publishedCount.reduce((prev, curr) => {
-      prev[curr.ty] = curr;
-      return prev;
-    }, {});
+  let aasCount = 0;
+  let smCount  = 0;
+  let insCount = 0;
+
+  try {
+    const raw = await getPublishedCount();
+    const list: Array<{ ty: string; cnt: number }> = Array.isArray(raw) ? raw : [];
+    aasCount = list.find((r) => r.ty === "aasmodel")?.cnt ?? 0;
+    smCount  = list.find((r) => r.ty === "submodel")?.cnt ?? 0;
+    insCount = list.find((r) => r.ty === "instance")?.cnt ?? 0;
+  } catch {
+    // backend unreachable
   }
 
   return (
-    <>
-      {/*begin::Toolbar*/}
-      <div className="toolbar py-5 py-lg-5 mb-0" id="kt_toolbar">
-        {/*begin::Container*/}
-        <div id="kt_toolbar_container" className="container-xxl py-5">
-          {/*begin::Row*/}
-          <div className="row gy-0 gx-10">
-            <div className="col-xl-12 mb-2">
-              <form action="#">
-                {/*begin::Card*/}
-                <AASSearchBar />
-                {/*end::Card*/}
-              </form>
+    <div className="min-h-full bg-background">
+
+      {/* ─── Hero ────────────────────────────────────────────────── */}
+      <section className="border-b border-border bg-white">
+        <div className="mx-auto max-w-screen-xl px-6 lg:px-10 py-14 lg:py-20">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-10 lg:gap-14">
+
+            {/* 왼쪽: 제목 + 설명 + stat + CTA */}
+            <div className="flex flex-col gap-6 lg:w-[44%] shrink-0">
+              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-semibold text-blue-600 tracking-wide">
+                <span className="size-1.5 rounded-full bg-blue-500 animate-pulse" />
+                IEC 63278 · AAS Part 1&amp;2 준수
+              </span>
+
+              <div>
+                <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-zinc-900 leading-[1.12]">
+                  Asset Administration
+                  <br />
+                  <span className="text-blue-600">Shell</span> Model Hub
+                </h1>
+                <p className="mt-4 text-base text-zinc-500 leading-relaxed">
+                  AAS 템플릿과 서브모델을 중앙에서 관리하고,
+                  노코드 방식으로 디지털 트윈 인스턴스를 생성합니다.
+                </p>
+              </div>
+
+              {/* stat 숫자 */}
+              <div className="flex gap-px rounded-xl overflow-hidden border border-zinc-200 w-fit">
+                {[
+                  { label: "AAS 템플릿",     value: aasCount,  href: "/aas" },
+                  { label: "서브모델 템플릿", value: smCount,   href: "/submodel" },
+                  { label: "인스턴스",        value: insCount,  href: "/instance" },
+                ].map((s, i) => (
+                  <Link
+                    key={i}
+                    href={s.href}
+                    className="group flex flex-col items-center gap-0.5 px-5 py-3.5 bg-white hover:bg-zinc-50 transition-colors"
+                  >
+                    <span className="text-2xl font-bold tabular-nums text-zinc-900 group-hover:text-blue-600 transition-colors">
+                      {s.value.toLocaleString()}
+                    </span>
+                    <span className="text-[10px] font-medium text-zinc-400 whitespace-nowrap">{s.label}</span>
+                  </Link>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-3 flex-wrap">
+                <Link
+                  href="/aas"
+                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-zinc-900 px-5 text-sm font-semibold text-white hover:bg-zinc-700 transition-colors"
+                >
+                  템플릿 탐색 <ArrowRight className="size-4" />
+                </Link>
+                <Link
+                  href="/instance/create"
+                  className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-5 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors"
+                >
+                  인스턴스 만들기
+                </Link>
+              </div>
+            </div>
+
+            {/* 오른쪽: 소개 영상 */}
+            <div className="flex-1 min-w-0">
+              <VideoEmbed src="https://www.youtube.com/embed/n4IDBR2C1CY" />
             </div>
           </div>
-
-          <div className="row gy-0 gx-10">
-            <div className="col-xl-4">
-              <div className="card card-flush h-lg-100">
-                {/*begin::Body*/}
-                <div className="card-body">
-                  {/*begin::Item*/}
-                  <a href="/aas">
-                    <div className="d-flex flex-stack">
-                      {/*begin::Section*/}
-                      <div className="text-gray-700 fw-semibold fs-6 me-2">
-                        <i className="fa-regular fa-file-lines"></i> AAS
-                        Templates
-                      </div>
-                      {/*end::Section*/}
-                      {/*begin::Statistics*/}
-                      <div className="d-flex align-items-senter">
-                        {publishedCount?.["aasmodel"]?.["is_new"] && (
-                          <span className="badge badge-light-success me-2">
-                            New
-                          </span>
-                        )}
-                        {/*begin::Number*/}
-                        <span className="text-gray-900 fw-bolder fs-6">
-                          {publishedCount?.["aasmodel"]?.["cnt"] ?? "0"}
-                        </span>
-                        {/*end::Number*/}
-                      </div>
-                      {/*end::Statistics*/}
-                    </div>
-                  </a>
-                  {/*end::Item*/}
-                </div>
-                {/*end::Body*/}
-              </div>
-            </div>
-
-            <div className="col-xl-4">
-              <div className="card card-flush h-lg-100">
-                {/*begin::Body*/}
-                <div className="card-body">
-                  {/*begin::Item*/}
-                  <a href="/submodel">
-                    <div className="d-flex flex-stack">
-                      {/*begin::Section*/}
-                      <div className="text-gray-700 fw-semibold fs-6 me-2">
-                        <i className="fa-regular fa-file"></i> Submodel Template
-                      </div>
-                      {/*end::Section*/}
-                      {/*begin::Statistics*/}
-                      <div className="d-flex align-items-senter">
-                        {publishedCount?.["submodel"]?.["is_new"] && (
-                          <span className="badge badge-light-success me-2">
-                            New
-                          </span>
-                        )}
-                        {/*begin::Number*/}
-                        <span className="text-gray-900 fw-bolder fs-6">
-                          {publishedCount?.["submodel"]?.["cnt"] ?? "0"}
-                        </span>
-                        {/*end::Number*/}
-                      </div>
-                      {/*end::Statistics*/}
-                    </div>
-                  </a>
-                  {/*end::Item*/}
-                </div>
-                {/*end::Body*/}
-              </div>
-            </div>
-
-            <div className="col-xl-4">
-              <div className="card card-flush h-lg-100">
-                {/*begin::Body*/}
-                <div className="card-body">
-                  {/*begin::Item*/}
-                  <a href="/instance">
-                    <div className="d-flex flex-stack">
-                      {/*begin::Section*/}
-                      <div className="text-gray-700 fw-semibold fs-6 me-2">
-                        <i className="fa-regular fa-user"></i> AAS Instances
-                      </div>
-                      {/*end::Section*/}
-                      {/*begin::Statistics*/}
-                      <div className="d-flex align-items-senter">
-                        {publishedCount?.["instance"]?.["is_new"] && (
-                          <span className="badge badge-light-success me-2">
-                            New
-                          </span>
-                        )}
-                        {/*begin::Number*/}
-                        <span className="text-gray-900 fw-bolder fs-6">
-                          {publishedCount?.["instance"]?.["cnt"] ?? "0"}
-                        </span>
-                        {/*end::Number*/}
-                      </div>
-                      {/*end::Statistics*/}
-                    </div>
-                  </a>
-                  {/*end::Item*/}
-                </div>
-                {/*end::Body*/}
-              </div>
-            </div>
-          </div>
-          {/*end::Row*/}
         </div>
-        {/*end::Container*/}
-      </div>
+      </section>
 
-      <div className="py-5 py-lg-5" id="kt_toolbar">
-        {/*begin::Container*/}
-        <div id="kt_toolbar_container" className="container-xxl py-5">
-          {/*begin::Row*/}
-          <div className="row gy-0 gx-10">
-            <div className="col-xl-12">
-              {/*begin::Engage widget 2*/}
-              <div className="card card-xl-stretch bg-body mb-5 mb-xl-0">
-                {/*begin::Body*/}
-                <div className="card-body d-flex flex-column flex-lg-row flex-stack p-lg-15">
-                  {/*begin::Info*/}
-                  <div className="d-flex flex-column justify-content-center align-items-center align-items-lg-start me-10 text-center text-lg-start">
-                    {/*begin::Title*/}
-                    <h3 className="fs-2hx line-height-lg mb-5">
-                      <span className="fs-3hx">ezAAS Model Hub</span>{" "}
-                      <span style={{ fontWeight: "100" }}>
-                        for Industrial Digital Twin
-                      </span>
-                    </h3>
-                    {/*end::Title*/}
-                    <div className="fs-4 text-muted mb-7">
-                      serves as a central hub that supports the efficient creation and management of digital twins for industrial assets,
-                      <br />
-                      based on the Asset Administration Shell (AAS) standard
-                    </div>
-                    <a
-                      href="/about"
-                      className="btn btn-success fw-semibold px-6 py-3"
-                    >
-                      ezAAS Model Hub
-                    </a>
-                  </div>
-                  {/*end::Info*/}
-                  {/*begin::Illustration*/}
-                  <img
-                    src="/assets/media/aas/aas_main_ob.png"
-                    alt=""
-                    className="mw-200px mw-lg-250px mt-lg-n10"
-                  />
-                  {/*end::Illustration*/}
-                </div>
-                {/*end::Body*/}
-              </div>
-              {/*end::Engage widget 2*/}
-            </div>
-          </div>
-          {/*end::Row*/}
+      {/* ─── 검색 ────────────────────────────────────────────────── */}
+      <section className="border-b border-border bg-zinc-50/60">
+        <div className="mx-auto max-w-screen-xl px-6 lg:px-10 py-5">
+          <AASSearchBar />
         </div>
-        {/*end::Container*/}
-      </div>
-      {/*end::Toolbar*/}
+      </section>
 
-      {/*begin::Container*/}
-      <div
-        id="kt_content_container"
-        className="d-flex flex-column-fluid align-items-start container-xxl"
-      >
-        {/*begin::Post*/}
-        <div className="content flex-row-fluid" id="kt_content">
-          {/*begin::Row*/}
-          <div className="row gy-0 gx-10">
-            {/*begin::Col*/}
-            <div className="col-xl-12">
-              {/*begin::General Widget 1*/}
-              <div className="mb-10">
-                {/*begin::Tabs*/}
-                <ul className="nav row mb-10">
-                  <li className="nav-item col-12 col-lg mb-5 mb-lg-0">
-                    <a
-                      href="/aas"
-                      className="nav-link btn btn-flex btn-color-gray-500 btn-outline btn-active-primary d-flex flex-grow-1 flex-column flex-center py-5 h-1250px h-lg-175px"
-                    >
-                      <i className="ki-duotone ki-abstract-26 fs-3hx mb-5 mx-0">
-                        <span className="path1"></span>
-                        <span className="path2"></span>
-                      </i>
-                      <span className="fs-2 text-success">
-                        Unified <br />
-                        AAS and Submodel Template
-                      </span>
-                    </a>
-                  </li>
-                  <li className="nav-item col-12 col-lg mb-5 mb-lg-0">
-                    <a
-                      href="/aas"
-                      className="nav-link btn btn-flex btn-color-gray-500 btn-outline btn-active-primary d-flex flex-grow-1 flex-column flex-center py-5 h-1250px h-lg-175px"
-                    >
-                      <i className="ki-duotone ki-element-11 fs-3hx mb-5 mx-0">
-                        <span className="path1"></span>
-                        <span className="path2"></span>
-                        <span className="path3"></span>
-                        <span className="path4"></span>
-                      </i>
-                      <span className="fs-2 text-success">
-                        Compliance <br />
-                        with AAS standard
-                      </span>
-                    </a>
-                  </li>
-                  <li className="nav-item col-12 col-lg mb-5 mb-lg-0">
-                    <a
-                      href="/aas"
-                      className="nav-link btn btn-flex btn-color-gray-500 btn-outline btn-active-primary d-flex flex-grow-1 flex-column flex-center py-5 h-1250px h-lg-175px"
-                    >
-                      <i className="ki-duotone ki-briefcase fs-3hx mb-5 mx-0">
-                        <span className="path1"></span>
-                        <span className="path2"></span>
-                      </i>
-                      <span className="fs-2 text-success">
-                        Simplified AAS <br />
-                        Generation and Deployment
-                      </span>
-                    </a>
-                  </li>
-                  <li className="nav-item col-12 col-lg mb-5 mb-lg-0">
-                    <a
-                      href="/aas"
-                      className="nav-link btn btn-flex btn-color-gray-500 btn-outline btn-active-primary d-flex flex-grow-1 flex-column flex-center py-5 h-1250px h-lg-175px"
-                    >
-                      <i className="ki-duotone ki-chart-simple fs-3hx mb-5 mx-0">
-                        <span className="path1"></span>
-                        <span className="path2"></span>
-                        <span className="path3"></span>
-                        <span className="path4"></span>
-                      </i>
-                      <span className="fs-2 text-success">
-                        Scalability <br />
-                        through API Support
-                      </span>
-                    </a>
-                  </li>
-                </ul>
-
-                <div className="mb-19 mt-15">
-                  {/*begin::Top*/}
-                  <div className="text-center mb-12">
-                    {/*begin::Title*/}
-                    <h3 className="fs-2hx text-gray-900 mb-5">About</h3>
-                    {/*end::Title*/}
-                    {/*begin::Text*/}
-                    <div className="fs-5 text-muted fw-semibold">
-                      ezAAS Model Hub
-                    </div>
-                    {/*end::Text*/}
-                  </div>
-                  {/*end::Top*/}
-                  {/*begin::Row*/}
-                  <div className="row g-10">
-                    <div className="col-md-12">
-                      <iframe
-                        className="embed-responsive-item rounded h-500px w-100"
-                        // src="https://www.youtube.com/embed/3Km1DXxn0BQ?si=vYGDRr6XdbnEp0UY"
-                        src="https://www.youtube.com/embed/n4IDBR2C1CY?si=jvDaO89Su0huplNn"
-                        allowFullScreen={true}
-                      ></iframe>
-                    </div>
-                  </div>
-                  {/*end::Row*/}
-                </div>
-              </div>
-              {/*end::General Widget 1*/}
-            </div>
-            {/*end::Col*/}
-          </div>
-          {/*end::Row*/}
+      {/* ─── 섹션 네비게이션 ─────────────────────────────────────── */}
+      <section className="mx-auto max-w-screen-xl px-6 lg:px-10 py-12 lg:py-16">
+        <div className="mb-8">
+          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-2">시작하기</p>
+          <h2 className="text-2xl lg:text-3xl font-bold text-zinc-900">무엇을 하고 싶으신가요?</h2>
         </div>
-        {/*end::Post*/}
-      </div>
-      {/*end::Container*/}
-    </>
+        <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-zinc-200 border border-zinc-200 rounded-2xl overflow-hidden bg-white">
+          {[
+            {
+              num: "01",
+              href: "/aas",
+              icon: LayoutTemplate,
+              title: "AAS 템플릿 탐색",
+              desc: "Asset Administration Shell의 전체 구조를 정의합니다. 서브모델·개념 사전이 포함된 표준 기반 템플릿을 탐색하세요.",
+              count: aasCount,
+              countLabel: "개 템플릿",
+              cta: "탐색하기",
+              accent: "group-hover:text-blue-600",
+              bg: "group-hover:bg-blue-50/40",
+              dot: "bg-blue-500",
+            },
+            {
+              num: "02",
+              href: "/submodel",
+              icon: Puzzle,
+              title: "서브모델 탐색",
+              desc: "재사용 가능한 서브모델 블록을 탐색하고 AAS 템플릿에 조합해 나만의 구조를 만드세요.",
+              count: smCount,
+              countLabel: "개 서브모델",
+              cta: "탐색하기",
+              accent: "group-hover:text-indigo-600",
+              bg: "group-hover:bg-indigo-50/40",
+              dot: "bg-indigo-500",
+            },
+            {
+              num: "03",
+              href: "/instance/create",
+              icon: Layers,
+              title: "인스턴스 생성",
+              desc: "템플릿을 골라 필드를 채우기만 하면 완성됩니다. 코드 없이 실제 자산의 디지털 트윈을 만드세요.",
+              count: insCount,
+              countLabel: "개 인스턴스",
+              cta: "만들기",
+              accent: "group-hover:text-emerald-600",
+              bg: "group-hover:bg-emerald-50/40",
+              dot: "bg-emerald-500",
+            },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.num}
+                href={item.href}
+                className={`group flex flex-col gap-6 p-8 transition-colors ${item.bg}`}
+              >
+                <div className="flex items-start justify-between">
+                  <span className="text-[11px] font-mono font-bold text-zinc-300">{item.num}</span>
+                  <Icon className={`size-5 text-zinc-300 transition-colors ${item.accent}`} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <h3 className={`text-lg font-bold text-zinc-900 transition-colors ${item.accent}`}>{item.title}</h3>
+                  <p className="text-sm text-zinc-500 leading-relaxed">{item.desc}</p>
+                </div>
+                <div className="flex items-end justify-between mt-auto pt-2 border-t border-zinc-100">
+                  <span className="flex items-center gap-1.5 text-xs text-zinc-400">
+                    <span className={`size-1.5 rounded-full ${item.dot}`} />
+                    {item.count.toLocaleString()}{item.countLabel}
+                  </span>
+                  <span className={`flex items-center gap-1 text-xs font-semibold text-zinc-400 transition-all ${item.accent} group-hover:gap-2`}>
+                    {item.cta} <ArrowRight className="size-3" />
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ─── 짙은 배경 특징 섹션 ────────────────────────────────── */}
+      <section className="bg-zinc-900">
+        <div className="mx-auto max-w-screen-xl px-6 lg:px-10 py-14 lg:py-20">
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 mb-12">
+            <div>
+              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-2">플랫폼 특징</p>
+              <h2 className="text-2xl lg:text-3xl font-bold text-white">
+                디지털 트윈 구축을<br />더 쉽게
+              </h2>
+            </div>
+            <p className="text-sm text-zinc-400 leading-relaxed max-w-sm">
+              복잡한 AAS 표준 구조를 누구나 쉽게 다룰 수 있도록 설계된 플랫폼입니다.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-px bg-zinc-700/50 rounded-2xl overflow-hidden">
+            {[
+              {
+                icon: FileStack,
+                title: "표준 기반 템플릿",
+                body: "IEC 63278 AAS 표준을 준수하는 템플릿을 제공합니다. 자산 유형별로 분류되어 빠르게 원하는 구조를 찾을 수 있습니다.",
+                tag: "IEC 63278",
+              },
+              {
+                icon: Activity,
+                title: "노코드 인스턴스 생성",
+                body: "템플릿을 선택하고 필드를 채우기만 하면 완성된 AAS 인스턴스가 만들어집니다. 개념 사전으로 각 필드를 바로 이해하세요.",
+                tag: "No-Code",
+              },
+              {
+                icon: Cpu,
+                title: "REST API 연동",
+                body: "생성된 인스턴스는 REST API로 외부 시스템과 자유롭게 연동할 수 있습니다. 표준 포맷으로 데이터를 주고받습니다.",
+                tag: "REST API",
+              },
+            ].map((f, i) => {
+              const Icon = f.icon;
+              return (
+                <div key={i} className="flex flex-col gap-6 bg-zinc-800/60 p-8">
+                  <div className="flex items-center justify-between">
+                    <div className="flex size-10 items-center justify-center rounded-xl bg-zinc-700">
+                      <Icon className="size-4 text-zinc-300" />
+                    </div>
+                    <span className="text-[10px] font-mono font-semibold text-zinc-500 border border-zinc-700 px-2 py-0.5 rounded-full">
+                      {f.tag}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <p className="text-sm font-bold text-white">{f.title}</p>
+                    <p className="text-sm text-zinc-400 leading-relaxed">{f.body}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+    </div>
   );
 }
