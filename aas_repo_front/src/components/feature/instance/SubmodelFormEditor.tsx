@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/sheet";
 import {
   ChevronRight, ChevronDown, CheckCircle2, Circle, AlertCircle, Plus, Trash2, Code2,
-  Settings2, Tag, FileText, Hash, Languages, Ruler, Link2, Boxes,
+  Settings2, Tag, FileText, Hash, Languages, Ruler, Link2, Boxes, ArrowRight,
 } from "lucide-react";
 
 /* Property/Range 등에서 선택 가능한 XSD value types */
@@ -330,21 +330,34 @@ function collectRefTargets(submodelNode: any): {
   return out;
 }
 
+/* AAS Reference 객체를 사람이 읽기 쉬운 한 줄 요약으로 변환 */
+function summarizeReference(ref: any): { text: string; filled: boolean } {
+  const keys: any[] = Array.isArray(ref?.keys) ? ref.keys : [];
+  if (keys.length === 0 || !keys[keys.length - 1]?.value) {
+    return { text: "참조 없음", filled: false };
+  }
+  if (ref?.type === "ExternalReference") {
+    return { text: keys[keys.length - 1].value, filled: true };
+  }
+  // ModelReference: 서브모델 idShort는 알 수 없으니 마지막 엘리먼트 경로만 강조
+  const elementPath = keys.slice(1).map((k) => k.value).join(" / ");
+  return { text: elementPath || keys[0]?.value || "참조 없음", filled: true };
+}
+
 /* ─────────────────────────────────────────────────────────────────────────
-   ReferenceElementEditor — ReferenceElement 전용 참조값 편집기
+   ReferencePicker — 단일 Reference 값을 선택/입력하는 재사용 컴포넌트
    · ModelReference : 현재 AAS 인스턴스 내부의 (서브모델 + 엘리먼트 idShort) 경로 선택
    · ExternalReference : 사용자가 외부 식별자(id)를 직접 입력
+   value 는 { type, keys } 형태의 AAS Reference 객체, onChange 로 즉시 반영.
 ───────────────────────────────────────────────────────────────────────────*/
-function ReferenceElementEditor({
-  node, state, treeData, onValueChange,
+function ReferencePicker({
+  value, treeData, onChange,
 }: {
-  node: any;
-  state: Record<string, any>;
+  value: any;
   treeData: any[];
-  onValueChange: SubmodelFormEditorProps["onValueChange"];
+  onChange: (ref: any) => void;
 }) {
-  const valueKey = `${node.valuePath}.value`;
-  const current = (valueKey in state ? state[valueKey] : node.originalValue) ?? { type: "ModelReference", keys: [] };
+  const current = value ?? { type: "ModelReference", keys: [] };
   const refType: "ModelReference" | "ExternalReference" =
     current?.type === "ExternalReference" ? "ExternalReference" : "ModelReference";
 
@@ -360,16 +373,15 @@ function ReferenceElementEditor({
     [selectedSubmodel]
   );
 
-  // 현재 선택된 엘리먼트 시그니처 (서브모델 key 이후 value들을 / 로 연결)
   const currentElementSig = (current?.keys ?? []).slice(1).map((k: any) => k.value).join("/");
   const externalId =
     refType === "ExternalReference" ? (current?.keys?.[0]?.value ?? "") : "";
 
   const setRefType = (t: string | null) => {
     if (t === "ExternalReference") {
-      onValueChange(valueKey, { type: "ExternalReference", keys: [{ type: "GlobalReference", value: "" }] });
+      onChange({ type: "ExternalReference", keys: [{ type: "GlobalReference", value: "" }] });
     } else {
-      onValueChange(valueKey, {
+      onChange({
         type: "ModelReference",
         keys: submodelId ? [{ type: "Submodel", value: submodelId }] : [],
       });
@@ -378,7 +390,7 @@ function ReferenceElementEditor({
 
   const handleSubmodel = (id: string | null) => {
     setSubmodelId(id ?? "");
-    onValueChange(valueKey, {
+    onChange({
       type: "ModelReference",
       keys: id ? [{ type: "Submodel", value: id }] : [],
     });
@@ -388,99 +400,181 @@ function ReferenceElementEditor({
     const target = targets.find(
       (t) => t.keys.slice(1).map((k) => k.value).join("/") === sig
     );
-    if (target) onValueChange(valueKey, { type: "ModelReference", keys: target.keys });
+    if (target) onChange({ type: "ModelReference", keys: target.keys });
   };
+
+  const submodelLabel = selectedSubmodel ? getDisplayLabel(selectedSubmodel.idShort) : "";
+
+  return (
+    <div className="space-y-2.5">
+      {/* Reference Type 토글 */}
+      <div className="flex gap-1.5 p-0.5 bg-zinc-100 rounded-lg">
+        {(["ModelReference", "ExternalReference"] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setRefType(t)}
+            className={cn(
+              "flex-1 text-xs font-medium py-1.5 rounded-md transition-colors",
+              refType === t ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+            )}
+          >
+            {t === "ModelReference" ? "내부 참조" : "외부 참조"}
+          </button>
+        ))}
+      </div>
+
+      {refType === "ModelReference" ? (
+        <div className="space-y-2">
+          <Select value={submodelId || undefined} onValueChange={handleSubmodel}>
+            <SelectTrigger className="h-9 text-sm">
+              <span className="flex items-center gap-1.5 min-w-0">
+                <Boxes size={13} className="text-zinc-400 shrink-0" />
+                <SelectValue placeholder="서브모델 선택..." />
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              {submodels.map((s) => (
+                <SelectItem key={s.id} value={s.id} className="text-sm">
+                  <span className="flex flex-col">
+                    <span className="font-medium">{getDisplayLabel(s.idShort)}</span>
+                    <span className="text-[11px] text-zinc-400 font-mono truncate max-w-[260px]">{s.id}</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={currentElementSig || undefined}
+            onValueChange={handleElement}
+            disabled={!submodelId || targets.length === 0}
+          >
+            <SelectTrigger className="h-9 text-sm">
+              <span className="flex items-center gap-1.5 min-w-0">
+                <Link2 size={13} className="text-zinc-400 shrink-0" />
+                <SelectValue placeholder={submodelId ? "엘리먼트 선택..." : "먼저 서브모델을 선택하세요"} />
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              {targets.map((t) => {
+                const sig = t.keys.slice(1).map((k) => k.value).join("/");
+                return (
+                  <SelectItem key={sig} value={sig} className="text-sm">
+                    <span className="flex items-center gap-2">
+                      <Badge variant="secondary" className="text-[9px] font-mono shrink-0">{t.modelType}</Badge>
+                      <span className="font-mono text-xs truncate max-w-[220px]">{t.labelPath}</span>
+                    </span>
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+
+          {currentElementSig && (
+            <div className="flex items-start gap-1.5 text-[11px] text-zinc-500 bg-zinc-50 rounded-md px-2 py-1.5">
+              <Boxes size={12} className="text-zinc-400 shrink-0 mt-0.5" />
+              <span className="font-mono break-all leading-relaxed">
+                {submodelLabel && <span className="text-zinc-400">{submodelLabel} › </span>}
+                <span className="text-zinc-700">{currentElementSig.replaceAll("/", " › ")}</span>
+              </span>
+            </div>
+          )}
+        </div>
+      ) : (
+        <Input
+          value={externalId}
+          onChange={(e) =>
+            onChange({
+              type: "ExternalReference",
+              keys: [{ type: "GlobalReference", value: e.target.value }],
+            })
+          }
+          placeholder="https://example.com/ids/..."
+          className="h-9 text-sm font-mono"
+        />
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ReferenceElementEditor — ReferenceElement 전용 참조값 편집기
+───────────────────────────────────────────────────────────────────────────*/
+function ReferenceElementEditor({
+  node, state, treeData, onValueChange,
+}: {
+  node: any;
+  state: Record<string, any>;
+  treeData: any[];
+  onValueChange: SubmodelFormEditorProps["onValueChange"];
+}) {
+  const valueKey = `${node.valuePath}.value`;
+  const current = (valueKey in state ? state[valueKey] : node.originalValue) ?? { type: "ModelReference", keys: [] };
+  return (
+    <DrawerField icon={<Link2 size={11} />} label="참조 대상" hint="내부 참조는 서브모델 id 기준으로 선택합니다 (idShort는 중복될 수 있음).">
+      <ReferencePicker value={current} treeData={treeData} onChange={(ref) => onValueChange(valueKey, ref)} />
+    </DrawerField>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   RelationshipElementEditor — first / second 두 엘리먼트 간의 연계 입력
+   각 값은 ReferenceElement 와 동일한 Reference 구조로 저장된다.
+───────────────────────────────────────────────────────────────────────────*/
+function RelationshipElementEditor({
+  node, state, treeData, onValueChange,
+}: {
+  node: any;
+  state: Record<string, any>;
+  treeData: any[];
+  onValueChange: SubmodelFormEditorProps["onValueChange"];
+}) {
+  const firstKey = `${node.valuePath}.first`;
+  const secondKey = `${node.valuePath}.second`;
+  const first = (firstKey in state ? state[firstKey] : node.first) ?? { type: "ModelReference", keys: [] };
+  const second = (secondKey in state ? state[secondKey] : node.second) ?? { type: "ModelReference", keys: [] };
+
+  const firstSummary = summarizeReference(first);
+  const secondSummary = summarizeReference(second);
 
   return (
     <>
-      <DrawerField icon={<Link2 size={11} />} label="Reference Type">
-        <Select value={refType} onValueChange={setRefType}>
-          <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ModelReference" className="text-sm">
-              <span className="flex flex-col">
-                <span className="font-medium">ModelReference</span>
-                <span className="text-[11px] text-zinc-400">현재 인스턴스 내부 엘리먼트 참조</span>
-              </span>
-            </SelectItem>
-            <SelectItem value="ExternalReference" className="text-sm">
-              <span className="flex flex-col">
-                <span className="font-medium">ExternalReference</span>
-                <span className="text-[11px] text-zinc-400">외부 식별자(id) 직접 입력</span>
-              </span>
-            </SelectItem>
-          </SelectContent>
-        </Select>
+      {/* 관계 요약 시각화: First → Second */}
+      <div className="px-5 py-4 border-b border-zinc-100">
+        <div className="flex items-center gap-2">
+          <div className={cn(
+            "flex-1 min-w-0 rounded-lg border px-3 py-2",
+            firstSummary.filled ? "border-blue-200 bg-blue-50" : "border-dashed border-zinc-200 bg-zinc-50"
+          )}>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-blue-500 mb-0.5">First</div>
+            <div className={cn("text-xs font-mono truncate", firstSummary.filled ? "text-zinc-700" : "text-zinc-400 italic")}>
+              {firstSummary.text}
+            </div>
+          </div>
+          <ArrowRight size={16} className="text-zinc-400 shrink-0" />
+          <div className={cn(
+            "flex-1 min-w-0 rounded-lg border px-3 py-2",
+            secondSummary.filled ? "border-emerald-200 bg-emerald-50" : "border-dashed border-zinc-200 bg-zinc-50"
+          )}>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 mb-0.5">Second</div>
+            <div className={cn("text-xs font-mono truncate", secondSummary.filled ? "text-zinc-700" : "text-zinc-400 italic")}>
+              {secondSummary.text}
+            </div>
+          </div>
+        </div>
+        <p className="text-[11px] text-zinc-400 leading-relaxed mt-2">
+          {"First 엘리먼트에서 Second 엘리먼트로의 관계를 정의합니다."}
+        </p>
+      </div>
+
+      <DrawerField icon={<span className="text-blue-500 font-bold text-[10px]">1st</span>} label="First (시작 엘리먼트)">
+        <ReferencePicker value={first} treeData={treeData} onChange={(ref) => onValueChange(firstKey, ref)} />
       </DrawerField>
 
-      {refType === "ModelReference" ? (
-        <>
-          <DrawerField icon={<Boxes size={11} />} label="Submodel" hint="서브모델 id 기준으로 선택합니다 (idShort는 중복될 수 있음).">
-            <Select value={submodelId || undefined} onValueChange={handleSubmodel}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="서브모델 선택..." />
-              </SelectTrigger>
-              <SelectContent>
-                {submodels.map((s) => (
-                  <SelectItem key={s.id} value={s.id} className="text-sm">
-                    <span className="flex flex-col">
-                      <span className="font-medium">{getDisplayLabel(s.idShort)}</span>
-                      <span className="text-[11px] text-zinc-400 font-mono truncate max-w-[260px]">{s.id}</span>
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </DrawerField>
-
-          <DrawerField icon={<Link2 size={11} />} label="Element" hint="참조할 엘리먼트의 경로(idShort)를 선택합니다.">
-            <Select
-              value={currentElementSig || undefined}
-              onValueChange={handleElement}
-              disabled={!submodelId || targets.length === 0}
-            >
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder={submodelId ? "엘리먼트 선택..." : "먼저 서브모델을 선택하세요"} />
-              </SelectTrigger>
-              <SelectContent>
-                {targets.map((t) => {
-                  const sig = t.keys.slice(1).map((k) => k.value).join("/");
-                  return (
-                    <SelectItem key={sig} value={sig} className="text-sm">
-                      <span className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-[9px] font-mono shrink-0">{t.modelType}</Badge>
-                        <span className="font-mono text-xs truncate max-w-[220px]">{t.labelPath}</span>
-                      </span>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </DrawerField>
-
-          {currentElementSig && (
-            <DrawerField icon={<Code2 size={11} />} label="참조 경로 (미리보기)">
-              <code className="block text-[11px] text-zinc-600 bg-zinc-50 rounded-md px-2 py-1.5 font-mono break-all">
-                {(current?.keys ?? []).map((k: any) => `${k.type}=${k.value}`).join("  ›  ")}
-              </code>
-            </DrawerField>
-          )}
-        </>
-      ) : (
-        <DrawerField icon={<Tag size={11} />} label="External Id" hint="외부 참조 식별자(URI/IRI 등)를 입력합니다.">
-          <Input
-            value={externalId}
-            onChange={(e) =>
-              onValueChange(valueKey, {
-                type: "ExternalReference",
-                keys: [{ type: "GlobalReference", value: e.target.value }],
-              })
-            }
-            placeholder="https://example.com/ids/..."
-            className="h-9 text-sm font-mono"
-          />
-        </DrawerField>
-      )}
+      <DrawerField icon={<span className="text-emerald-600 font-bold text-[10px]">2nd</span>} label="Second (대상 엘리먼트)">
+        <ReferencePicker value={second} treeData={treeData} onChange={(ref) => onValueChange(secondKey, ref)} />
+      </DrawerField>
     </>
   );
 }
@@ -623,6 +717,15 @@ function ElementDetailDrawer({
         onValueChange={onValueChange}
       />
     );
+  } else if (modelType === "RelationshipElement" || modelType === "AnnotatedRelationshipElement") {
+    body = (
+      <RelationshipElementEditor
+        node={node}
+        state={state}
+        treeData={treeData}
+        onValueChange={onValueChange}
+      />
+    );
   } else {
     // RelationshipElement / 기타 — 단순 값 입력
     const valueKey = `${valuePath}.originalValue`;
@@ -736,7 +839,7 @@ function FieldLabelWithHint({
   );
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
+/* ──────────────���──────────────────────────────────────────────────────────
    FileFieldInput — separate component so useRef is always at the top level
 ───────────────────────────────────────────────────────────────────────────*/
 function FileFieldInput({
