@@ -5,8 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import {
-  getCodeList,
-  getModel,
   getPublishedList,
   getPublishedModel,
   upsertPublishedModel,
@@ -18,7 +16,6 @@ import { formatDateToDotYMD } from "@/utils";
 import { StatusBadge } from "@/components/feature/shared/ResourceListShell";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -121,8 +118,6 @@ function normalizeList(res: any): DraftRow[] {
 export default function DistributeReviewForm({
   mode,
   initialModel,
-  modelType,
-  targetSeq,
 }: DistributeReviewFormProps) {
   const router = useRouter();
   const isEdit = mode === "edit";
@@ -159,9 +154,6 @@ export default function DistributeReviewForm({
   const drafts = useMemo(() => normalizeList(draftRes), [draftRes]);
 
   /* ── 선택된 템플릿의 상세(트리/메타) ─────────────────────────────────── */
-  const selectedType = (selected?.ty as ModelType) ?? modelType;
-  const selectedSeq = selected?.target_seq ?? targetSeq;
-
   const handleSelectDraft = async (row: DraftRow) => {
     try {
       const res = await getPublishedModel({
