@@ -88,6 +88,15 @@ const DrawerRequestContext = React.createContext<
   ((parentNode: any, idShort: string) => void) | null
 >(null);
 
+/* 기존 엘리먼트를 선택해 상세 입력 드로어를 열기 위한 컨텍스트 */
+const OpenDetailContext = React.createContext<((node: any) => void) | null>(null);
+
+/* 상세 입력 드로어를 지원하는 엘리먼트 타입 (단순 value 입력 외 부가 정보가 있는 타입) */
+const DETAIL_TYPES = new Set([
+  "Property", "MultiLanguageProperty", "Range", "File",
+  "ReferenceElement", "RelationshipElement", "AnnotatedRelationshipElement",
+]);
+
 /* ─────────────────────────────────────────────────────────────────────────
    Types
 ───────────────────────────────────────────────────────────────────────────*/
@@ -532,8 +541,9 @@ function RelationshipElementEditor({
 }) {
   const firstKey = `${node.valuePath}.first`;
   const secondKey = `${node.valuePath}.second`;
-  const first = (firstKey in state ? state[firstKey] : node.first) ?? { type: "ModelReference", keys: [] };
-  const second = (secondKey in state ? state[secondKey] : node.second) ?? { type: "ModelReference", keys: [] };
+  // parsingAAS는 first/second를 node.Submodel(원본 객체)에만 보관하므로 거기서도 fallback
+  const first = (firstKey in state ? state[firstKey] : (node.first ?? node.Submodel?.first)) ?? { type: "ModelReference", keys: [] };
+  const second = (secondKey in state ? state[secondKey] : (node.second ?? node.Submodel?.second)) ?? { type: "ModelReference", keys: [] };
 
   const firstSummary = summarizeReference(first);
   const secondSummary = summarizeReference(second);
@@ -890,7 +900,7 @@ function FileFieldInput({
   );
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────��───────────────────────────
    Field Input — renders one Property / MLP / File / Range row
 ───────────────────────────────────────────────────────────────────────────*/
 function FieldInput({
@@ -1037,7 +1047,18 @@ function FieldInput({
     );
   }
 
-  /* ── ReferenceElement / RelationshipElement (read-only preview) ── */
+  /* ── ReferenceElement / RelationshipElement — 구조화된 참조값, 드로어로 상세 입력 ── */
+  if (
+    node.modelType === "ReferenceElement" ||
+    node.modelType === "RelationshipElement" ||
+    node.modelType === "AnnotatedRelationshipElement"
+  ) {
+    return (
+      <ReferenceLikeRow node={node} state={state} editMode={editMode} depth={depth} cdHint={cdHint} />
+    );
+  }
+
+  /* ── 그 외 단순 값 입력 (fallback) ── */
   const fallbackKey = `${valuePath}.originalValue`;
   const fallbackVal = fallbackKey in state ? state[fallbackKey] : (node.originalValue ?? "");
   const fallbackFilled = fallbackVal !== "" && fallbackVal !== null;
@@ -1057,6 +1078,68 @@ function FieldInput({
           {fallbackFilled ? fallbackVal : "—"}
         </span>
       )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ReferenceLikeRow — ReferenceElement / RelationshipElement 의 인라인 행
+   값은 구조화된 Reference 이므로 텍스트 입력 대신 읽기 쉬운 요약 + 상세 버튼 제공
+───────────────────────────────────────────────────────────────────────────*/
+function ReferenceLikeRow({
+  node, state, editMode, depth, cdHint,
+}: {
+  node: any; state: Record<string, any>; editMode: boolean; depth: number;
+  cdHint?: { idShort: string; description: string } | null;
+}) {
+  const openDetail = React.useContext(OpenDetailContext);
+  const label = getDisplayLabel(node.idShort);
+  const isRelationship = node.modelType !== "ReferenceElement";
+
+  const read = (key: string, fallback: any) => (key in state ? state[key] : fallback);
+
+  let summaryNode: React.ReactNode;
+  let filled: boolean;
+
+  if (isRelationship) {
+    const first = read(`${node.valuePath}.first`, node.first ?? node.Submodel?.first);
+    const second = read(`${node.valuePath}.second`, node.second ?? node.Submodel?.second);
+    const f = summarizeReference(first);
+    const s = summarizeReference(second);
+    filled = f.filled && s.filled;
+    summaryNode = (
+      <div className="flex items-center gap-1.5 min-w-0 text-xs font-mono">
+        <span className={cn("truncate", f.filled ? "text-zinc-700" : "text-zinc-400 italic")}>{f.text}</span>
+        <ArrowRight size={12} className="text-zinc-400 shrink-0" />
+        <span className={cn("truncate", s.filled ? "text-zinc-700" : "text-zinc-400 italic")}>{s.text}</span>
+      </div>
+    );
+  } else {
+    const value = read(`${node.valuePath}.value`, node.originalValue);
+    const summary = summarizeReference(value);
+    filled = summary.filled;
+    summaryNode = (
+      <span className={cn("text-xs font-mono truncate", filled ? "text-zinc-700" : "text-zinc-400 italic")}>
+        {summary.text}
+      </span>
+    );
+  }
+
+  return (
+    <div className={cn("grid grid-cols-[240px_1fr] items-center gap-4 py-3 px-4 border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50/60", depth > 0 && "pl-6")}>
+      <FieldLabelWithHint label={label} idShort={node.idShort} filled={filled} typeLabel={node.modelType} cdHint={cdHint} />
+      <div className="flex items-center gap-2 min-w-0">
+        <div className="flex-1 min-w-0">{summaryNode}</div>
+        {editMode && openDetail && (
+          <button
+            type="button"
+            onClick={() => openDetail(node)}
+            className="shrink-0 flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 border border-blue-200 hover:border-blue-300 rounded-md px-2 py-1 transition-colors"
+          >
+            <Settings2 size={12} /> 상세 입력
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -1401,6 +1484,11 @@ export default function SubmodelFormEditor({
     pendingAddRef.current = { parentPath: parentNode?.valuePath ?? "", idShort };
   };
 
+  // 기존 엘리먼트를 선택하면 해당 노드 경로로 상세 드로어를 연다
+  const openDetailForNode = (node: any) => {
+    if (node?.valuePath) setDrawerPath(node.valuePath);
+  };
+
   // treeData 변경 시: (1) 대기 중인 신규 노드를 찾아 드로어 오픈, (2) 현재 드로어 노드 경로 유효성 유지
   useEffect(() => {
     const pending = pendingAddRef.current;
@@ -1453,6 +1541,7 @@ export default function SubmodelFormEditor({
 
   return (
     <DrawerRequestContext.Provider value={editMode ? requestDrawerForNew : null}>
+    <OpenDetailContext.Provider value={editMode ? openDetailForNode : null}>
     <div className="flex h-full overflow-hidden bg-white rounded-lg border border-zinc-200">
       {/* ── Left sidebar ── */}
       <div className="w-56 shrink-0 flex flex-col border-r border-zinc-200 bg-zinc-50">
