@@ -12,7 +12,6 @@ import {
 import { ROUTES } from "@/constants/routes";
 import { confirmSave } from "@/utils/modal";
 import { showToast } from "@/utils/toast";
-import { formatDateToDotYMD } from "@/utils";
 import { StatusBadge } from "@/components/feature/shared/ResourceListShell";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -79,40 +78,62 @@ const MATURITY_LEVELS = [
   },
 ] as const;
 
+/* 정규화된 행 — submodel_* / aas_* 필드를 공통 형태로 매핑한 결과 */
 interface DraftRow {
-  ty: ModelType | string;
+  ty: ModelType;
   target_seq: string;
   target_name: string;
   target_version: string | null;
   category_name: string;
   category_seq: number | string;
-  tmp_seman_id?: string | null;
+  template_id: string | null;
+  semantic_id?: string | null;
+  description?: string;
   status?: string;
   status_nm?: string;
-  create_date?: string;
-  last_mod_date?: string;
-  draft_user_nm?: string;
-  published_user_nm?: string;
-  creator?: string;
-  description?: string;
   aas_maturity_level?: string;
   guide_filename?: string | null;
   guide_realpath?: string | null;
+  /** 서버로 다시 보낼 원본 행 */
+  _raw: any;
+}
+
+/* submodel_* / aas_* 응답을 공통 DraftRow 형태로 정규화 */
+function normalizeRow(raw: any): DraftRow {
+  const isAas = raw.aas_seq != null || raw.aas_name != null || raw.aas_id != null;
+  return {
+    ty: isAas ? "aasmodel" : "submodel",
+    target_seq: String(raw.submodel_seq ?? raw.aas_seq ?? raw.target_seq ?? ""),
+    target_name: raw.submodel_name ?? raw.aas_name ?? raw.target_name ?? "(이름 없음)",
+    target_version: raw.version ?? raw.target_version ?? null,
+    category_name: raw.category_name ?? "—",
+    category_seq: raw.category_seq ?? "",
+    template_id: raw.submodel_id ?? raw.aas_id ?? raw.tmp_seman_id ?? null,
+    semantic_id: raw.submodel_semantic_id ?? raw.aas_semantic_id ?? null,
+    description: raw.description ?? "",
+    status: raw.status,
+    status_nm: raw.status_nm,
+    aas_maturity_level: raw.aas_maturity_level,
+    guide_filename: raw.guide_filename ?? null,
+    guide_realpath: raw.guide_realpath ?? null,
+    _raw: raw,
+  };
 }
 
 interface DistributeReviewFormProps {
   mode: "create" | "edit";
-  /** edit 모드에서 미리 로드된 모델 */
-  initialModel?: DraftRow;
+  /** edit 모드에서 미리 로드된 모델(원본 응답) */
+  initialModel?: any;
   modelType?: ModelType;
   targetSeq?: string;
 }
 
 function normalizeList(res: any): DraftRow[] {
-  if (Array.isArray(res)) return res;
-  if (Array.isArray(res?.data)) return res.data;
-  if (Array.isArray(res?.list)) return res.list;
-  return [];
+  let arr: any[] = [];
+  if (Array.isArray(res)) arr = res;
+  else if (Array.isArray(res?.data)) arr = res.data;
+  else if (Array.isArray(res?.list)) arr = res.list;
+  return arr.map(normalizeRow);
 }
 
 export default function DistributeReviewForm({
@@ -122,19 +143,24 @@ export default function DistributeReviewForm({
   const router = useRouter();
   const isEdit = mode === "edit";
 
+  const normalizedInitial = useMemo(
+    () => (initialModel ? normalizeRow(initialModel) : undefined),
+    [initialModel]
+  );
+
   /* ── 선택된 템플릿 (검토 대상) ────────────────────────────────────────── */
-  const selectedRef = useRef<DraftRow | undefined>(initialModel);
-  const [selected, setSelected] = useState<DraftRow | undefined>(initialModel);
+  const selectedRef = useRef<DraftRow | undefined>(normalizedInitial);
+  const [selected, setSelected] = useState<DraftRow | undefined>(normalizedInitial);
 
   /* ── 관리자가 입력/검수하는 publish 정보 ─────────────────────────────── */
   const [maturity, setMaturity] = useState<string>(
-    initialModel?.aas_maturity_level ?? ""
+    normalizedInitial?.aas_maturity_level ?? ""
   );
   const [status, setStatus] = useState<string>(
-    isEdit ? (initialModel?.status ?? "published") : "published"
+    isEdit ? (normalizedInitial?.status ?? "published") : "published"
   );
   const [description, setDescription] = useState<string>(
-    initialModel?.description ?? ""
+    normalizedInitial?.description ?? ""
   );
   const [typeFilter, setTypeFilter] = useState<"all" | ModelType>("all");
   const [submitting, setSubmitting] = useState(false);
@@ -193,8 +219,7 @@ export default function DistributeReviewForm({
     if (!(await confirmSave(confirmMsg))) return;
 
     const body: Record<string, unknown> = {
-      ...selectedRef.current,
-      ...selected,
+      ...(selectedRef.current?._raw ?? selected._raw ?? {}),
       status,
       description,
       aas_maturity_level: maturity,
@@ -291,10 +316,10 @@ export default function DistributeReviewForm({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-20">Type</TableHead>
-                        <TableHead>Template</TableHead>
-                        <TableHead className="w-16">Ver</TableHead>
-                        <TableHead className="w-16" />
+                        <TableHead className="w-[88px]">Type</TableHead>
+                        <TableHead>Template (Name / ID)</TableHead>
+                        <TableHead className="w-[120px]">Category</TableHead>
+                        <TableHead className="w-20 text-right" />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -306,6 +331,8 @@ export default function DistributeReviewForm({
                           <TableRow
                             key={`${row.ty}-${row.target_seq}`}
                             data-state={isActive ? "selected" : undefined}
+                            className="cursor-pointer"
+                            onClick={() => handleSelectDraft(row)}
                           >
                             <TableCell>
                               <Badge
@@ -317,22 +344,32 @@ export default function DistributeReviewForm({
                                 {row.ty === "aasmodel" ? "AAS" : "Submodel"}
                               </Badge>
                             </TableCell>
-                            <TableCell className="font-medium text-foreground">
-                              <span className="block truncate max-w-[160px]">
+                            <TableCell>
+                              <span className="block truncate max-w-[280px] font-medium text-foreground">
                                 {row.target_name}
+                                {row.target_version ? (
+                                  <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">
+                                    v{row.target_version}
+                                  </span>
+                                ) : null}
                               </span>
-                              <span className="block text-[11px] text-muted-foreground truncate max-w-[160px]">
+                              <span className="block truncate max-w-[280px] font-mono text-[11px] text-muted-foreground">
+                                {row.template_id ?? "—"}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-xs text-muted-foreground">
                                 {row.category_name}
                               </span>
                             </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">
-                              {row.target_version ? `v${row.target_version}` : "—"}
-                            </TableCell>
-                            <TableCell>
+                            <TableCell className="text-right">
                               <Button
                                 size="sm"
                                 variant={isActive ? "default" : "outline"}
-                                onClick={() => handleSelectDraft(row)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSelectDraft(row);
+                                }}
                               >
                                 {isActive ? "선택됨" : "검토"}
                               </Button>
@@ -385,7 +422,7 @@ export default function DistributeReviewForm({
                   <ReadField label="Category" value={selected.category_name} />
                   <ReadField
                     label="Template ID"
-                    value={selected.tmp_seman_id ?? "—"}
+                    value={selected.template_id ?? "—"}
                     mono
                   />
                   <ReadField
@@ -393,18 +430,26 @@ export default function DistributeReviewForm({
                     value={selected.target_version ? `v${selected.target_version}` : "—"}
                   />
                   <ReadField
-                    label="Creator"
-                    value={selected.creator ?? selected.draft_user_nm ?? "—"}
+                    label="Semantic ID"
+                    value={selected.semantic_id ?? "—"}
+                    mono
                   />
                   <ReadField
-                    label="Submitted Date"
-                    value={
-                      selected.create_date
-                        ? formatDateToDotYMD(selected.create_date).replaceAll(".", "-")
-                        : "—"
-                    }
+                    label="Current Status"
+                    value={selected.status_nm ?? selected.status ?? "Draft"}
                   />
                 </div>
+
+                {selected.description ? (
+                  <div className="rounded-lg border border-border bg-muted/30 p-3">
+                    <p className="text-[11px] font-medium text-muted-foreground mb-1">
+                      Template Description
+                    </p>
+                    <p className="text-sm text-foreground leading-relaxed">
+                      {selected.description}
+                    </p>
+                  </div>
+                ) : null}
 
                 {selected.guide_filename ? (
                   <a
