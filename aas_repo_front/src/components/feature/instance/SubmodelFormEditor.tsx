@@ -392,7 +392,7 @@ function summarizeReference(ref: any): { text: string; filled: boolean } {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   ReferencePicker — 단일 Reference 값을 선택/입력하는 재사용 컴포넌트
+   ReferencePicker ��� 단일 Reference 값을 선택/입력하는 재사용 컴포넌트
    · ModelReference : 현재 AAS 인스턴스 내부의 (서브모델 + 엘리먼트 idShort) 경로 선택
    · ExternalReference : 사용자가 외부 식별자(id)를 직접 입력
    value 는 { type, keys } 형태의 AAS Reference 객체, onChange 로 즉시 반영.
@@ -1267,22 +1267,38 @@ function ReferenceLikeRow({
     );
   }
 
-  // ── 보기 모드: 요약 ──
+  // ── 보기 모드: 요약 (서브모델이름 › 마지막 엘리먼트 idShort) ──
+  const friendly = (ref: any): { text: string; filled: boolean } => {
+    const base = summarizeReference(ref);
+    if (!base.filled) return base;
+    if (ref?.type === "ExternalReference") return base;
+    const keys: any[] = Array.isArray(ref?.keys) ? ref.keys : [];
+    const submodelId = keys[0]?.type === "Submodel" ? keys[0].value : "";
+    const submodels: any[] = inlineRef?.treeData?.[0]?.children ?? [];
+    const sm = submodels.find((s) => s.id === submodelId);
+    const smLabel = sm ? getDisplayLabel(sm.idShort) : "";
+    const lastIdShort = keys.length > 0 ? keys[keys.length - 1].value : "";
+    return {
+      text: smLabel ? `${smLabel} › ${lastIdShort}` : lastIdShort,
+      filled: true,
+    };
+  };
+
   let summaryNode: React.ReactNode;
   if (isRelationship) {
-    const f = summarizeReference(first);
-    const s = summarizeReference(second);
+    const f = friendly(first);
+    const s = friendly(second);
     summaryNode = (
-      <div className="flex items-center gap-1.5 min-w-0 text-xs font-mono">
+      <div className="flex items-center gap-1.5 min-w-0 text-xs">
         <span className={cn("truncate", f.filled ? "text-zinc-700" : "text-zinc-400 italic")}>{f.text}</span>
         <ArrowRight size={12} className="text-zinc-400 shrink-0" />
         <span className={cn("truncate", s.filled ? "text-zinc-700" : "text-zinc-400 italic")}>{s.text}</span>
       </div>
     );
   } else {
-    const summary = summarizeReference(valueRef);
+    const summary = friendly(valueRef);
     summaryNode = (
-      <span className={cn("text-xs font-mono truncate", summary.filled ? "text-zinc-700" : "text-zinc-400 italic")}>
+      <span className={cn("text-xs truncate", summary.filled ? "text-zinc-700" : "text-zinc-400 italic")}>
         {summary.text}
       </span>
     );
@@ -1694,7 +1710,7 @@ export default function SubmodelFormEditor({
   return (
     <DrawerRequestContext.Provider value={editMode ? requestDrawerForNew : null}>
     <OpenDetailContext.Provider value={editMode ? openDetailForNode : null}>
-    <InlineRefContext.Provider value={editMode ? { treeData, onValueChange } : null}>
+    <InlineRefContext.Provider value={{ treeData, onValueChange }}>
     <div className="flex h-full overflow-hidden bg-white rounded-lg border border-zinc-200">
       {/* ── Left sidebar ── */}
       <div className="w-56 shrink-0 flex flex-col border-r border-zinc-200 bg-zinc-50">
