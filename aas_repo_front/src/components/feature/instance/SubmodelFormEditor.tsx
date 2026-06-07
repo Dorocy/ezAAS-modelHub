@@ -91,6 +91,13 @@ const DrawerRequestContext = React.createContext<
 /* 기존 엘리먼트를 선택해 상세 입력 드로어를 열기 위한 컨텍스트 */
 const OpenDetailContext = React.createContext<((node: any) => void) | null>(null);
 
+/* 인라인에서 Reference/Relationship 값을 바로 편집하기 위한 컨텍스트
+   (treeData = ModelReference 후보 탐색용, onValueChange = 값 반영용) */
+const InlineRefContext = React.createContext<{
+  treeData: any[];
+  onValueChange: SubmodelFormEditorProps["onValueChange"];
+} | null>(null);
+
 /* 상세 입력 드로어를 지원하는 엘리먼트 타입 (단순 value 입력 외 부가 정보가 있는 타입) */
 const DETAIL_TYPES = new Set([
   "Property", "MultiLanguageProperty", "Range", "File",
@@ -180,7 +187,7 @@ function countFilledLeaves(node: any, state: Record<string, any>): number {
 
 /* ─────────────────────────────────────────────────────────────────────────
    AddElementDialog — 타입 선택 + idShort 입력 후 onAdd 호출
-─────────────────────────��─────────────────────────────────────────────────*/
+─────────────────────────���─────────────────────────────────────────────────*/
 function AddElementDialog({
   parentNode,
   parentLabel,
@@ -1098,7 +1105,9 @@ function FieldInput({
 
 /* ─────────────────────────────────────────────────────────────────────────
    ReferenceLikeRow — ReferenceElement / RelationshipElement 의 인라인 행
-   값은 구조화된 Reference 이므로 텍스트 입력 대신 읽기 쉬운 요약 + 상세 버튼 제공
+   · 보기 모드  : 읽기 쉬운 참조 요약
+   · 편집 모드  : ReferencePicker 로 타입/참조값을 바로 선택·수정 (MLP 처럼 인라인)
+                 부가 정보(추가 키 등) 상세 수정은 "상세 입력" 버튼으로 드로어 열기
 ───────────────────────────────────────────────────────────────────────────*/
 function ReferenceLikeRow({
   node, state, editMode, depth, cdHint,
@@ -1107,20 +1116,60 @@ function ReferenceLikeRow({
   cdHint?: { idShort: string; description: string } | null;
 }) {
   const openDetail = React.useContext(OpenDetailContext);
+  const inlineRef = React.useContext(InlineRefContext);
   const label = getDisplayLabel(node.idShort);
   const isRelationship = node.modelType !== "ReferenceElement";
 
   const read = (key: string, fallback: any) => (key in state ? state[key] : fallback);
 
-  let summaryNode: React.ReactNode;
-  let filled: boolean;
+  // 현재 값 읽기
+  const valueRef = read(`${node.valuePath}.value`, node.originalValue) ?? { type: "ModelReference", keys: [] };
+  const first = read(`${node.valuePath}.first`, node.first ?? node.Submodel?.first) ?? { type: "ModelReference", keys: [] };
+  const second = read(`${node.valuePath}.second`, node.second ?? node.Submodel?.second) ?? { type: "ModelReference", keys: [] };
 
+  const filled = isRelationship
+    ? summarizeReference(first).filled && summarizeReference(second).filled
+    : summarizeReference(valueRef).filled;
+
+  // ── 편집 모드: 인라인 피커 ──
+  if (editMode && inlineRef) {
+    return (
+      <div className={cn("grid grid-cols-[240px_1fr] items-start gap-4 py-3 px-4 border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50/60", depth > 0 && "pl-6")}>
+        <FieldLabelWithHint label={label} idShort={node.idShort} filled={filled} typeLabel={node.modelType} cdHint={cdHint} node={node} />
+        <div className="space-y-3 min-w-0">
+          {isRelationship ? (
+            <>
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-blue-500">First</span>
+                <ReferencePicker value={first} treeData={inlineRef.treeData} onChange={(ref) => inlineRef.onValueChange(`${node.valuePath}.first`, ref)} />
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600">Second</span>
+                <ReferencePicker value={second} treeData={inlineRef.treeData} onChange={(ref) => inlineRef.onValueChange(`${node.valuePath}.second`, ref)} />
+              </div>
+            </>
+          ) : (
+            <ReferencePicker value={valueRef} treeData={inlineRef.treeData} onChange={(ref) => inlineRef.onValueChange(`${node.valuePath}.value`, ref)} />
+          )}
+          {openDetail && (
+            <button
+              type="button"
+              onClick={() => openDetail(node)}
+              className="flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-blue-600 transition-colors"
+            >
+              <Settings2 size={12} /> 상세 입력
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── 보기 모드: 요약 ──
+  let summaryNode: React.ReactNode;
   if (isRelationship) {
-    const first = read(`${node.valuePath}.first`, node.first ?? node.Submodel?.first);
-    const second = read(`${node.valuePath}.second`, node.second ?? node.Submodel?.second);
     const f = summarizeReference(first);
     const s = summarizeReference(second);
-    filled = f.filled && s.filled;
     summaryNode = (
       <div className="flex items-center gap-1.5 min-w-0 text-xs font-mono">
         <span className={cn("truncate", f.filled ? "text-zinc-700" : "text-zinc-400 italic")}>{f.text}</span>
@@ -1129,11 +1178,9 @@ function ReferenceLikeRow({
       </div>
     );
   } else {
-    const value = read(`${node.valuePath}.value`, node.originalValue);
-    const summary = summarizeReference(value);
-    filled = summary.filled;
+    const summary = summarizeReference(valueRef);
     summaryNode = (
-      <span className={cn("text-xs font-mono truncate", filled ? "text-zinc-700" : "text-zinc-400 italic")}>
+      <span className={cn("text-xs font-mono truncate", summary.filled ? "text-zinc-700" : "text-zinc-400 italic")}>
         {summary.text}
       </span>
     );
@@ -1142,25 +1189,14 @@ function ReferenceLikeRow({
   return (
     <div className={cn("grid grid-cols-[240px_1fr] items-center gap-4 py-3 px-4 border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50/60", depth > 0 && "pl-6")}>
       <FieldLabelWithHint label={label} idShort={node.idShort} filled={filled} typeLabel={node.modelType} cdHint={cdHint} node={node} />
-      <div className="flex items-center gap-2 min-w-0">
-        <div className="flex-1 min-w-0">{summaryNode}</div>
-        {editMode && openDetail && (
-          <button
-            type="button"
-            onClick={() => openDetail(node)}
-            className="shrink-0 flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 border border-blue-200 hover:border-blue-300 rounded-md px-2 py-1 transition-colors"
-          >
-            <Settings2 size={12} /> 상세 입력
-          </button>
-        )}
-      </div>
+      <div className="min-w-0">{summaryNode}</div>
     </div>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
    GroupSection — renders a collapsible SMC / SML section
-───────────────────────────────────────────────────────────────────────────*/
+──────────────��────────────────────────────────────────────────────────────*/
 function GroupSection({
   node, state, editMode, onValueChange, depth = 0, defaultOpen = true, cdMap,
   onAddElement, onDeleteElement,
@@ -1556,6 +1592,7 @@ export default function SubmodelFormEditor({
   return (
     <DrawerRequestContext.Provider value={editMode ? requestDrawerForNew : null}>
     <OpenDetailContext.Provider value={editMode ? openDetailForNode : null}>
+    <InlineRefContext.Provider value={editMode ? { treeData, onValueChange } : null}>
     <div className="flex h-full overflow-hidden bg-white rounded-lg border border-zinc-200">
       {/* ── Left sidebar ── */}
       <div className="w-56 shrink-0 flex flex-col border-r border-zinc-200 bg-zinc-50">
@@ -1681,6 +1718,7 @@ export default function SubmodelFormEditor({
         onClose={() => setDrawerPath(null)}
         onValueChange={onValueChange}
       />
+    </InlineRefContext.Provider>
     </OpenDetailContext.Provider>
     </DrawerRequestContext.Provider>
   );
