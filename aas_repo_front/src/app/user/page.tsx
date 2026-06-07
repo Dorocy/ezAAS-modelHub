@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 import { Search, Pencil, ChevronLeft, ChevronRight } from "lucide-react";
 
 const PAGE_SIZE = 20;
@@ -81,8 +80,20 @@ export default function UserPage() {
 
   // user/info/list 는 DataTables 형식: { draw, recordsTotal, recordsFiltered, data }
   // apiRequest 가 result.data 를 반환하므로 userData 는 이미 data 필드 값
-  const users: User[] = Array.isArray(userData) ? userData : (Array.isArray(userData?.list) ? userData.list : []);
-  const totalCount: number = userData?.recordsTotal ? Number(userData.recordsTotal) : (userData?.totalCount ?? users.length);
+  const users: User[] = Array.isArray(userData)
+    ? userData
+    : Array.isArray(userData?.data)
+      ? userData.data
+        : Array.isArray(userData?.list)
+          ? userData.list
+          : [];
+  // 총 개수도 한 단계 더 들어간 곳에 있을 수 있다.
+  const totalCount: number =
+    userData?.recordsTotal != null
+      ? Number(userData.recordsTotal)
+      : userData?.data?.recordsTotal != null
+        ? Number(userData.data.recordsTotal)
+        : userData?.totalCount ?? users.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   const handleSearch = useCallback(() => {
