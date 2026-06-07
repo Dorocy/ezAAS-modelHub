@@ -187,7 +187,7 @@ function countFilledLeaves(node: any, state: Record<string, any>): number {
   );
 }
 
-/* ─────�����───────────────────────────────────────────────────────────────────
+/* ─────�������───────────────────────────────────────────────────────────────────
    AddElementDialog — 타입 선택 + idShort 입력 후 onAdd 호출
 ─────────────────────────���─────────────────────────────────────────────────*/
 function AddElementDialog({
@@ -392,7 +392,7 @@ function summarizeReference(ref: any): { text: string; filled: boolean } {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   ReferencePicker ��� 단일 Reference 값을 선택/입력하는 재사용 컴포넌트
+   ReferencePicker ����� 단일 Reference 값을 선택/입력하는 재사용 컴포넌트
    · ModelReference : 현재 AAS 인스턴스 내부의 (서브모델 + 엘리먼트 idShort) 경로 선택
    · ExternalReference : 사용자가 외부 식별자(id)를 직접 입력
    value 는 { type, keys } 형태의 AAS Reference 객체, onChange 로 즉시 반영.
@@ -545,6 +545,8 @@ function InlineReferencePicker({
   const externalId =
     refType === "ExternalReference" ? (current?.keys?.[0]?.value ?? "") : "";
 
+  const selectedTarget = targets.find((t) => t.sig === currentSig);
+
   const setRefType = (t: "ModelReference" | "ExternalReference") => {
     if (t === "ExternalReference") {
       onChange({ type: "ExternalReference", keys: [{ type: "GlobalReference", value: "" }] });
@@ -581,7 +583,14 @@ function InlineReferencePicker({
       {refType === "ModelReference" ? (
         <Select value={currentSig || undefined} onValueChange={handleElement} disabled={targets.length === 0}>
           <SelectTrigger className="h-8 text-sm flex-1 min-w-0">
-            <SelectValue placeholder="엘리먼트 선택..." />
+            {selectedTarget ? (
+              <span className="truncate">
+                <span className="text-zinc-400">{selectedTarget.submodelLabel} › </span>
+                <span className="text-zinc-700">{getDisplayLabel(selectedTarget.idShort)}</span>
+              </span>
+            ) : (
+              <SelectValue placeholder="엘리먼트 선택..." />
+            )}
           </SelectTrigger>
           <SelectContent>
             {treeData?.[0]?.children?.map((sm: any) => {
