@@ -1814,6 +1814,9 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                                 onSave={handleFormEditorSave}
                                 onToggleAdvanced={() => setShowAdvancedTree(true)}
                                 showAdvanced={showAdvancedTree}
+                                onAddSubmodel={() => { setModalOpen(true); setModelType("submodel"); }}
+                                onAddElement={handleAddElement}
+                                onDeleteElement={handleDeleteElement}
                               />
                             )}
                           </div>

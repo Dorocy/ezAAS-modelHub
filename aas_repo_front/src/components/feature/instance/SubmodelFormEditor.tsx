@@ -1,10 +1,54 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { ChevronRight, ChevronDown, CheckCircle2, Circle, AlertCircle, Plus, Trash2, Code2 } from "lucide-react";
+
+/* 추가 가능한 SubmodelElement 타입 목록 */
+const ELEMENT_TYPES = [
+  "Property",
+  "MultiLanguageProperty",
+  "Range",
+  "File",
+  "ReferenceElement",
+  "RelationshipElement",
+  "SubmodelElementCollection",
+  "SubmodelElementList",
+  "Entity",
+];
+
+/* 각 타입에 대한 짧은 설명 — 사용자가 타입 특성을 이해하도록 돕는다 */
+const ELEMENT_TYPE_HINTS: Record<string, string> = {
+  Property: "단일 값 (텍스트/숫자/날짜 등)",
+  MultiLanguageProperty: "언어별 다국어 텍스트 값",
+  Range: "최소/최대 범위 값",
+  File: "파일 경로 또는 업로드",
+  ReferenceElement: "다른 요소에 대한 참조",
+  RelationshipElement: "두 요소 간의 관계",
+  SubmodelElementCollection: "하위 요소들을 담는 그룹",
+  SubmodelElementList: "동일 타입 요소들의 목록",
+  Entity: "자산 엔티티 (statements 포함)",
+};
+
+type AddElementHandler = (parentNode: any, elementType: string, idShort: string) => void;
+type DeleteElementHandler = (node: any) => void;
 
 /* ─────────────────────────────────────────────────────────────────────────
    Types
@@ -18,6 +62,9 @@ interface SubmodelFormEditorProps {
   onToggleAdvanced: () => void;
   showAdvanced: boolean;
   conceptDescriptions?: any[];                  // aasmodel_metadata.conceptDescriptions
+  onAddSubmodel?: () => void;                   // "Submodel 추가" — 템플릿 선택 모달 오픈
+  onAddElement?: AddElementHandler;             // 하위 엘리먼트 추가
+  onDeleteElement?: DeleteElementHandler;       // 엘리먼트/서브모델 삭제
 }
 
 /* semanticId key[0].value → { idShort, description } 맵 */
@@ -81,6 +128,115 @@ function countFilledLeaves(node: any, state: Record<string, any>): number {
   return node.children.reduce(
     (s: number, c: any) => s + countFilledLeaves(c, state),
     0
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   AddElementDialog — 타입 선택 + idShort 입력 후 onAdd 호출
+───────────────────────────────────────────────────────────────────────────*/
+function AddElementDialog({
+  parentNode,
+  parentLabel,
+  onAdd,
+  trigger,
+  allowedTypes = ELEMENT_TYPES,
+}: {
+  parentNode: any;
+  parentLabel: string;
+  onAdd: AddElementHandler;
+  trigger: React.ReactNode;
+  allowedTypes?: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [type, setType] = useState<string>("Property");
+  const [idShort, setIdShort] = useState("");
+
+  // 다이얼로그를 열 때마다 입력값 초기화
+  useEffect(() => {
+    if (open) {
+      setType("Property");
+      setIdShort("");
+    }
+  }, [open]);
+
+  const handleAdd = () => {
+    const trimmed = idShort.trim();
+    if (!type || !trimmed) return;
+    onAdd(parentNode, type, trimmed);
+    setOpen(false);
+  };
+
+  return (
+    <>
+      <span onClick={() => setOpen(true)}>{trigger}</span>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base">
+              {"하위 엘리먼트 추가"}
+              <span className="block text-xs font-normal text-zinc-400 mt-1 truncate">
+                {parentLabel}
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-1">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-zinc-600">Element Type</Label>
+              <Select value={type} onValueChange={(v) => setType(v as string)}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allowedTypes.map((t) => (
+                    <SelectItem key={t} value={t} className="text-sm">
+                      <span className="flex flex-col">
+                        <span className="font-medium">{t}</span>
+                        <span className="text-[11px] text-zinc-400">{ELEMENT_TYPE_HINTS[t]}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-zinc-600">idShort</Label>
+              <Input
+                value={idShort}
+                onChange={(e) => setIdShort(e.target.value)}
+                placeholder="Enter idShort..."
+                className="h-9 text-sm"
+                onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+                autoFocus
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button onClick={handleAdd} disabled={!type || !idShort.trim()}>Add</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+/* 작은 삭제 아이콘 버튼 (확인 prompt 포함) */
+function DeleteIconButton({ label, onDelete }: { label: string; onDelete: () => void }) {
+  return (
+    <button
+      type="button"
+      title={`'${label}' 삭제`}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (window.confirm(`'${label}' 항목을 삭제하시겠습니까?`)) onDelete();
+      }}
+      className="text-zinc-300 hover:text-red-500 transition-colors p-1 shrink-0"
+    >
+      <Trash2 size={14} />
+    </button>
   );
 }
 
@@ -369,31 +525,38 @@ function FieldInput({
 ───────────────────────────────────────────────────────────────────────────*/
 function GroupSection({
   node, state, editMode, onValueChange, depth = 0, defaultOpen = true, cdMap,
+  onAddElement, onDeleteElement,
 }: {
   node: any; state: Record<string, any>; editMode: boolean;
   onValueChange: SubmodelFormEditorProps["onValueChange"];
   depth?: number; defaultOpen?: boolean; cdMap: CDMap;
+  onAddElement?: AddElementHandler; onDeleteElement?: DeleteElementHandler;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const children: any[] = Array.isArray(node.children) ? node.children : [];
   const total = children.reduce((s, c) => s + countLeaves(c), 0);
   const filled = children.reduce((s, c) => s + countFilledLeaves(c, state), 0);
   const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+  const label = getDisplayLabel(node.idShort);
+  // SMC / SML / Entity 는 하위 요소를 가질 수 있음
+  const canHaveChildren = GROUP_TYPES.has(node.modelType) || node.modelType === "Entity";
 
   return (
     <div className={cn("border-b border-zinc-100 last:border-b-0", depth > 0 && "border-l-2 border-l-zinc-100 ml-4")}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-50 transition-colors text-left"
-      >
-        {open
-          ? <ChevronDown size={13} className="text-zinc-400 shrink-0" />
-          : <ChevronRight size={13} className="text-zinc-400 shrink-0" />
-        }
-        <span className="text-sm font-semibold text-zinc-800 truncate flex-1">
-          {getDisplayLabel(node.idShort)}
-        </span>
+      <div className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-zinc-50 transition-colors group">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex items-center gap-3 flex-1 min-w-0 text-left"
+        >
+          {open
+            ? <ChevronDown size={13} className="text-zinc-400 shrink-0" />
+            : <ChevronRight size={13} className="text-zinc-400 shrink-0" />
+          }
+          <span className="text-sm font-semibold text-zinc-800 truncate">
+            {label}
+          </span>
+        </button>
         <div className="flex items-center gap-2 shrink-0">
           {total > 0 && (
             <span className={cn(
@@ -405,14 +568,48 @@ function GroupSection({
               {filled}/{total}
             </span>
           )}
+          {editMode && canHaveChildren && onAddElement && (
+            <AddElementDialog
+              parentNode={node}
+              parentLabel={label}
+              onAdd={onAddElement}
+              trigger={
+                <button
+                  type="button"
+                  title="하위 엘리먼트 추가"
+                  className="text-zinc-300 hover:text-blue-500 transition-colors p-1"
+                >
+                  <Plus size={14} />
+                </button>
+              }
+            />
+          )}
+          {editMode && onDeleteElement && (
+            <DeleteIconButton label={label} onDelete={() => onDeleteElement(node)} />
+          )}
         </div>
-      </button>
+      </div>
       {open && children.length > 0 && (
         <div className={cn(depth > 0 ? "bg-white" : "bg-zinc-50/30")}>
           {children.map((child, i) => (
             <NodeRenderer key={child.valuePath ?? i} node={child} state={state}
-              editMode={editMode} onValueChange={onValueChange} depth={depth + 1} cdMap={cdMap} />
+              editMode={editMode} onValueChange={onValueChange} depth={depth + 1} cdMap={cdMap}
+              onAddElement={onAddElement} onDeleteElement={onDeleteElement} />
           ))}
+        </div>
+      )}
+      {open && children.length === 0 && editMode && canHaveChildren && onAddElement && (
+        <div className="px-4 py-2 pl-10">
+          <AddElementDialog
+            parentNode={node}
+            parentLabel={label}
+            onAdd={onAddElement}
+            trigger={
+              <button type="button" className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium">
+                <Plus size={12} /> 하위 엘리먼트 추가
+              </button>
+            }
+          />
         </div>
       )}
     </div>
@@ -424,21 +621,35 @@ function GroupSection({
 ───────────────────────────────────────────────────────────────────────────*/
 function NodeRenderer({
   node, state, editMode, onValueChange, depth = 0, cdMap,
+  onAddElement, onDeleteElement,
 }: {
   node: any; state: Record<string, any>; editMode: boolean;
   onValueChange: SubmodelFormEditorProps["onValueChange"]; depth?: number; cdMap: CDMap;
+  onAddElement?: AddElementHandler; onDeleteElement?: DeleteElementHandler;
 }) {
   const semanticKey = getSemanticKey(node);
   const cdHint = semanticKey ? (cdMap.get(semanticKey) ?? null) : null;
 
   if (LEAF_TYPES.has(node.modelType)) {
-    if (node.modelType === "File") {
-      return <FileFieldInput node={node} state={state} editMode={editMode} onValueChange={onValueChange} depth={depth} cdHint={cdHint} />;
+    const field = node.modelType === "File"
+      ? <FileFieldInput node={node} state={state} editMode={editMode} onValueChange={onValueChange} depth={depth} cdHint={cdHint} />
+      : <FieldInput node={node} state={state} editMode={editMode} onValueChange={onValueChange} depth={depth} cdHint={cdHint} />;
+
+    // 편집 모드에서는 각 leaf row 우측에 삭제 버튼을 겹쳐 표시한다.
+    if (editMode && onDeleteElement) {
+      return (
+        <div className="relative group">
+          {field}
+          <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <DeleteIconButton label={getDisplayLabel(node.idShort)} onDelete={() => onDeleteElement(node)} />
+          </div>
+        </div>
+      );
     }
-    return <FieldInput node={node} state={state} editMode={editMode} onValueChange={onValueChange} depth={depth} cdHint={cdHint} />;
+    return field;
   }
-  if (GROUP_TYPES.has(node.modelType)) {
-    return <GroupSection node={node} state={state} editMode={editMode} onValueChange={onValueChange} depth={depth} defaultOpen={depth < 2} cdMap={cdMap} />;
+  if (GROUP_TYPES.has(node.modelType) || node.modelType === "Entity") {
+    return <GroupSection node={node} state={state} editMode={editMode} onValueChange={onValueChange} depth={depth} defaultOpen={depth < 2} cdMap={cdMap} onAddElement={onAddElement} onDeleteElement={onDeleteElement} />;
   }
   return null;
 }
@@ -448,14 +659,18 @@ function NodeRenderer({
 ───────────────────────────────────────────────────────────────────────────*/
 function SubmodelPanel({
   submodel, state, editMode, onValueChange, onSave, cdMap,
+  onAddElement, onDeleteElement, onDeleteSubmodel,
 }: {
   submodel: any; state: Record<string, any>; editMode: boolean;
   onValueChange: SubmodelFormEditorProps["onValueChange"]; onSave: () => void; cdMap: CDMap;
+  onAddElement?: AddElementHandler; onDeleteElement?: DeleteElementHandler;
+  onDeleteSubmodel?: (submodel: any) => void;
 }) {
   const children: any[] = Array.isArray(submodel.children) ? submodel.children : [];
   const total = children.reduce((s, c) => s + countLeaves(c), 0);
   const filled = children.reduce((s, c) => s + countFilledLeaves(c, state), 0);
   const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+  const submodelLabel = getDisplayLabel(submodel.idShort);
 
   const description = useMemo(() => {
     const desc = submodel.description;
@@ -500,9 +715,36 @@ function SubmodelPanel({
               </span>
             </div>
             {editMode && (
-              <Button type="button" onClick={onSave}>
-                저장
-              </Button>
+              <div className="flex items-center gap-2">
+                {onAddElement && (
+                  <AddElementDialog
+                    parentNode={submodel}
+                    parentLabel={submodelLabel}
+                    onAdd={onAddElement}
+                    trigger={
+                      <Button type="button" variant="outline" size="sm">
+                        <Plus size={14} className="mr-1" /> 엘리먼트 추가
+                      </Button>
+                    }
+                  />
+                )}
+                {onDeleteSubmodel && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                    onClick={() => {
+                      if (window.confirm(`Submodel '${submodelLabel}' 을(를) 삭제하시겠습니까?`)) onDeleteSubmodel(submodel);
+                    }}
+                  >
+                    <Trash2 size={14} className="mr-1" /> 삭제
+                  </Button>
+                )}
+                <Button type="button" onClick={onSave}>
+                  저장
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -535,8 +777,20 @@ function SubmodelPanel({
         </div>
 
         {children.length === 0 ? (
-          <div className="flex items-center justify-center py-16 text-sm text-zinc-400">
-            No elements defined in this submodel.
+          <div className="flex flex-col items-center justify-center py-16 gap-3 text-sm text-zinc-400">
+            <span>No elements defined in this submodel.</span>
+            {editMode && onAddElement && (
+              <AddElementDialog
+                parentNode={submodel}
+                parentLabel={submodelLabel}
+                onAdd={onAddElement}
+                trigger={
+                  <Button type="button" variant="outline" size="sm">
+                    <Plus size={14} className="mr-1" /> 엘리먼트 추가
+                  </Button>
+                }
+              />
+            )}
           </div>
         ) : (
           <div>
@@ -549,6 +803,8 @@ function SubmodelPanel({
                 onValueChange={onValueChange}
                 depth={0}
                 cdMap={cdMap}
+                onAddElement={onAddElement}
+                onDeleteElement={onDeleteElement}
               />
             ))}
           </div>
@@ -570,6 +826,9 @@ export default function SubmodelFormEditor({
   onToggleAdvanced,
   showAdvanced,
   conceptDescriptions,
+  onAddSubmodel,
+  onAddElement,
+  onDeleteElement,
 }: SubmodelFormEditorProps) {
   const root = treeData[0];
 
@@ -585,6 +844,10 @@ export default function SubmodelFormEditor({
   }, [treeData, root]);
 
   const [activeIdx, setActiveIdx] = useState(0);
+  // 서브모델 추가/삭제로 목록 길이가 바뀌면 활성 인덱스를 안전 범위로 보정
+  useEffect(() => {
+    if (activeIdx > submodels.length - 1) setActiveIdx(Math.max(0, submodels.length - 1));
+  }, [submodels.length, activeIdx]);
   const activeSubmodel = submodels[activeIdx];
 
   /* Completion per submodel */
@@ -604,8 +867,13 @@ export default function SubmodelFormEditor({
 
   if (submodels.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-sm text-zinc-400">
-        No submodels found.
+      <div className="flex flex-col items-center justify-center h-full gap-4 text-sm text-zinc-400">
+        <span>No submodels found.</span>
+        {editMode && onAddSubmodel && (
+          <Button type="button" variant="outline" onClick={onAddSubmodel}>
+            <Plus size={14} className="mr-1" /> Submodel 추가
+          </Button>
+        )}
       </div>
     );
   }
@@ -637,8 +905,18 @@ export default function SubmodelFormEditor({
 
         {/* Submodel nav list */}
         <nav className="flex-1 overflow-y-auto py-2">
-          <div className="px-3 mb-1">
+          <div className="px-3 mb-1 flex items-center justify-between">
             <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Submodels</span>
+            {editMode && onAddSubmodel && (
+              <button
+                type="button"
+                onClick={onAddSubmodel}
+                title="Submodel 추가"
+                className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 font-medium"
+              >
+                <Plus size={12} /> 추가
+              </button>
+            )}
           </div>
           {submodels.map((sm, i) => {
             const { filled, total, pct } = completions[i];
@@ -705,6 +983,9 @@ export default function SubmodelFormEditor({
             onValueChange={onValueChange}
             onSave={onSave}
             cdMap={cdMap}
+            onAddElement={onAddElement}
+            onDeleteElement={onDeleteElement}
+            onDeleteSubmodel={onDeleteElement}
           />
         ) : (
           <div className="flex items-center justify-center h-full text-sm text-zinc-400">
