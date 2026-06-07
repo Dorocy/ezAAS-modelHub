@@ -187,7 +187,7 @@ function countFilledLeaves(node: any, state: Record<string, any>): number {
   );
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
+/* ─────���───────────────────────────────────────────────────────────────────
    AddElementDialog — 타입 선택 + idShort 입력 후 onAdd 호출
 ─────────────────────────���─────────────────────────────────────────────────*/
 function AddElementDialog({
@@ -439,15 +439,15 @@ function ReferencePicker({
 
   return (
     <div className="space-y-2">
-      {/* Reference Type 토글 */}
-      <div className="flex gap-1.5 p-0.5 bg-zinc-100 rounded-lg">
+      {/* Reference Type 토글 (콘텐츠 너비, 콤팩트) */}
+      <div className="inline-flex gap-0.5 p-0.5 bg-zinc-100 rounded-md w-fit">
         {(["ModelReference", "ExternalReference"] as const).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setRefType(t)}
             className={cn(
-              "flex-1 text-xs font-medium py-1.5 rounded-md transition-colors",
+              "text-[11px] font-medium px-2.5 py-1 rounded transition-colors",
               refType === t ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
             )}
           >
