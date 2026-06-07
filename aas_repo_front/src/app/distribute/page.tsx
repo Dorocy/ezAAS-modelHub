@@ -69,8 +69,20 @@ export default function DistributePage() {
       })
   );
 
-  const models: any[] = Array.isArray(publishedData) ? publishedData : (Array.isArray(publishedData?.list) ? publishedData.list : []);
-  const totalCount: number = publishedData?.totalCount ?? publishedData?.total ?? models.length;
+  // 응답 구조 방어: apiRequest가 result.data를 반환하므로 publishedData가
+  // 배열이거나 { data: [...] } / { list: [...] } / { recordsTotal, data:[...] } 형태일 수 있다.
+  const payload: any = publishedData?.data ?? publishedData;
+  const models: any[] = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : Array.isArray(payload?.list)
+        ? payload.list
+        : [];
+  console.log("[v0] publish list payload:", publishedData);
+  console.log("[v0] publish first row:", models[0]);
+  const totalCount: number =
+    payload?.recordsTotal ?? payload?.recordsFiltered ?? publishedData?.totalCount ?? models.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   const handleSearch = useCallback(() => {
