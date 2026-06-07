@@ -34,6 +34,7 @@ import {
 import {
   ChevronRight, ChevronDown, CheckCircle2, Circle, AlertCircle, Plus, Trash2, Code2,
   Settings2, Tag, FileText, Hash, Languages, Ruler, Link2, Boxes, ArrowRight,
+  BookText, Check,
 } from "lucide-react";
 
 /* Property/Range 등에서 선택 가능한 XSD value types */
@@ -82,8 +83,25 @@ const ELEMENT_TYPE_HINTS: Record<string, string> = {
   Entity: "자산 엔티티 (statements 포함)",
 };
 
-type AddElementHandler = (parentNode: any, elementType: string, idShort: string) => void;
+/* 엘리먼트 추가 시 함께 연결할 개념(ConceptDescription) 정보
+   · mode "new"     → 새 개념을 정의하고 semanticId 로 연결 (id/preferredName/definition)
+   · mode "existing"→ 기존 개념의 id 로 semanticId 만 연결
+   · mode "none"    → 개념 연결 없음 (semanticId 비움) */
+type ConceptLink =
+  | { mode: "new"; id: string; preferredName: string; definition: string }
+  | { mode: "existing"; id: string }
+  | { mode: "none" };
+
+type AddElementHandler = (
+  parentNode: any,
+  elementType: string,
+  idShort: string,
+  concept?: ConceptLink,
+) => void;
 type DeleteElementHandler = (node: any) => void;
+
+/* AddElementDialog 에서 기존 개념 검색용으로 사용할 CD 목록 컨텍스트 */
+const ConceptListContext = React.createContext<any[]>([]);
 
 /* 새 엘리먼트 추가 직후 상세 드로어를 열기 위한 컨텍스트 (prop drilling 회피) */
 const DrawerRequestContext = React.createContext<
@@ -206,30 +224,70 @@ function AddElementDialog({
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<string>("Property");
   const [idShort, setIdShort] = useState("");
+  // 개념 연결 상태
+  const [conceptMode, setConceptMode] = useState<"new" | "existing">("new");
+  const [definition, setDefinition] = useState("");
+  const [customId, setCustomId] = useState("");      // 비우면 idShort 기반 자동 생성
+  const [existingId, setExistingId] = useState("");   // 기존 개념 연결 시 선택된 CD id
+  const [conceptSearch, setConceptSearch] = useState("");
   const requestDrawer = React.useContext(DrawerRequestContext);
+  const conceptList = React.useContext(ConceptListContext);
 
   // 다이얼로그를 열 때마다 입력값 초기화
   useEffect(() => {
     if (open) {
       setType("Property");
       setIdShort("");
+      setConceptMode("new");
+      setDefinition("");
+      setCustomId("");
+      setExistingId("");
+      setConceptSearch("");
     }
   }, [open]);
 
+  const trimmedIdShort = idShort.trim();
+  // idShort 기반 자동 생성 ID (사용자가 직접 입력하면 그 값 사용)
+  const autoId = trimmedIdShort
+    ? `https://www.smart-factory.kr/ids/cd/${encodeURIComponent(trimmedIdShort)}/1/0`
+    : "";
+  const effectiveNewId = customId.trim() || autoId;
+
+  // 기존 개념 검색 결과
+  const filteredConcepts = useMemo(() => {
+    const q = conceptSearch.trim().toLowerCase();
+    const list = Array.isArray(conceptList) ? conceptList : [];
+    if (!q) return list.slice(0, 50);
+    return list
+      .filter((cd: any) =>
+        (cd.idShort ?? "").toLowerCase().includes(q) ||
+        (cd.id ?? "").toLowerCase().includes(q)
+      )
+      .slice(0, 50);
+  }, [conceptList, conceptSearch]);
+
+  // 추가 가능 여부: idShort 필수 + (새 개념이면 정의 필수 / 기존이면 선택 필수)
+  const conceptValid =
+    conceptMode === "new" ? definition.trim().length > 0 : existingId !== "";
+  const canAdd = !!type && !!trimmedIdShort && conceptValid;
+
   const handleAdd = () => {
-    const trimmed = idShort.trim();
-    if (!type || !trimmed) return;
-    onAdd(parentNode, type, trimmed);
+    if (!canAdd) return;
+    const concept: ConceptLink =
+      conceptMode === "new"
+        ? { mode: "new", id: effectiveNewId, preferredName: trimmedIdShort, definition: definition.trim() }
+        : { mode: "existing", id: existingId };
+    onAdd(parentNode, type, trimmedIdShort, concept);
     setOpen(false);
     // 추가 직후 상세 입력 드로어 오픈 요청
-    requestDrawer?.(parentNode, trimmed);
+    requestDrawer?.(parentNode, trimmedIdShort);
   };
 
   return (
     <>
       <span onClick={() => setOpen(true)}>{trigger}</span>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base">
               {"하위 엘리먼트 추가"}
@@ -264,17 +322,104 @@ function AddElementDialog({
               <Input
                 value={idShort}
                 onChange={(e) => setIdShort(e.target.value)}
-                placeholder="Enter idShort..."
+                placeholder="예: ManufacturerId"
                 className="h-9 text-sm"
-                onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+                onKeyDown={(e) => { if (e.key === "Enter" && conceptMode === "new") handleAdd(); }}
                 autoFocus
               />
+            </div>
+
+            {/* ── 개념(ConceptDescription) 연결 ── */}
+            <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50/60 p-3">
+              <div className="flex items-center gap-1.5">
+                <BookText size={13} className="text-zinc-500" />
+                <Label className="text-xs font-semibold text-zinc-700">개념 정의 연결</Label>
+              </div>
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                모든 엘리먼트는 개념사전과 연결됩니다. 도움말(?) 설명에 사용돼요.
+              </p>
+
+              {/* 모드 토글 */}
+              <div className="inline-flex w-full gap-0.5 p-0.5 bg-zinc-200/70 rounded-md">
+                {([["new", "새 개념 정의"], ["existing", "기존 개념 연결"]] as const).map(([m, lbl]) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setConceptMode(m)}
+                    className={cn(
+                      "flex-1 text-[11px] font-medium py-1 rounded transition-colors",
+                      conceptMode === m ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+                    )}
+                  >
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+
+              {conceptMode === "new" ? (
+                <div className="space-y-2.5 pt-1">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-medium text-zinc-500">
+                      정의 (Definition) <span className="text-red-400">*</span>
+                    </Label>
+                    <Textarea
+                      value={definition}
+                      onChange={(e) => setDefinition(e.target.value)}
+                      placeholder="이 개념이 무엇을 의미하는지 한 줄로 설명하세요."
+                      className="text-sm min-h-[60px] bg-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-medium text-zinc-500">ID (자동 생성)</Label>
+                    <Input
+                      value={customId || autoId}
+                      onChange={(e) => setCustomId(e.target.value)}
+                      placeholder="idShort 입력 시 자동 생성됩니다"
+                      className="h-8 text-xs font-mono bg-white text-zinc-500"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2 pt-1">
+                  <Input
+                    value={conceptSearch}
+                    onChange={(e) => setConceptSearch(e.target.value)}
+                    placeholder="개념 이름 또는 ID 검색..."
+                    className="h-8 text-sm bg-white"
+                  />
+                  <div className="max-h-44 overflow-y-auto rounded-md border border-zinc-200 bg-white divide-y divide-zinc-100">
+                    {filteredConcepts.length === 0 ? (
+                      <div className="px-3 py-4 text-center text-xs text-zinc-400">
+                        연결할 개념이 없습니다.
+                      </div>
+                    ) : (
+                      filteredConcepts.map((cd: any) => (
+                        <button
+                          key={cd.id}
+                          type="button"
+                          onClick={() => setExistingId(cd.id)}
+                          className={cn(
+                            "w-full text-left px-3 py-2 transition-colors",
+                            existingId === cd.id ? "bg-blue-50" : "hover:bg-zinc-50"
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            {existingId === cd.id && <Check size={12} className="text-blue-500 shrink-0" />}
+                            <span className="text-sm font-medium text-zinc-700 truncate">{cd.idShort}</span>
+                          </div>
+                          <span className="block text-[10px] text-zinc-400 font-mono truncate mt-0.5">{cd.id}</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={handleAdd} disabled={!type || !idShort.trim()}>Add</Button>
+            <Button onClick={handleAdd} disabled={!canAdd}>Add</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1718,6 +1863,7 @@ export default function SubmodelFormEditor({
 
   return (
     <DrawerRequestContext.Provider value={editMode ? requestDrawerForNew : null}>
+    <ConceptListContext.Provider value={conceptDescriptions ?? []}>
     <OpenDetailContext.Provider value={editMode ? openDetailForNode : null}>
     <InlineRefContext.Provider value={{ treeData, onValueChange }}>
     <div className="flex h-full overflow-hidden bg-white rounded-lg border border-zinc-200">
@@ -1847,6 +1993,7 @@ export default function SubmodelFormEditor({
       />
     </InlineRefContext.Provider>
     </OpenDetailContext.Provider>
+    </ConceptListContext.Provider>
     </DrawerRequestContext.Provider>
   );
 }

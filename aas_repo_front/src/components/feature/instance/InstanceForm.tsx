@@ -524,7 +524,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     }
 
     // body 생성부터 API 호출까지 모두 try로 감싼다.
-    // (이전에는 body 생성이 try 밖에 있어, 여기서 에러가 나면 토스트도 없고
+    // (이전에는 body 생성��� try 밖에 있어, 여기서 에러가 나면 토스트도 없고
     //  API도 호출되지 않은 채 조용히 중단됐다 — "API가 아예 안 나간다"의 원인)
     try {
       setLoading(true);
@@ -686,10 +686,17 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     showToast.success("Changes saved.");
   };
 
-  const handleAddElement = (parentNode: any, elementType: string, idShort: string) => {
-    const newElement: any = { idShort, modelType: elementType, description: [{ language: "en", text: "" }], semanticId: { type: "ModelReference", keys: [{ type: "GlobalReference", value: "" }] } };
+  const handleAddElement = (parentNode: any, elementType: string, idShort: string, concept?: any) => {
+    // 개념(ConceptDescription) 연결: semanticId 를 개념 id 로 설정
+    const conceptId: string | undefined =
+      concept && concept.mode !== "none" ? concept.id : undefined;
+    const semanticId = conceptId
+      ? { type: "ExternalReference", keys: [{ type: "GlobalReference", value: conceptId }] }
+      : { type: "ModelReference", keys: [{ type: "GlobalReference", value: "" }] };
+
+    const newElement: any = { idShort, modelType: elementType, description: [{ language: "en", text: "" }], semanticId };
     switch (elementType) {
-      case "Property": newElement.valueType = "xs:string"; newElement.value = ""; newElement.category = "PARAMETER"; newElement.semanticId = { keys: [] }; break;
+      case "Property": newElement.valueType = "xs:string"; newElement.value = ""; newElement.category = "PARAMETER"; break;
       case "MultiLanguageProperty": newElement.valueType = "xs:string"; newElement.value = [{ language: "en-US", text: "" }]; break;
       case "Range": newElement.valueType = "xs:integer"; newElement.min = 0; newElement.max = 0; break;
       case "File": newElement.contentType = ""; newElement.value = ""; break;
@@ -699,6 +706,31 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
       case "Entity": newElement.entityType = "SelfManagedEntity"; newElement.statements = []; newElement.globalAssetId = ""; newElement.specificAssetId = []; break;
       case "RelationshipElement": newElement.first = { type: "ModelReference", keys: [] }; newElement.second = { type: "ModelReference", keys: [] }; break;
     }
+
+    // 새 개념을 정의한 경우 ConceptDescription 도 함께 생성 (IEC61360 데이터스펙)
+    const newCD =
+      concept?.mode === "new"
+        ? {
+            idShort,
+            modelType: "ConceptDescription",
+            id: concept.id,
+            description: [{ language: "en", text: concept.definition }],
+            embeddedDataSpecifications: [
+              {
+                dataSpecification: {
+                  type: "ExternalReference",
+                  keys: [{ type: "GlobalReference", value: "https://admin-shell.io/DataSpecificationTemplates/DataSpecificationIEC61360/3/0" }],
+                },
+                dataSpecificationContent: {
+                  modelType: "DataSpecificationIec61360",
+                  preferredName: [{ language: "en", text: concept.preferredName }],
+                  definition: [{ language: "en", text: concept.definition }],
+                },
+              },
+            ],
+          }
+        : null;
+
     setAasmodel((prev) => {
       const newMetadata = _.cloneDeep((prev as any).aasmodel_metadata);
       const parentPath = parentNode.valuePath;
@@ -710,6 +742,13 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         const children = _.get(newMetadata, childrenPath, []);
         if (Array.isArray(children) && !children.find((c: any) => c.idShort === idShort)) { children.push(newElement); _.set(newMetadata, childrenPath, children); }
         else if (!children) _.set(newMetadata, childrenPath, [newElement]);
+      }
+      // 새 개념 등록 (중복 id 방지)
+      if (newCD) {
+        if (!newMetadata.conceptDescriptions) newMetadata.conceptDescriptions = [];
+        if (!newMetadata.conceptDescriptions.find((cd: any) => cd.id === newCD.id)) {
+          newMetadata.conceptDescriptions.push(newCD);
+        }
       }
       return { ...prev, aasmodel_metadata: newMetadata };
     });
@@ -1782,7 +1821,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                                         />
                                       ) : (
                                         <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
-                                          <p className="text-sm font-medium">항목을 선택하세요</p>
+                                          <p className="text-sm font-medium">항목�� 선택하세요</p>
                                         </div>
                                       )}
                                     </CardContent>
