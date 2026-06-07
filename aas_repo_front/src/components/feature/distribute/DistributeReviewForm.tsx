@@ -24,18 +24,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
+  Check,
   CheckCircle2,
   FileDown,
   Gauge,
@@ -206,7 +199,7 @@ export default function DistributeReviewForm({
     if (!selected) {
       return showToast.error("검토할 템플릿을 먼저 선택하세요.");
     }
-    // Maturity level 은 publish 의 필수 항목 — 정확히 부여하도록 강제
+    // Maturity level 은 publish 의 필수 항목 — 정���히 부여하도록 강제
     if (status === "published" && !maturity) {
       return showToast.warning("Maturity level 을 정확하게 부여해야 합니다.");
     }
@@ -305,90 +298,67 @@ export default function DistributeReviewForm({
                 </Select>
               </div>
 
-              <div className="max-h-[460px] overflow-auto">
+              <div className="max-h-[460px] overflow-y-auto p-2">
                 {draftsLoading ? (
-                  <div className="space-y-2 p-3">
+                  <div className="space-y-2 p-1">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <Skeleton key={i} className="h-10 w-full rounded" />
+                      <Skeleton key={i} className="h-16 w-full rounded-lg" />
                     ))}
                   </div>
+                ) : drafts.length === 0 ? (
+                  <div className="flex h-28 items-center justify-center text-sm text-muted-foreground">
+                    검토 대기 중인 템플릿이 없습니다.
+                  </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[88px]">Type</TableHead>
-                        <TableHead>Template (Name / ID)</TableHead>
-                        <TableHead className="w-[120px]">Category</TableHead>
-                        <TableHead className="w-20 text-right" />
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {drafts.map((row) => {
-                        const isActive =
-                          selected?.target_seq === row.target_seq &&
-                          selected?.ty === row.ty;
-                        return (
-                          <TableRow
-                            key={`${row.ty}-${row.target_seq}`}
-                            data-state={isActive ? "selected" : undefined}
-                            className="cursor-pointer"
+                  <ul className="flex flex-col gap-1.5">
+                    {drafts.map((row) => {
+                      const isActive =
+                        selected?.target_seq === row.target_seq &&
+                        selected?.ty === row.ty;
+                      return (
+                        <li key={`${row.ty}-${row.target_seq}`}>
+                          <button
+                            type="button"
                             onClick={() => handleSelectDraft(row)}
+                            className={cn(
+                              "w-full rounded-lg border px-3 py-2.5 text-left transition-colors",
+                              isActive
+                                ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                : "border-border bg-background hover:bg-muted/50"
+                            )}
                           >
-                            <TableCell>
+                            <div className="flex items-center gap-2">
                               <Badge
                                 variant={
                                   row.ty === "aasmodel" ? "default" : "secondary"
                                 }
-                                className="text-[11px]"
+                                className="shrink-0 text-[11px]"
                               >
                                 {row.ty === "aasmodel" ? "AAS" : "Submodel"}
                               </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <span className="block truncate max-w-[280px] font-medium text-foreground">
+                              <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                                 {row.target_name}
-                                {row.target_version ? (
-                                  <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">
-                                    v{row.target_version}
-                                  </span>
-                                ) : null}
                               </span>
-                              <span className="block truncate max-w-[280px] font-mono text-[11px] text-muted-foreground">
-                                {row.template_id ?? "—"}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <span className="text-xs text-muted-foreground">
-                                {row.category_name}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                size="sm"
-                                variant={isActive ? "default" : "outline"}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSelectDraft(row);
-                                }}
-                              >
-                                {isActive ? "선택됨" : "검토"}
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                      {drafts.length === 0 && (
-                        <TableRow>
-                          <TableCell
-                            colSpan={4}
-                            className="h-28 text-center text-sm text-muted-foreground"
-                          >
-                            검토 대기 중인 템플릿이 없습니다.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                              {row.target_version ? (
+                                <span className="shrink-0 text-[11px] text-muted-foreground">
+                                  v{row.target_version}
+                                </span>
+                              ) : null}
+                              {isActive ? (
+                                <Check className="size-4 shrink-0 text-primary" />
+                              ) : null}
+                            </div>
+                            <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
+                              {row.template_id ?? "—"}
+                            </p>
+                            <p className="truncate text-[11px] text-muted-foreground">
+                              {row.category_name}
+                            </p>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 )}
               </div>
             </div>
