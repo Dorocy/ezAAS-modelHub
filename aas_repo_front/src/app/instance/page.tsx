@@ -4,6 +4,7 @@ import React, { useState, useCallback } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { getInstanceList, getCodeList, exportModel } from "@/api/index";
+import { rankByQuery } from "@/utils/search";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/constants/roles";
@@ -80,15 +81,21 @@ export default function InstancePage() {
   // 응답 구조: { result, msg, data: { recordsTotal, recordsFiltered, data: [...instances] } }
   // 다양한 형태를 방어적으로 처리한다.
   const payload = instanceData?.data ?? instanceData;
-  const instances: any[] = Array.isArray(payload?.data)
+  const rawInstances: any[] = Array.isArray(payload?.data)
     ? payload.data
     : Array.isArray(payload)
       ? payload
       : Array.isArray(instanceData)
         ? instanceData
         : [];
-  const totalCount: number = payload?.recordsTotal ?? payload?.recordsFiltered ?? instances.length;
+  const totalCount: number = payload?.recordsTotal ?? payload?.recordsFiltered ?? rawInstances.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+  // 이름 일치를 최우선으로, 그다음 설명/카테고리 키워드 순으로 재정렬
+  const instances = rankByQuery(rawInstances, searchKey, {
+    getName: (i) => i.instance_name,
+    getKeywords: (i) => [i.description, i.category_name],
+  });
 
   const handleSearch = useCallback(() => {
     setSearchKey(inputValue);
@@ -140,15 +147,21 @@ export default function InstancePage() {
         <aside className="w-52 shrink-0">
           <div className="sticky top-6 space-y-1">
             {/* Search */}
-            <div className="relative mb-4">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-              <Input
-                className="h-8 pl-8 text-sm bg-white border-zinc-200 rounded-lg"
-                placeholder="Search..."
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              />
+            <div className="mb-4 space-y-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+                <Input
+                  className="h-8 pl-8 text-sm bg-white border-zinc-200 rounded-lg"
+                  placeholder="Search by name..."
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                />
+              </div>
+              <Button size="sm" className="w-full h-8" onClick={handleSearch}>
+                <Search className="w-3.5 h-3.5 mr-1.5" />
+                Search
+              </Button>
             </div>
 
             {/* Scope toggle */}

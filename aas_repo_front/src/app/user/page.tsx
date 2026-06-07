@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { rankByQuery } from "@/utils/search";
 import { Search, Pencil, ChevronLeft, ChevronRight } from "lucide-react";
 
 const PAGE_SIZE = 20;
@@ -80,7 +81,7 @@ export default function UserPage() {
 
   // user/info/list 는 DataTables 형식: { draw, recordsTotal, recordsFiltered, data }
   // apiRequest 가 result.data 를 반환하므로 userData 는 이미 data 필드 값
-  const users: User[] = Array.isArray(userData)
+  const rawUsers: User[] = Array.isArray(userData)
     ? userData
     : Array.isArray(userData?.data)
       ? userData.data
@@ -93,8 +94,14 @@ export default function UserPage() {
       ? Number(userData.recordsTotal)
       : userData?.data?.recordsTotal != null
         ? Number(userData.data.recordsTotal)
-        : userData?.totalCount ?? users.length;
+        : userData?.totalCount ?? rawUsers.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+  // 이름(user_name) 일치를 최우선으로, 그다음 아이디/전화번호 키워드 순으로 재정렬
+  const users = rankByQuery(rawUsers, searchKey, {
+    getName: (u) => u.user_name,
+    getKeywords: (u) => [u.user_id, u.user_phonenumber],
+  });
 
   const handleSearch = useCallback(() => {
     setSearchKey(inputValue);

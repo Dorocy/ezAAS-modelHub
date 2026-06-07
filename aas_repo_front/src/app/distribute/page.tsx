@@ -4,6 +4,7 @@ import React, { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { getPublishedList } from "@/api/index";
+import { rankByQuery } from "@/utils/search";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -113,18 +114,23 @@ export default function DistributePage() {
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   }, [allModels, typeFilter]);
 
-  // 필터 적용
+  // 필터 적용: 타입/카테고리로 먼저 거른 뒤, 검색어 기준으로 이름 우선 재정렬
   const filtered = useMemo(() => {
-    const q = searchKey.trim().toLowerCase();
-    return allModels.filter((m) => {
+    const base = allModels.filter((m) => {
       if (typeFilter !== "all" && m.type !== typeFilter) return false;
       if (categoryFilter !== "all" && m.categoryName !== categoryFilter) return false;
-      if (q) {
-        const haystack = `${m.name} ${m.templateId ?? ""} ${m.semanticId ?? ""} ${m.description}`.toLowerCase();
-        if (!haystack.includes(q)) return false;
-      }
       return true;
     });
+    // 이름 일치를 최우선으로, 그다음 ID/시맨틱ID/설명 키워드 순. 매칭 없으면 제외.
+    return rankByQuery(
+      base,
+      searchKey,
+      {
+        getName: (m) => m.name,
+        getKeywords: (m) => [m.templateId, m.semanticId, m.description],
+      },
+      true,
+    );
   }, [allModels, typeFilter, categoryFilter, searchKey]);
 
   const totalCount = filtered.length;
@@ -172,15 +178,21 @@ export default function DistributePage() {
         <aside className="w-56 shrink-0">
           <div className="sticky top-6 space-y-1">
             {/* Search */}
-            <div className="relative mb-4">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-              <Input
-                className="h-8 pl-8 text-sm bg-white border-zinc-200 rounded-lg"
-                placeholder="이름 / ID 검색..."
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              />
+            <div className="mb-4 space-y-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+                <Input
+                  className="h-8 pl-8 text-sm bg-white border-zinc-200 rounded-lg"
+                  placeholder="이름 / ID 검색..."
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                />
+              </div>
+              <Button size="sm" className="w-full h-8" onClick={handleSearch}>
+                <Search className="w-3.5 h-3.5 mr-1.5" />
+                Search
+              </Button>
             </div>
 
             {/* Model type toggle */}

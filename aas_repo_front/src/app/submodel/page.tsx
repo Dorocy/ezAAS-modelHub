@@ -4,6 +4,7 @@ import React, { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { getModelList, getCodeList } from "@/api/index";
+import { rankByQuery } from "@/utils/search";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/constants/roles";
@@ -128,11 +129,17 @@ export default function SubmodelPage() {
     () => getModelList({ modelType: "submodel", pageNumber: page, pageSize: PAGE_SIZE, searchParams })
   );
 
-  const models: any[] = Array.isArray(modelData)
+  const rawModels: any[] = Array.isArray(modelData)
     ? modelData
     : Array.isArray(modelData?.list) ? modelData.list : [];
-  const totalCount: number = modelData?.totalCount ?? modelData?.total ?? models.length;
+  const totalCount: number = modelData?.totalCount ?? modelData?.total ?? rawModels.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+  // 이름 일치를 최우선으로, 그다음 설명/카테고리 키워드 순으로 재정렬
+  const models = rankByQuery(rawModels, searchKey, {
+    getName: (m) => m.submodel_name,
+    getKeywords: (m) => [m.description, m.category_name],
+  });
 
   const handleSearch = useCallback(() => {
     setSearchKey(inputValue);
@@ -169,15 +176,21 @@ export default function SubmodelPage() {
         <aside className="w-52 shrink-0">
           <div className="sticky top-6 space-y-1">
             {/* Search */}
-            <div className="relative mb-4">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-              <Input
-                className="h-8 pl-8 text-sm bg-white border-zinc-200 rounded-lg"
-                placeholder="Search..."
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              />
+            <div className="mb-4 space-y-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+                <Input
+                  className="h-8 pl-8 text-sm bg-white border-zinc-200 rounded-lg"
+                  placeholder="Search by name..."
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                />
+              </div>
+              <Button size="sm" className="w-full h-8" onClick={handleSearch}>
+                <Search className="w-3.5 h-3.5 mr-1.5" />
+                Search
+              </Button>
             </div>
 
             {/* Category label */}
