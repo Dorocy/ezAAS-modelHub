@@ -14,7 +14,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -346,7 +348,36 @@ function collectRefTargets(submodelNode: any): {
   return out;
 }
 
-/* AAS Reference 객체를 사람이 읽기 쉬운 한 줄 요약으로 변환 */
+/* AAS 인스턴스 전체(모든 서브모델)의 엘리먼트를 평탄화한 ModelReference 후보 목록.
+   사용자는 엘리먼트 하나만 고르면 되고, 소속 서브모델 경로는 자동으로 채워진다.
+   sig 는 서브모델별로 idShort가 겹쳐도 구분되도록 submodelId 를 포함한다. */
+function collectAllRefTargets(treeData: any[]): {
+  sig: string;
+  keys: { type: string; value: string }[];
+  elementPath: string;
+  submodelLabel: string;
+  submodelId: string;
+  idShort: string;
+  modelType: string;
+}[] {
+  const submodels: any[] = Array.isArray(treeData?.[0]?.children) ? treeData[0].children : [];
+  const out: ReturnType<typeof collectAllRefTargets> = [];
+  for (const sm of submodels) {
+    const submodelLabel = getDisplayLabel(sm.idShort);
+    for (const t of collectRefTargets(sm)) {
+      out.push({
+        sig: `${sm.id}::${t.keys.slice(1).map((k) => k.value).join("/")}`,
+        keys: t.keys,
+        elementPath: t.labelPath,
+        submodelLabel,
+        submodelId: sm.id,
+        idShort: t.idShort,
+        modelType: t.modelType,
+      });
+    }
+  }
+  return out;
+}
 function summarizeReference(ref: any): { text: string; filled: boolean } {
   const keys: any[] = Array.isArray(ref?.keys) ? ref.keys : [];
   if (keys.length === 0 || !keys[keys.length - 1]?.value) {
@@ -377,19 +408,19 @@ function ReferencePicker({
   const refType: "ModelReference" | "ExternalReference" =
     current?.type === "ExternalReference" ? "ExternalReference" : "ModelReference";
 
-  const submodels: any[] = Array.isArray(treeData?.[0]?.children) ? treeData[0].children : [];
+  // 전체 인스턴스의 모든 엘리먼트를 후보로 (소속 서브모델은 자동 매핑)
+  const targets = useMemo(() => collectAllRefTargets(treeData), [treeData]);
 
-  const initialSubmodelId =
-    current?.keys?.[0]?.type === "Submodel" ? current.keys[0].value : "";
-  const [submodelId, setSubmodelId] = useState<string>(initialSubmodelId);
+  // 현재 값에 해당하는 후보 sig 계산 (서브모델 id + 엘리먼트 경로로 매칭)
+  const currentSig = useMemo(() => {
+    const keys: any[] = current?.keys ?? [];
+    if (refType !== "ModelReference" || keys.length === 0) return "";
+    const submodelId = keys[0]?.type === "Submodel" ? keys[0].value : "";
+    const path = keys.slice(1).map((k) => k.value).join("/");
+    return submodelId ? `${submodelId}::${path}` : "";
+  }, [current, refType]);
 
-  const selectedSubmodel = submodels.find((s) => s.id === submodelId);
-  const targets = useMemo(
-    () => (selectedSubmodel ? collectRefTargets(selectedSubmodel) : []),
-    [selectedSubmodel]
-  );
-
-  const currentElementSig = (current?.keys ?? []).slice(1).map((k: any) => k.value).join("/");
+  const selected = targets.find((t) => t.sig === currentSig);
   const externalId =
     refType === "ExternalReference" ? (current?.keys?.[0]?.value ?? "") : "";
 
@@ -397,32 +428,17 @@ function ReferencePicker({
     if (t === "ExternalReference") {
       onChange({ type: "ExternalReference", keys: [{ type: "GlobalReference", value: "" }] });
     } else {
-      onChange({
-        type: "ModelReference",
-        keys: submodelId ? [{ type: "Submodel", value: submodelId }] : [],
-      });
+      onChange({ type: "ModelReference", keys: [] });
     }
   };
 
-  const handleSubmodel = (id: string | null) => {
-    setSubmodelId(id ?? "");
-    onChange({
-      type: "ModelReference",
-      keys: id ? [{ type: "Submodel", value: id }] : [],
-    });
-  };
-
   const handleElement = (sig: string | null) => {
-    const target = targets.find(
-      (t) => t.keys.slice(1).map((k) => k.value).join("/") === sig
-    );
+    const target = targets.find((t) => t.sig === sig);
     if (target) onChange({ type: "ModelReference", keys: target.keys });
   };
 
-  const submodelLabel = selectedSubmodel ? getDisplayLabel(selectedSubmodel.idShort) : "";
-
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-2">
       {/* Reference Type 토글 */}
       <div className="flex gap-1.5 p-0.5 bg-zinc-100 rounded-lg">
         {(["ModelReference", "ExternalReference"] as const).map((t) => (
@@ -441,62 +457,48 @@ function ReferencePicker({
       </div>
 
       {refType === "ModelReference" ? (
-        <div className="space-y-2">
-          <Select value={submodelId || undefined} onValueChange={handleSubmodel}>
-            <SelectTrigger className="h-9 text-sm">
-              <span className="flex items-center gap-1.5 min-w-0">
-                <Boxes size={13} className="text-zinc-400 shrink-0" />
-                <SelectValue placeholder="서브모델 선택..." />
-              </span>
-            </SelectTrigger>
-            <SelectContent>
-              {submodels.map((s) => (
-                <SelectItem key={s.id} value={s.id} className="text-sm">
-                  <span className="flex flex-col">
-                    <span className="font-medium">{getDisplayLabel(s.idShort)}</span>
-                    <span className="text-[11px] text-zinc-400 font-mono truncate max-w-[260px]">{s.id}</span>
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={currentElementSig || undefined}
-            onValueChange={handleElement}
-            disabled={!submodelId || targets.length === 0}
-          >
+        <>
+          {/* 엘리먼트 하나만 선택 → 서브모델 경로 자동 입력 */}
+          <Select value={currentSig || undefined} onValueChange={handleElement} disabled={targets.length === 0}>
             <SelectTrigger className="h-9 text-sm">
               <span className="flex items-center gap-1.5 min-w-0">
                 <Link2 size={13} className="text-zinc-400 shrink-0" />
-                <SelectValue placeholder={submodelId ? "엘리먼트 선택..." : "먼저 서브모델을 선택하세요"} />
+                <SelectValue placeholder="참조할 엘리먼트 선택..." />
               </span>
             </SelectTrigger>
             <SelectContent>
-              {targets.map((t) => {
-                const sig = t.keys.slice(1).map((k) => k.value).join("/");
+              {treeData?.[0]?.children?.map((sm: any) => {
+                const group = targets.filter((t) => t.submodelId === sm.id);
+                if (group.length === 0) return null;
                 return (
-                  <SelectItem key={sig} value={sig} className="text-sm">
-                    <span className="flex items-center gap-2">
-                      <Badge variant="secondary" className="text-[9px] font-mono shrink-0">{t.modelType}</Badge>
-                      <span className="font-mono text-xs truncate max-w-[220px]">{t.labelPath}</span>
-                    </span>
-                  </SelectItem>
+                  <SelectGroup key={sm.id}>
+                    <SelectLabel className="text-[11px] text-zinc-400 font-medium flex items-center gap-1">
+                      <Boxes size={11} /> {getDisplayLabel(sm.idShort)}
+                    </SelectLabel>
+                    {group.map((t) => (
+                      <SelectItem key={t.sig} value={t.sig} className="text-sm">
+                        <span className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-[9px] font-mono shrink-0">{t.modelType}</Badge>
+                          <span className="font-mono text-xs truncate max-w-[220px]">{t.elementPath}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 );
               })}
             </SelectContent>
           </Select>
 
-          {currentElementSig && (
+          {selected && (
             <div className="flex items-start gap-1.5 text-[11px] text-zinc-500 bg-zinc-50 rounded-md px-2 py-1.5">
               <Boxes size={12} className="text-zinc-400 shrink-0 mt-0.5" />
               <span className="font-mono break-all leading-relaxed">
-                {submodelLabel && <span className="text-zinc-400">{submodelLabel} › </span>}
-                <span className="text-zinc-700">{currentElementSig.replaceAll("/", " › ")}</span>
+                <span className="text-zinc-400">{selected.submodelLabel} › </span>
+                <span className="text-zinc-700">{selected.elementPath.replaceAll(" / ", " › ")}</span>
               </span>
             </div>
           )}
-        </div>
+        </>
       ) : (
         <Input
           value={externalId}
