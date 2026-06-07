@@ -19,7 +19,40 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { ChevronRight, ChevronDown, CheckCircle2, Circle, AlertCircle, Plus, Trash2, Code2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
+import {
+  ChevronRight, ChevronDown, CheckCircle2, Circle, AlertCircle, Plus, Trash2, Code2,
+  Settings2, Tag, FileText, Hash, Languages, Ruler, Link2, Boxes,
+} from "lucide-react";
+
+/* Property/Range 등에서 선택 가능한 XSD value types */
+const VALUE_TYPES = [
+  "xs:string", "xs:boolean", "xs:integer", "xs:int", "xs:long",
+  "xs:double", "xs:float", "xs:decimal", "xs:date", "xs:dateTime",
+  "xs:time", "xs:anyURI",
+];
+
+/* 각 modelType 별 아이콘 (드로어 헤더 표시용) */
+const TYPE_ICON: Record<string, React.ReactNode> = {
+  Property: <Hash size={14} />,
+  MultiLanguageProperty: <Languages size={14} />,
+  Range: <Ruler size={14} />,
+  File: <FileText size={14} />,
+  ReferenceElement: <Link2 size={14} />,
+  RelationshipElement: <Link2 size={14} />,
+  SubmodelElementCollection: <Boxes size={14} />,
+  SubmodelElementList: <Boxes size={14} />,
+  Entity: <Boxes size={14} />,
+};
 
 /* 추가 가능한 SubmodelElement 타입 목록 */
 const ELEMENT_TYPES = [
@@ -49,6 +82,11 @@ const ELEMENT_TYPE_HINTS: Record<string, string> = {
 
 type AddElementHandler = (parentNode: any, elementType: string, idShort: string) => void;
 type DeleteElementHandler = (node: any) => void;
+
+/* 새 엘리먼트 추가 직후 상세 드로어를 열기 위한 컨텍스트 (prop drilling 회피) */
+const DrawerRequestContext = React.createContext<
+  ((parentNode: any, idShort: string) => void) | null
+>(null);
 
 /* ─────────────────────────────────────────────────────────────────────────
    Types
@@ -150,6 +188,7 @@ function AddElementDialog({
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<string>("Property");
   const [idShort, setIdShort] = useState("");
+  const requestDrawer = React.useContext(DrawerRequestContext);
 
   // 다이얼로그를 열 때마다 입력값 초기화
   useEffect(() => {
@@ -164,6 +203,8 @@ function AddElementDialog({
     if (!type || !trimmed) return;
     onAdd(parentNode, type, trimmed);
     setOpen(false);
+    // 추가 직후 상세 입력 드로어 오픈 요청
+    requestDrawer?.(parentNode, trimmed);
   };
 
   return (
@@ -238,6 +279,209 @@ function DeleteIconButton({ label, onDelete }: { label: string; onDelete: () => 
       <Trash2 size={14} />
     </button>
   );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   DrawerField — 드로어 내부의 라벨 + 입력 한 줄 (개념사전 DetailRow 스타일 차용)
+───────────────────────────────────────────────────────────────────────────*/
+function DrawerField({
+  icon, label, hint, children,
+}: {
+  icon?: React.ReactNode; label: string; hint?: string; children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5 py-3.5 px-5 border-b border-zinc-100 last:border-b-0">
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+        {icon && <span className="text-zinc-400">{icon}</span>}
+        {label}
+      </div>
+      {children}
+      {hint && <p className="text-[11px] text-zinc-400 leading-relaxed">{hint}</p>}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ElementDetailDrawer — 새 엘리먼트(또는 선택한 엘리먼트) 상세 입력 드로어
+   타입별로 입력 필드가 달라진다. 값은 onValueChange(path,value)로 즉시 반영.
+───────────────────────────────────────────────────────────────────────────*/
+function ElementDetailDrawer({
+  node, state, open, onClose, onValueChange,
+}: {
+  node: any | null;
+  state: Record<string, any>;
+  open: boolean;
+  onClose: () => void;
+  onValueChange: SubmodelFormEditorProps["onValueChange"];
+}) {
+  if (!node) return null;
+
+  const valuePath = node.valuePath;
+  const label = getDisplayLabel(node.idShort);
+  const modelType = node.modelType;
+
+  // 공통 헬퍼: state 우선, 없으면 노드 원본
+  const read = (key: string, fallback: any) => (key in state ? state[key] : fallback);
+
+  /* 타입별 본문 */
+  let body: React.ReactNode = null;
+
+  if (modelType === "Property") {
+    const valueKey = `${valuePath}.originalValue`;
+    const typeKey = `${valuePath}.valueType`;
+    const val = read(valueKey, node.originalValue ?? "");
+    const vType = read(typeKey, node.valueType ?? "xs:string");
+    body = (
+      <>
+        <DrawerField icon={<Code2 size={11} />} label="Value Type">
+          <Select value={vType} onValueChange={(v) => onValueChange(typeKey, v as string)}>
+            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {VALUE_TYPES.map((t) => (
+                <SelectItem key={t} value={t} className="text-sm font-mono">{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </DrawerField>
+        <DrawerField icon={<Hash size={11} />} label="Value">
+          <Input
+            value={val}
+            onChange={(e) => onValueChange(valueKey, e.target.value)}
+            placeholder="값을 입력하세요..."
+            className="h-9 text-sm"
+          />
+        </DrawerField>
+      </>
+    );
+  } else if (modelType === "MultiLanguageProperty") {
+    const valueKey = `${valuePath}.originalValue`;
+    const raw = read(valueKey, node.originalValue ?? []);
+    const mlp: { language: string; text: string }[] = Array.isArray(raw) ? raw : [];
+    const setMLP = (next: typeof mlp) => onValueChange(valueKey, next);
+    body = (
+      <DrawerField icon={<Languages size={11} />} label="다국어 값" hint="언어 코드별로 텍스트를 입력합니다 (예: ko, en).">
+        <div className="space-y-2">
+          {mlp.map((item, idx) => (
+            <div key={idx} className="flex gap-2 items-center">
+              <Input
+                value={item.language}
+                onChange={(e) => { const n = [...mlp]; n[idx] = { ...n[idx], language: e.target.value }; setMLP(n); }}
+                placeholder="lang" className="w-16 h-8 text-xs font-mono shrink-0"
+              />
+              <Input
+                value={item.text}
+                onChange={(e) => { const n = [...mlp]; n[idx] = { ...n[idx], text: e.target.value }; setMLP(n); }}
+                placeholder="텍스트..." className="flex-1 h-8 text-sm"
+              />
+              <button type="button" onClick={() => setMLP(mlp.filter((_, i) => i !== idx))}
+                className="text-zinc-400 hover:text-red-500 transition-colors p-1 shrink-0">
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
+          <button type="button" onClick={() => setMLP([...mlp, { language: "ko", text: "" }])}
+            className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium mt-1">
+            <Plus size={12} /> 언어 추가
+          </button>
+        </div>
+      </DrawerField>
+    );
+  } else if (modelType === "Range") {
+    const minKey = `${valuePath}.min`;
+    const maxKey = `${valuePath}.max`;
+    const typeKey = `${valuePath}.valueType`;
+    const minVal = read(minKey, node.min ?? "");
+    const maxVal = read(maxKey, node.max ?? "");
+    const vType = read(typeKey, node.valueType ?? "xs:integer");
+    body = (
+      <>
+        <DrawerField icon={<Code2 size={11} />} label="Value Type">
+          <Select value={vType} onValueChange={(v) => onValueChange(typeKey, v as string)}>
+            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {VALUE_TYPES.map((t) => (
+                <SelectItem key={t} value={t} className="text-sm font-mono">{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </DrawerField>
+        <DrawerField icon={<Ruler size={11} />} label="범위 (Min / Max)">
+          <div className="flex gap-2 items-center">
+            <Input value={minVal} onChange={(e) => onValueChange(minKey, e.target.value)} placeholder="Min" className="h-9 text-sm flex-1" />
+            <span className="text-zinc-400 text-sm shrink-0">~</span>
+            <Input value={maxVal} onChange={(e) => onValueChange(maxKey, e.target.value)} placeholder="Max" className="h-9 text-sm flex-1" />
+          </div>
+        </DrawerField>
+      </>
+    );
+  } else if (modelType === "File") {
+    const valueKey = `${valuePath}.originalValue`;
+    const ctKey = `${valuePath}.contentType`;
+    const val = read(valueKey, node.originalValue ?? "");
+    const ct = read(ctKey, node.contentType ?? "");
+    body = (
+      <>
+        <DrawerField icon={<FileText size={11} />} label="파일 경로 / URL">
+          <Input value={val} onChange={(e) => onValueChange(valueKey, e.target.value)} placeholder="/files/example.pdf" className="h-9 text-sm" />
+        </DrawerField>
+        <DrawerField icon={<Tag size={11} />} label="Content Type" hint="예: application/pdf, image/png">
+          <Input value={ct} onChange={(e) => onValueChange(ctKey, e.target.value)} placeholder="application/octet-stream" className="h-9 text-sm font-mono" />
+        </DrawerField>
+      </>
+    );
+  } else {
+    // ReferenceElement / RelationshipElement / 기타 — 단순 값 입력
+    const valueKey = `${valuePath}.originalValue`;
+    const val = read(valueKey, node.originalValue ?? "");
+    body = (
+      <DrawerField icon={<Link2 size={11} />} label="참조 값" hint={`${modelType} 의 참조 키 값을 입력합니다.`}>
+        <Textarea
+          value={typeof val === "string" ? val : JSON.stringify(val ?? "", null, 2)}
+          onChange={(e) => onValueChange(valueKey, e.target.value)}
+          placeholder="참조 값을 입력하세요..."
+          className="text-sm font-mono min-h-[80px]"
+        />
+      </DrawerField>
+    );
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <SheetContent side="right" className="w-full sm:max-w-md p-0 gap-0">
+        <SheetHeader className="px-5 py-4 border-b border-zinc-100">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 shrink-0">
+              {TYPE_ICON[modelType] ?? <Settings2 size={14} />}
+            </div>
+            <SheetTitle className="text-base font-semibold text-zinc-900 truncate">{label}</SheetTitle>
+          </div>
+          <SheetDescription className="sr-only">엘리먼트 상세 입력</SheetDescription>
+          <div className="flex items-center gap-2 mt-1">
+            <Badge variant="secondary" className="text-[10px] font-mono">{modelType}</Badge>
+            <span className="text-[11px] text-zinc-400 font-mono truncate">{node.idShort}</span>
+          </div>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto">{body}</div>
+
+        <SheetFooter className="px-5 py-4 border-t border-zinc-100">
+          <Button type="button" className="w-full" onClick={onClose}>완료</Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/* 트리에서 valuePath로 노드를 찾는다 (드로어 타깃 동기화용) */
+function findNodeByPath(nodes: any[], path: string): any | null {
+  for (const n of nodes) {
+    if (n?.valuePath === path) return n;
+    if (Array.isArray(n?.children)) {
+      const found = findNodeByPath(n.children, path);
+      if (found) return found;
+    }
+  }
+  return null;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -850,6 +1094,38 @@ export default function SubmodelFormEditor({
   }, [submodels.length, activeIdx]);
   const activeSubmodel = submodels[activeIdx];
 
+  /* ── 상세 입력 드로어 상태 ── */
+  // 드로어에 표시할 노드 (treeData에서 valuePath로 다시 찾아 최신값 사용)
+  const [drawerPath, setDrawerPath] = useState<string | null>(null);
+  // 새 엘리먼트 추가 후, treeData가 갱신되면 그 노드를 찾아 드로어를 연다
+  const pendingAddRef = useRef<{ parentPath: string; idShort: string } | null>(null);
+
+  const requestDrawerForNew = (parentNode: any, idShort: string) => {
+    pendingAddRef.current = { parentPath: parentNode?.valuePath ?? "", idShort };
+  };
+
+  // treeData 변경 시: (1) 대기 중인 신규 노드를 찾아 드로어 오픈, (2) 현재 드로어 노드 경로 유효성 유지
+  useEffect(() => {
+    const pending = pendingAddRef.current;
+    if (!pending) return;
+    const parent = pending.parentPath
+      ? findNodeByPath(treeData, pending.parentPath)
+      : null;
+    const siblings: any[] = parent
+      ? (Array.isArray(parent.children) ? parent.children : [])
+      : treeData;
+    const target = siblings.find((n) => n?.idShort === pending.idShort);
+    if (target?.valuePath) {
+      setDrawerPath(target.valuePath);
+      pendingAddRef.current = null;
+    }
+  }, [treeData]);
+
+  const drawerNode = useMemo(
+    () => (drawerPath ? findNodeByPath(treeData, drawerPath) : null),
+    [treeData, drawerPath]
+  );
+
   /* Completion per submodel */
   const completions = useMemo(() =>
     submodels.map((sm) => {
@@ -879,6 +1155,7 @@ export default function SubmodelFormEditor({
   }
 
   return (
+    <DrawerRequestContext.Provider value={editMode ? requestDrawerForNew : null}>
     <div className="flex h-full overflow-hidden bg-white rounded-lg border border-zinc-200">
       {/* ── Left sidebar ── */}
       <div className="w-56 shrink-0 flex flex-col border-r border-zinc-200 bg-zinc-50">
@@ -994,5 +1271,15 @@ export default function SubmodelFormEditor({
         )}
       </div>
     </div>
+
+      {/* ── 엘리먼트 상세 입력 드로어 ── */}
+      <ElementDetailDrawer
+        node={drawerNode}
+        state={state}
+        open={!!drawerNode}
+        onClose={() => setDrawerPath(null)}
+        onValueChange={onValueChange}
+      />
+    </DrawerRequestContext.Provider>
   );
 }
