@@ -180,7 +180,7 @@ function countFilledLeaves(node: any, state: Record<string, any>): number {
 
 /* ─────────────────────────────────────────────────────────────────────────
    AddElementDialog — 타입 선택 + idShort 입력 후 onAdd 호출
-───────────────────────────────────────────────────────────────────────────*/
+─────────────────────────��─────────────────────────────────────────────────*/
 function AddElementDialog({
   parentNode,
   parentLabel,
@@ -795,22 +795,36 @@ function findNodeByPath(nodes: any[], path: string): any | null {
    FieldLabelWithHint — label + CD 설명 tooltip
 ───────────────────────────────────────────────────────────────────────────*/
 function FieldLabelWithHint({
-  label, idShort, filled, typeLabel, cdHint,
+  label, idShort, filled, typeLabel, cdHint, node,
 }: {
   label: string;
   idShort: string;
   filled: boolean;
   typeLabel?: string;
   cdHint?: { idShort: string; description: string } | null;
+  node?: any;
 }) {
   const [open, setOpen] = useState(false);
+  const openDetail = React.useContext(OpenDetailContext);
+  const canDetail = !!openDetail && !!node && DETAIL_TYPES.has(node.modelType);
 
   return (
     <div className="flex items-center gap-2 min-w-0 pt-0.5">
       <div className={cn("w-1.5 h-1.5 rounded-full shrink-0 mt-px", filled ? "bg-blue-500" : "bg-zinc-300")} />
-      <label className="text-sm text-zinc-700 font-medium truncate leading-tight" title={idShort}>
-        {label}
-      </label>
+      {canDetail ? (
+        <button
+          type="button"
+          onClick={() => openDetail!(node)}
+          className="text-sm text-zinc-700 font-medium truncate leading-tight text-left hover:text-blue-600 hover:underline decoration-dotted underline-offset-2 transition-colors"
+          title={`${idShort} — 상세 입력 열기`}
+        >
+          {label}
+        </button>
+      ) : (
+        <label className="text-sm text-zinc-700 font-medium truncate leading-tight" title={idShort}>
+          {label}
+        </label>
+      )}
       {typeLabel && (
         <span className="shrink-0 text-[10px] text-zinc-400 font-mono bg-zinc-100 px-1.5 py-0.5 rounded hidden lg:block">
           {typeLabel}
@@ -867,7 +881,7 @@ function FileFieldInput({
 
   return (
     <div className={cn("grid grid-cols-[240px_1fr] items-start gap-4 py-3 px-4 border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50/60", depth > 0 && "pl-6")}>
-      <FieldLabelWithHint label={label} idShort={node.idShort} filled={filled} typeLabel="File" cdHint={cdHint} />
+      <FieldLabelWithHint label={label} idShort={node.idShort} filled={filled} typeLabel="File" cdHint={cdHint} node={node} />
       {editMode ? (
         <div className="flex gap-2 items-center">
           <Input
@@ -937,7 +951,7 @@ function FieldInput({
         <FieldLabelWithHint
           label={label} idShort={node.idShort} filled={filled}
           typeLabel={node.valueType?.replace("xs:", "")}
-          cdHint={cdHint}
+          cdHint={cdHint} node={node}
         />
         {editMode ? (
           <Input
@@ -967,7 +981,7 @@ function FieldInput({
     return (
       <div className={cn("py-3 px-4 border-b border-zinc-100 last:border-b-0", depth > 0 && "pl-6")}>
         <div className="grid grid-cols-[240px_1fr] items-start gap-4">
-          <FieldLabelWithHint label={label} idShort={node.idShort} filled={filled} typeLabel="MLP" cdHint={cdHint} />
+          <FieldLabelWithHint label={label} idShort={node.idShort} filled={filled} typeLabel="MLP" cdHint={cdHint} node={node} />
           <div className="space-y-2">
             {mlp.length === 0 && !editMode && (
               <span className="text-sm text-zinc-400 italic py-1 inline-block">—</span>
@@ -1029,7 +1043,7 @@ function FieldInput({
 
     return (
       <div className={cn("grid grid-cols-[240px_1fr] items-start gap-4 py-3 px-4 border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50/60", depth > 0 && "pl-6")}>
-        <FieldLabelWithHint label={label} idShort={node.idShort} filled={filled} typeLabel="Range" cdHint={cdHint} />
+        <FieldLabelWithHint label={label} idShort={node.idShort} filled={filled} typeLabel="Range" cdHint={cdHint} node={node} />
         <div className="flex gap-2 items-center">
           {editMode ? (
             <>
@@ -1065,7 +1079,7 @@ function FieldInput({
 
   return (
     <div className={cn("grid grid-cols-[240px_1fr] items-start gap-4 py-3 px-4 border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50/60", depth > 0 && "pl-6")}>
-      <FieldLabelWithHint label={label} idShort={node.idShort} filled={fallbackFilled} typeLabel={node.modelType} cdHint={cdHint} />
+      <FieldLabelWithHint label={label} idShort={node.idShort} filled={fallbackFilled} typeLabel={node.modelType} cdHint={cdHint} node={node} />
       {editMode ? (
         <Input
           value={fallbackVal}
@@ -1127,7 +1141,7 @@ function ReferenceLikeRow({
 
   return (
     <div className={cn("grid grid-cols-[240px_1fr] items-center gap-4 py-3 px-4 border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50/60", depth > 0 && "pl-6")}>
-      <FieldLabelWithHint label={label} idShort={node.idShort} filled={filled} typeLabel={node.modelType} cdHint={cdHint} />
+      <FieldLabelWithHint label={label} idShort={node.idShort} filled={filled} typeLabel={node.modelType} cdHint={cdHint} node={node} />
       <div className="flex items-center gap-2 min-w-0">
         <div className="flex-1 min-w-0">{summaryNode}</div>
         {editMode && openDetail && (
@@ -1240,7 +1254,7 @@ function GroupSection({
   );
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
+/* ───────────────────────────────────────────────────────────────────��─────
    NodeRenderer — dispatches to FieldInput or GroupSection
 ───────────────────────────────────────────────────────────────────────────*/
 function NodeRenderer({
@@ -1667,6 +1681,7 @@ export default function SubmodelFormEditor({
         onClose={() => setDrawerPath(null)}
         onValueChange={onValueChange}
       />
+    </OpenDetailContext.Provider>
     </DrawerRequestContext.Provider>
   );
 }
