@@ -187,7 +187,7 @@ function countFilledLeaves(node: any, state: Record<string, any>): number {
   );
 }
 
-/* ─────���───────────────────────────────────────────────────────────────────
+/* ─────�����───────────────────────────────────────────────────────────────────
    AddElementDialog — 타입 선택 + idShort 입력 후 onAdd 호출
 ─────────────────────────���─────────────────────────────────────────────────*/
 function AddElementDialog({
@@ -510,6 +510,106 @@ function ReferencePicker({
           }
           placeholder="https://example.com/ids/..."
           className="h-9 text-sm font-mono"
+        />
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   InlineReferencePicker — Simple View 한 줄 입력용 (타입 토글 + 값 입력 동일 라인)
+   · 내부 참조 : 엘리먼트 선택 → 트리거에는 idShort 만 표시 (상세 경로는 드로어에서)
+   · 외부 참조 : 식별자 직접 입력
+───────────────────────────────────────────────────────────────────────────*/
+function InlineReferencePicker({
+  value, treeData, onChange,
+}: {
+  value: any;
+  treeData: any[];
+  onChange: (ref: any) => void;
+}) {
+  const current = value ?? { type: "ModelReference", keys: [] };
+  const refType: "ModelReference" | "ExternalReference" =
+    current?.type === "ExternalReference" ? "ExternalReference" : "ModelReference";
+
+  const targets = useMemo(() => collectAllRefTargets(treeData), [treeData]);
+
+  const currentSig = useMemo(() => {
+    const keys: any[] = current?.keys ?? [];
+    if (refType !== "ModelReference" || keys.length === 0) return "";
+    const submodelId = keys[0]?.type === "Submodel" ? keys[0].value : "";
+    const path = keys.slice(1).map((k) => k.value).join("/");
+    return submodelId ? `${submodelId}::${path}` : "";
+  }, [current, refType]);
+
+  const externalId =
+    refType === "ExternalReference" ? (current?.keys?.[0]?.value ?? "") : "";
+
+  const setRefType = (t: "ModelReference" | "ExternalReference") => {
+    if (t === "ExternalReference") {
+      onChange({ type: "ExternalReference", keys: [{ type: "GlobalReference", value: "" }] });
+    } else {
+      onChange({ type: "ModelReference", keys: [] });
+    }
+  };
+
+  const handleElement = (sig: string | null) => {
+    const target = targets.find((t) => t.sig === sig);
+    if (target) onChange({ type: "ModelReference", keys: target.keys });
+  };
+
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      {/* 타입 토글 (콤팩트) */}
+      <div className="inline-flex gap-0.5 p-0.5 bg-zinc-100 rounded-md shrink-0">
+        {(["ModelReference", "ExternalReference"] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setRefType(t)}
+            className={cn(
+              "text-[11px] font-medium px-2 py-1 rounded transition-colors",
+              refType === t ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+            )}
+          >
+            {t === "ModelReference" ? "내부" : "외부"}
+          </button>
+        ))}
+      </div>
+
+      {/* 값 입력 (같은 라인) */}
+      {refType === "ModelReference" ? (
+        <Select value={currentSig || undefined} onValueChange={handleElement} disabled={targets.length === 0}>
+          <SelectTrigger className="h-8 text-sm flex-1 min-w-0">
+            <SelectValue placeholder="엘리먼트 선택..." />
+          </SelectTrigger>
+          <SelectContent>
+            {treeData?.[0]?.children?.map((sm: any) => {
+              const group = targets.filter((t) => t.submodelId === sm.id);
+              if (group.length === 0) return null;
+              return (
+                <SelectGroup key={sm.id}>
+                  <SelectLabel className="text-[11px] text-zinc-400 font-medium flex items-center gap-1">
+                    <Boxes size={11} /> {getDisplayLabel(sm.idShort)}
+                  </SelectLabel>
+                  {group.map((t) => (
+                    <SelectItem key={t.sig} value={t.sig} className="text-sm">
+                      {getDisplayLabel(t.idShort)}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              );
+            })}
+          </SelectContent>
+        </Select>
+      ) : (
+        <Input
+          value={externalId}
+          onChange={(e) =>
+            onChange({ type: "ExternalReference", keys: [{ type: "GlobalReference", value: e.target.value }] })
+          }
+          placeholder="외부 식별자 (URI/IRI)..."
+          className="h-8 text-sm font-mono flex-1 min-w-0"
         />
       )}
     </div>
@@ -1133,25 +1233,25 @@ function ReferenceLikeRow({
     ? summarizeReference(first).filled && summarizeReference(second).filled
     : summarizeReference(valueRef).filled;
 
-  // ── 편집 모드: 인라인 피커 ──
+  // ── 편집 모드: 인라인 한 줄 피커 ──
   if (editMode && inlineRef) {
     return (
       <div className={cn("grid grid-cols-[240px_1fr] items-start gap-4 py-3 px-4 border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50/60", depth > 0 && "pl-6")}>
         <FieldLabelWithHint label={label} idShort={node.idShort} filled={filled} typeLabel={node.modelType} cdHint={cdHint} node={node} />
-        <div className="space-y-3 min-w-0">
+        <div className="space-y-2 min-w-0">
           {isRelationship ? (
             <>
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-blue-500">First</span>
-                <ReferencePicker value={first} treeData={inlineRef.treeData} onChange={(ref) => inlineRef.onValueChange(`${node.valuePath}.first`, ref)} />
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-blue-500 w-12 shrink-0">First</span>
+                <InlineReferencePicker value={first} treeData={inlineRef.treeData} onChange={(ref) => inlineRef.onValueChange(`${node.valuePath}.first`, ref)} />
               </div>
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600">Second</span>
-                <ReferencePicker value={second} treeData={inlineRef.treeData} onChange={(ref) => inlineRef.onValueChange(`${node.valuePath}.second`, ref)} />
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 w-12 shrink-0">Second</span>
+                <InlineReferencePicker value={second} treeData={inlineRef.treeData} onChange={(ref) => inlineRef.onValueChange(`${node.valuePath}.second`, ref)} />
               </div>
             </>
           ) : (
-            <ReferencePicker value={valueRef} treeData={inlineRef.treeData} onChange={(ref) => inlineRef.onValueChange(`${node.valuePath}.value`, ref)} />
+            <InlineReferencePicker value={valueRef} treeData={inlineRef.treeData} onChange={(ref) => inlineRef.onValueChange(`${node.valuePath}.value`, ref)} />
           )}
           {openDetail && (
             <button
@@ -1159,7 +1259,7 @@ function ReferenceLikeRow({
               onClick={() => openDetail(node)}
               className="flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-blue-600 transition-colors"
             >
-              <Settings2 size={12} /> 상세 입력
+              <Settings2 size={12} /> 상세 편집
             </button>
           )}
         </div>
