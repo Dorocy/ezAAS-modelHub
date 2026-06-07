@@ -247,9 +247,10 @@ function AddElementDialog({
   }, [open]);
 
   const trimmedIdShort = idShort.trim();
-  // idShort 기반 자동 생성 ID (사용자가 직접 입력하면 그 값 사용)
+  // idShort 기반 자동 생성 ID — 이 사이트에서 만드는 CD 는 항상 ezmodel-hub.re.kr 도메인 사용
+  //   규칙: https://ezmodel-hub.re.kr/cd/{idShort}/{version}/{revision}
   const autoId = trimmedIdShort
-    ? `https://www.smart-factory.kr/ids/cd/${encodeURIComponent(trimmedIdShort)}/1/0`
+    ? `https://ezmodel-hub.re.kr/cd/${encodeURIComponent(trimmedIdShort)}/1/0`
     : "";
   const effectiveNewId = customId.trim() || autoId;
 
@@ -1054,7 +1055,7 @@ function findNodeByPath(nodes: any[], path: string): any | null {
   return null;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
+/* ────────────────────────────────────────────────────────────────────���────
    FieldLabelWithHint — label + CD 설명 tooltip
 ───────────────────────────────────────────────────────────────────────────*/
 function FieldLabelWithHint({
