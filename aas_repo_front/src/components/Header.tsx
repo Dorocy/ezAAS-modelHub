@@ -71,12 +71,12 @@ function Header() {
   const isManager = profile?.user_group_seq === 1 || profile?.user_group_seq === 2;
 
   const navLinks = [
-    { href: ROUTES.AASMODEL.LIST,  label: t("AAS Template") },
-    { href: ROUTES.SUBMODEL.LIST,  label: t("Submodel Template") },
-    ...(profile ? [{ href: ROUTES.INSTANCE.LIST, label: t("My AAS Instance") }] : []),
-    { href: ROUTES.ABOUT,          label: t("About") },
-    ...(isManager ? [{ href: ROUTES.DISTRIBUTE.LIST, label: t("Publish") }]   : []),
-    ...(isAdmin   ? [{ href: ROUTES.USER.LIST,       label: t("Authority") }] : []),
+    { href: ROUTES.AASMODEL.LIST,  label: t("AAS Template"),      desc: t("AAS Template desc") },
+    { href: ROUTES.SUBMODEL.LIST,  label: t("Submodel Template"), desc: t("Submodel Template desc") },
+    ...(profile ? [{ href: ROUTES.INSTANCE.LIST, label: t("My AAS Instance"), desc: t("My AAS Instance desc") }] : []),
+    { href: ROUTES.ABOUT,          label: t("About"),             desc: t("About desc") },
+    ...(isManager ? [{ href: ROUTES.DISTRIBUTE.LIST, label: t("Publish"),   desc: t("Publish desc") }]   : []),
+    ...(isAdmin   ? [{ href: ROUTES.USER.LIST,       label: t("Authority"), desc: t("Authority desc") }] : []),
   ];
 
   const isNavActive = (href: string) =>
@@ -111,14 +111,17 @@ function Header() {
                       key={link.href}
                       href={link.href}
                       className={cn(
-                        "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                        "flex items-start gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                         isNavActive(link.href)
                           ? "bg-primary/8 text-primary"
                           : "text-muted-foreground hover:bg-accent hover:text-foreground"
                       )}
                     >
-                      <ChevronRight className={cn("size-3.5 shrink-0", isNavActive(link.href) ? "text-primary" : "text-muted-foreground/50")} />
-                      {link.label}
+                      <ChevronRight className={cn("mt-0.5 size-3.5 shrink-0", isNavActive(link.href) ? "text-primary" : "text-muted-foreground/50")} />
+                      <span className="flex flex-col">
+                        <span>{link.label}</span>
+                        <span className="text-[11px] font-normal text-muted-foreground/70">{link.desc}</span>
+                      </span>
                     </Link>
                   ))}
                   {!isAuthenticated && (
@@ -231,6 +234,7 @@ function Header() {
                 <Link
                   key={link.href}
                   href={link.href}
+                  title={link.desc}
                   className={cn(
                     "relative flex h-full items-center px-3.5 text-sm transition-colors",
                     active

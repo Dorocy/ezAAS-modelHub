@@ -1,6 +1,7 @@
 import { getPublishedCount } from "@/api";
 import AASSearchBar from "@/components/feature/app/AASSearchBar";
 import VideoEmbed from "@/components/feature/app/VideoEmbed";
+import { ROUTES } from "@/constants/routes";
 import Link from "next/link";
 import {
   LayoutTemplate,
@@ -10,6 +11,8 @@ import {
   FileStack,
   Activity,
   Cpu,
+  Box,
+  Boxes,
 } from "lucide-react";
 
 export const metadata = { title: "KETI ezAAS Model Hub" };
@@ -85,7 +88,7 @@ export default async function Home() {
                   템플릿 탐색 <ArrowRight className="size-4" />
                 </Link>
                 <Link
-                  href="/instance/create"
+                  href={ROUTES.INSTANCE.CREATE}
                   className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-5 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors"
                 >
                   인스턴스 만들기
@@ -105,6 +108,108 @@ export default async function Home() {
       <section className="border-b border-border bg-zinc-50/60">
         <div className="mx-auto max-w-screen-xl px-6 lg:px-10 py-5">
           <AASSearchBar />
+        </div>
+      </section>
+
+      {/* ─── AAS가 처음이신가요? 개념 설명 ──────────────────────── */}
+      <section className="border-b border-border bg-white">
+        <div className="mx-auto max-w-screen-xl px-6 lg:px-10 py-12 lg:py-16">
+          <div className="mb-8 max-w-2xl">
+            <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-2">
+              AAS가 처음이신가요?
+            </p>
+            <h2 className="text-2xl lg:text-3xl font-bold text-zinc-900">
+              3가지 개념만 알면 됩니다
+            </h2>
+            <p className="mt-3 text-sm text-zinc-500 leading-relaxed">
+              AAS(Asset Administration Shell)는 기계·제품 같은 실제 자산을 디지털로
+              표현하는 국제 표준입니다. 아래 순서대로 따라오시면 됩니다.
+            </p>
+          </div>
+
+          {/* 3단계 흐름: 설계도 → 부품 → 실제 제품 */}
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-stretch">
+            {/* STEP 1 - 템플릿 */}
+            <div className="flex flex-col gap-3 rounded-2xl border border-blue-100 bg-blue-50/40 p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex size-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                  <LayoutTemplate className="size-5" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-500">
+                    Step 1 · 템플릿
+                  </p>
+                  <p className="text-sm font-bold text-zinc-900">AAS 템플릿 = 설계도</p>
+                </div>
+              </div>
+              <p className="text-sm text-zinc-600 leading-relaxed">
+                자산이 어떤 정보를 담을지 미리 정해 둔{" "}
+                <span className="font-semibold text-zinc-900">빈 양식(설계도)</span>입니다.
+                예: &ldquo;전동기&rdquo; 템플릿에는 제조사·정격출력 칸이 있습니다.
+              </p>
+            </div>
+
+            {/* 화살표 */}
+            <div className="hidden items-center justify-center md:flex">
+              <ArrowRight className="size-5 text-zinc-300" />
+            </div>
+
+            {/* STEP 2 - 서브모델 */}
+            <div className="flex flex-col gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
+                  <Puzzle className="size-5" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-500">
+                    Step 2 · 서브모델
+                  </p>
+                  <p className="text-sm font-bold text-zinc-900">서브모델 = 부품 블록</p>
+                </div>
+              </div>
+              <p className="text-sm text-zinc-600 leading-relaxed">
+                설계도를 이루는{" "}
+                <span className="font-semibold text-zinc-900">재사용 가능한 부품</span>입니다.
+                예: &ldquo;기술 데이터&rdquo;, &ldquo;식별 정보&rdquo; 같은 블록을 조합합니다.
+              </p>
+            </div>
+
+            {/* 화살표 */}
+            <div className="hidden items-center justify-center md:flex">
+              <ArrowRight className="size-5 text-zinc-300" />
+            </div>
+
+            {/* STEP 3 - 인스턴스 */}
+            <div className="flex flex-col gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/40 p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+                  <Box className="size-5" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-500">
+                    Step 3 · 인스턴스
+                  </p>
+                  <p className="text-sm font-bold text-zinc-900">인스턴스 = 실제 제품</p>
+                </div>
+              </div>
+              <p className="text-sm text-zinc-600 leading-relaxed">
+                설계도(템플릿)에 실제 값을 채워 만든{" "}
+                <span className="font-semibold text-zinc-900">진짜 제품의 디지털 트윈</span>입니다.
+                코드 없이 칸만 채우면 완성됩니다.
+              </p>
+            </div>
+          </div>
+
+          {/* 비유 한 줄 요약 */}
+          <div className="mt-6 flex items-start gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-5 py-4">
+            <Boxes className="mt-0.5 size-5 shrink-0 text-zinc-400" />
+            <p className="text-sm text-zinc-600 leading-relaxed">
+              <span className="font-semibold text-zinc-900">쉽게 말하면</span> — 템플릿은
+              과자 &ldquo;틀&rdquo;, 서브모델은 틀을 이루는 &ldquo;조각&rdquo;,
+              인스턴스는 그 틀로 찍어낸 &ldquo;실제 과자&rdquo;입니다.
+              먼저 템플릿을 둘러본 뒤, 마음에 드는 걸 골라 인스턴스를 만들어 보세요.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -144,7 +249,7 @@ export default async function Home() {
             },
             {
               num: "03",
-              href: "/instance/create",
+              href: ROUTES.INSTANCE.CREATE,
               icon: Layers,
               title: "인스턴스 생성",
               desc: "템플릿을 골라 필드를 채우기만 하면 완성됩니다. 코드 없이 실제 자산의 디지털 트윈을 만드세요.",

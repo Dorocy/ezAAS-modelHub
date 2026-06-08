@@ -13,8 +13,12 @@
  */
 
 import useSWR from "swr";
+import Link from "next/link";
+import { AlertTriangle, ArrowLeft, RotateCcw } from "lucide-react";
 import { getInstance, getInstanceDetail } from "@/api/index";
+import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 import InstanceFormClient from "./InstanceFormClient";
 
 interface Props {
@@ -25,21 +29,11 @@ interface Props {
 export default function InstanceFormLoader({ mode, instanceSeq }: Props) {
   const { isAuthenticated } = useAuth();
 
-  const { data: instance, isLoading, error } = useSWR(
+  const { data: instance, isLoading, error, mutate } = useSWR(
     isAuthenticated && instanceSeq ? ["instance", instanceSeq] : null,
     () => getInstance({ instance_seq: instanceSeq }),
     { shouldRetryOnError: false }
   );
-
-  console.log("[v0] InstanceFormLoader", {
-    instanceSeq,
-    isAuthenticated,
-    isLoading,
-    hasInstance: !!instance,
-    instanceResult: (instance as any)?.result,
-    errorMessage: (error as any)?.message,
-    errorCause: (error as any)?.cause,
-  });
 
   // view 모드에서는 결합된 AAS 메타데이터(검증 결과 등)도 함께 표시한다.
   const { data: instanceDetail } = useSWR(
@@ -73,18 +67,35 @@ export default function InstanceFormLoader({ mode, instanceSeq }: Props) {
       ((instance as any)?.msg as string | undefined);
     const status = (error as any)?.cause?.status;
     return (
-      <div className="flex flex-col items-center justify-center gap-2 py-24 text-center">
-        <p className="text-sm font-medium text-zinc-900">
-          인스턴스를 불러오지 못했습니다.
-        </p>
-        <p className="text-sm text-zinc-500 max-w-md">
-          {backendMsg
-            ? backendMsg
-            : "잠시 후 다시 시도하거나 목록에서 다시 선택해주세요."}
-        </p>
-        {status ? (
-          <p className="text-xs text-zinc-400">에러 코드: {status}</p>
-        ) : null}
+      <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
+        <div className="flex size-12 items-center justify-center rounded-full bg-amber-50 text-amber-500">
+          <AlertTriangle className="size-6" />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <p className="text-base font-semibold text-zinc-900">
+            인스턴스를 불러오지 못했습니다
+          </p>
+          <p className="mx-auto max-w-md text-sm text-zinc-500 leading-relaxed">
+            {backendMsg
+              ? backendMsg
+              : "잠시 후 다시 시도하거나 목록에서 다시 선택해주세요."}
+          </p>
+          {status ? (
+            <p className="text-xs text-zinc-400">에러 코드: {status}</p>
+          ) : null}
+        </div>
+        <div className="mt-1 flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => mutate()}>
+            <RotateCcw className="size-3.5" />
+            다시 시도
+          </Button>
+          <Button size="sm" render={
+            <Link href={ROUTES.INSTANCE.LIST}>
+              <ArrowLeft className="size-3.5" />
+              목록으로
+            </Link>
+          } />
+        </div>
       </div>
     );
   }
