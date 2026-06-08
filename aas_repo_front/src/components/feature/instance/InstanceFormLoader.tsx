@@ -27,8 +27,19 @@ export default function InstanceFormLoader({ mode, instanceSeq }: Props) {
 
   const { data: instance, isLoading, error } = useSWR(
     isAuthenticated && instanceSeq ? ["instance", instanceSeq] : null,
-    () => getInstance({ instance_seq: instanceSeq })
+    () => getInstance({ instance_seq: instanceSeq }),
+    { shouldRetryOnError: false }
   );
+
+  console.log("[v0] InstanceFormLoader", {
+    instanceSeq,
+    isAuthenticated,
+    isLoading,
+    hasInstance: !!instance,
+    instanceResult: (instance as any)?.result,
+    errorMessage: (error as any)?.message,
+    errorCause: (error as any)?.cause,
+  });
 
   // view 모드에서는 결합된 AAS 메타데이터(검증 결과 등)도 함께 표시한다.
   const { data: instanceDetail } = useSWR(
@@ -55,17 +66,25 @@ export default function InstanceFormLoader({ mode, instanceSeq }: Props) {
     ((instance as any).result === "error" || !(instance as any).instance_seq);
 
   if (error || !instance || isErrorResponse) {
-    const backendMsg = (instance as any)?.msg as string | undefined;
+    // 실제 백엔드 메시지를 우선 노출한다. (throw된 에러의 cause.json.msg → instance.msg 순)
+    const backendMsg =
+      (error as any)?.cause?.json?.msg ||
+      (error as any)?.message ||
+      ((instance as any)?.msg as string | undefined);
+    const status = (error as any)?.cause?.status;
     return (
       <div className="flex flex-col items-center justify-center gap-2 py-24 text-center">
         <p className="text-sm font-medium text-zinc-900">
           인스턴스를 불러오지 못했습니다.
         </p>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-zinc-500 max-w-md">
           {backendMsg
-            ? "이 인스턴스는 메타데이터가 손상되어 열 수 없습니다."
+            ? backendMsg
             : "잠시 후 다시 시도하거나 목록에서 다시 선택해주세요."}
         </p>
+        {status ? (
+          <p className="text-xs text-zinc-400">에러 코드: {status}</p>
+        ) : null}
       </div>
     );
   }
