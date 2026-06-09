@@ -35,7 +35,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> =
 function StatusBadge({ status, label }: { status: string; label: string }) {
   const s = STATUS_COLORS[status] ?? STATUS_COLORS.draft;
   return (
-    <span className={cn("inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border", s.bg, s.text)}>
+    <span className={cn("inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border", s.bg, s.text)}>
       <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", s.dot)} />
       {label}
     </span>
@@ -66,7 +66,7 @@ function TemplateCard({ model }: { model: any }) {
 
         {/* footer */}
         <div className="flex items-center justify-between gap-2 pt-3 border-t border-zinc-100">
-          <span className="text-[11px] text-zinc-400 font-medium truncate">
+          <span className="text-xs text-zinc-400 font-medium truncate">
             {model.category_name || "—"}
           </span>
           <StatusBadge status={model.status} label={model.status_nm ?? model.status} />
@@ -197,7 +197,7 @@ export default function AASPage() {
             </div>
 
             {/* Category label */}
-            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
+            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
               Category
             </p>
 
@@ -212,7 +212,7 @@ export default function AASPage() {
               )}
             >
               <span>All</span>
-              <span className={cn("text-[11px] tabular-nums", activeCategory === "all" ? "text-zinc-300" : "text-zinc-400")}>
+              <span className={cn("text-xs tabular-nums", activeCategory === "all" ? "text-zinc-300" : "text-zinc-400")}>
                 {totalCount}
               </span>
             </button>

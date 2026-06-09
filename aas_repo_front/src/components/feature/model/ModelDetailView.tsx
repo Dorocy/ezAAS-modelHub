@@ -98,7 +98,7 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
                     {isLoading ? "Loading..." : model?.[meta.nameKey] || "Untitled"}
                   </h1>
                   {model?.status && <StatusBadge status={model.status} label={model.status} />}
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-zinc-100 border-zinc-200 text-zinc-500">
+                  <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border bg-zinc-100 border-zinc-200 text-zinc-500">
                     <Lock className="w-3 h-3" />
                     Read-only template
                   </span>
@@ -145,7 +145,7 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
                   if (value === undefined || value === null || value === "") return null;
                   return (
                     <div key={f.key} className="flex flex-col gap-0.5">
-                      <dt className="text-[11px] font-medium text-zinc-400">{f.label}</dt>
+                      <dt className="text-xs font-medium text-zinc-400">{f.label}</dt>
                       <dd className={cn("text-sm text-zinc-800 break-all", f.mono && "font-mono text-xs")}>
                         {String(value)}
                       </dd>

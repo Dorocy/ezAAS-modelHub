@@ -201,7 +201,7 @@ function StepIndicator({
       {/* 현재 스텝 안내 — 구분선 + 한 줄 */}
       {currentStep && (
         <div className="border-t border-zinc-100 pt-3 flex items-center gap-2">
-          <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">Step {active + 1}</span>
+          <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Step {active + 1}</span>
           <span className="text-zinc-200">·</span>
           <span className="text-xs text-zinc-500">{currentStep.hint}</span>
         </div>
@@ -1020,14 +1020,14 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-sm font-bold text-zinc-900">{instanceName || "—"}</h2>
-                {categoryName && <span className="text-[11px] bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">{categoryName}</span>}
-                {version      && <span className="text-[11px] bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">v{version}</span>}
-                {assetKind    && <span className="text-[11px] bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">{assetKind}</span>}
+                {categoryName && <span className="text-xs bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">{categoryName}</span>}
+                {version      && <span className="text-xs bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">v{version}</span>}
+                {assetKind    && <span className="text-xs bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">{assetKind}</span>}
                 {verificationBadge(mode === "view" ? instance?.verification : inputState.verification)}
               </div>
               {description && <p className="text-xs text-zinc-400 mt-1 max-w-lg leading-relaxed">{description}</p>}
               {thumbnailPath && (
-                <p className="text-[11px] text-zinc-300 mt-1 font-mono truncate max-w-xs">{thumbnailPath}</p>
+                <p className="text-xs text-zinc-300 mt-1 font-mono truncate max-w-xs">{thumbnailPath}</p>
               )}
             </div>
           </div>
@@ -1078,13 +1078,13 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                   <div className="flex items-center justify-between gap-3 w-full pr-2">
                     <div className="min-w-0 text-left">
                       <p className="text-sm font-semibold text-zinc-800 leading-none">{sm.idShort}</p>
-                      {smDesc && <p className="text-[11px] text-zinc-400 mt-1 leading-snug line-clamp-1">{smDesc}</p>}
+                      {smDesc && <p className="text-xs text-zinc-400 mt-1 leading-snug line-clamp-1">{smDesc}</p>}
                     </div>
                     {/* 입력 현황 */}
                     <div className="shrink-0 flex items-center gap-2">
-                      <span className="text-[11px] text-zinc-400">{filled}/{props.length}</span>
+                      <span className="text-xs text-zinc-400">{filled}/{props.length}</span>
                       {isComplete && props.length > 0 && (
-                        <span className="text-[11px] font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full px-2.5 py-0.5">
+                        <span className="text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full px-2.5 py-0.5">
                           완료
                         </span>
                       )}
@@ -1098,7 +1098,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       {/* 그룹 레이블 */}
                       {group.label && (
                         <div className="px-4 py-2 bg-zinc-50 border-t border-zinc-100">
-                          <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">{group.label}</span>
+                          <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{group.label}</span>
                         </div>
                       )}
                       {/* key-value 2열 그리드 */}
@@ -1112,7 +1112,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                               key={pi}
                               className="flex items-start gap-3 px-4 py-2.5 border-b border-r border-zinc-100 last:border-r-0"
                             >
-                              <span className="text-[11px] text-zinc-400 w-28 shrink-0 pt-0.5 leading-tight truncate">{prop.idShort}</span>
+                              <span className="text-xs text-zinc-400 w-28 shrink-0 pt-0.5 leading-tight truncate">{prop.idShort}</span>
                               {val ? (
                                 isImg ? (
                                   <div className="flex-1 min-w-0">
@@ -1122,13 +1122,13 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                                       className="h-16 w-auto max-w-full rounded border border-zinc-200 object-contain"
                                       onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                                     />
-                                    <span className="text-[10px] text-zinc-300 font-mono mt-1 block truncate">{val}</span>
+                                    <span className="text-xs text-zinc-300 font-mono mt-1 block truncate">{val}</span>
                                   </div>
                                 ) : (
                                   <span className="text-xs font-medium text-zinc-900 flex-1 min-w-0 leading-snug break-words">{val}</span>
                                 )
                               ) : (
-                                <span className="text-[11px] text-amber-400 italic flex-1 pt-0.5">미입력</span>
+                                <span className="text-xs text-amber-400 italic flex-1 pt-0.5">미입력</span>
                               )}
                             </div>
                           );
@@ -1301,7 +1301,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             {/* 카테고리 버튼 목록 */}
             <div className="shrink-0 border-b">
               <div className="px-3 pt-3 pb-1">
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                   Category
                 </p>
               </div>
@@ -1348,11 +1348,11 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             {/* ���플릿 목록 */}
             <div className="flex flex-col flex-1 min-h-0">
               <div className="px-3 py-2 shrink-0 flex items-center justify-between border-b bg-muted/10">
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Templates
                 </p>
                 {!isFetchingModels && (
-                  <span className="text-[11px] text-muted-foreground">{templateListItems.length}개</span>
+                  <span className="text-xs text-muted-foreground">{templateListItems.length}개</span>
                 )}
               </div>
 
@@ -1382,12 +1382,12 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       <div className="font-medium leading-snug line-clamp-2 text-[13px]">{item.label}</div>
                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         {item.category_name && (
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
+                          <Badge variant="secondary" className="text-xs px-1.5 py-0 h-4 font-normal">
                             {item.category_name}
                           </Badge>
                         )}
                         {item.version && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal">
+                          <Badge variant="outline" className="text-xs px-1.5 py-0 h-4 font-normal">
                             v{item.version}
                           </Badge>
                         )}
@@ -1404,7 +1404,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
 
             {/* 패널 헤더 */}
             <div className="shrink-0 border-b bg-muted/5 px-5 py-2.5 flex items-center gap-2">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Structure Preview</span>
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Structure Preview</span>
               {previewModel && (
                 <>
                   <span className="text-muted-foreground/30 text-xs">—</span>
@@ -1412,7 +1412,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                     {previewModel[`${modelType}_name`] ?? previewModel.aasmodel_name ?? previewModel.submodel_name}
                   </span>
                   {modelSeq && (
-                    <span className="ml-auto shrink-0 flex items-center gap-1 text-[11px] text-emerald-600 font-medium bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                    <span className="ml-auto shrink-0 flex items-center gap-1 text-xs text-emerald-600 font-medium bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
                       <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                         <circle cx="5" cy="5" r="4.5" fill="#059669" opacity="0.15"/>
                         <path d="M2.5 5l1.8 1.8L7.5 3.5" stroke="#059669" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1447,7 +1447,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       왼쪽 목록에서 템플릿을 클릭하면 Submodel 구조와 입력 항목이 여기에 표시됩니다.
                     </p>
                   </div>
-                  <div className="flex items-center gap-6 text-[11px] text-muted-foreground/40 mt-2">
+                  <div className="flex items-center gap-6 text-xs text-muted-foreground/40 mt-2">
                     <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 opacity-60" />Submodel</span>
                     <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-violet-400 opacity-60" />Collection</span>
                     <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400 opacity-60" />Property</span>
@@ -1469,13 +1469,13 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       )}
                       <div className="flex gap-1.5 mt-2 flex-wrap">
                         {previewModel.category_name && (
-                          <Badge variant="secondary" className="text-[11px] h-5 px-2">{previewModel.category_name}</Badge>
+                          <Badge variant="secondary" className="text-xs h-5 px-2">{previewModel.category_name}</Badge>
                         )}
                         {previewModel.version && (
-                          <Badge variant="outline" className="text-[11px] h-5 px-2 font-mono">v{previewModel.version}</Badge>
+                          <Badge variant="outline" className="text-xs h-5 px-2 font-mono">v{previewModel.version}</Badge>
                         )}
                         {previewModel.status_nm && (
-                          <Badge variant="outline" className="text-[11px] h-5 px-2">{previewModel.status_nm}</Badge>
+                          <Badge variant="outline" className="text-xs h-5 px-2">{previewModel.status_nm}</Badge>
                         )}
                       </div>
                     </div>
@@ -1584,7 +1584,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                           placeholder="예: 로봇암_라인A_001"
                           onChange={(e) => setInputState((prev) => ({ ...prev, instance_name: e.target.value }))}
                         />
-                        <p className="text-[11px] text-zinc-400">이 AAS 인스턴스를 구분할 고유한 이름</p>
+                        <p className="text-xs text-zinc-400">이 AAS 인스턴스를 구분할 고유한 이름</p>
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-semibold text-zinc-800">회사 URL</label>
@@ -1593,7 +1593,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                           placeholder="https://company.com"
                           onChange={(e) => setInputState((prev) => ({ ...prev, company_url: e.target.value }))}
                         />
-                        <p className="text-[11px] text-zinc-400">제조사 또는 운영사 웹사이트 주소</p>
+                        <p className="text-xs text-zinc-400">제조사 또는 운영사 웹사이트 주소</p>
                       </div>
                     </div>
 
@@ -1607,7 +1607,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                         style={{ minHeight: "130px" }}
                         onChange={(e) => setInputState((prev) => ({ ...prev, description: e.target.value }))}
                       />
-                      <p className="text-[11px] text-zinc-400">AAS 인스턴스에 대한 설명을 상세하게 입력해주세요.</p>
+                      <p className="text-xs text-zinc-400">AAS 인스턴스에 대한 설명을 상세하게 입력해주세요.</p>
                     </div>
 
                     {/* ── 열 3: 썸네일 ── */}
@@ -1643,7 +1643,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                               </div>
                               <div className="text-center">
                                 <p className="text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 transition-colors">이미지 업로드</p>
-                                <p className="text-[11px] text-zinc-400 mt-0.5">JPG, PNG, WEBP</p>
+                                <p className="text-xs text-zinc-400 mt-0.5">JPG, PNG, WEBP</p>
                               </div>
                             </>
                           )}
@@ -1660,7 +1660,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       </label>
                       {inputState.thumbnail && (
                         <button type="button"
-                          className="text-[11px] text-zinc-400 hover:text-red-500 transition-colors text-center"
+                          className="text-xs text-zinc-400 hover:text-red-500 transition-colors text-center"
                           onClick={() => setInputState((prev) => ({ ...prev, thumbnail: undefined }))}
                         >
                           이미지 삭제
@@ -1706,7 +1706,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                               </span>
                             </div>
                             <Separator orientation="vertical" className="h-4" />
-                            <Badge variant="secondary" className="font-mono text-[10px]">{treeData[0].id}</Badge>
+                            <Badge variant="secondary" className="font-mono text-xs">{treeData[0].id}</Badge>
                             {(aasmodel as any).version && <Badge variant="outline">v{mode === "create" ? (aasmodel as any).version : instance?.aasmodel_version}</Badge>}
                             {(aasmodel as any).status && <Badge variant="outline">{mode === "create" ? (aasmodel as any).status : instance?.status}</Badge>}
                           </div>

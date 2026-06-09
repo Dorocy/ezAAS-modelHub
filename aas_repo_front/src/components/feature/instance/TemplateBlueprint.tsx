@@ -134,23 +134,23 @@ function ConceptHint({ node }: { node: any }) {
             <div className="font-semibold text-[13px] leading-snug">{info.preferredName}</div>
           )}
           {info.definition && (
-            <div className="text-[11px] leading-relaxed opacity-90">{info.definition}</div>
+            <div className="text-xs leading-relaxed opacity-90">{info.definition}</div>
           )}
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
             {info.unit && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-background/15 px-1.5 py-0.5 rounded">
+              <span className="inline-flex items-center gap-1 text-xs font-medium bg-background/15 px-1.5 py-0.5 rounded">
                 <Ruler className="size-3" />
                 {info.unit}
               </span>
             )}
             {info.dataType && (
-              <span className="text-[10px] font-mono bg-background/15 px-1.5 py-0.5 rounded">
+              <span className="text-xs font-mono bg-background/15 px-1.5 py-0.5 rounded">
                 {info.dataType}
               </span>
             )}
           </div>
           {info.semanticId && (
-            <div className="text-[10px] font-mono opacity-70 break-all border-t border-background/20 pt-1.5 mt-0.5 w-full">
+            <div className="text-xs font-mono opacity-70 break-all border-t border-background/20 pt-1.5 mt-0.5 w-full">
               {info.semanticId}
             </div>
           )}
@@ -198,7 +198,7 @@ function PropertyRow({
           </span>
           {concept.preferredName && concept.preferredName !== node.idShort && (
             <span
-              className="text-[11px] text-zinc-400 truncate leading-tight"
+              className="text-xs text-zinc-400 truncate leading-tight"
               title={concept.preferredName}
             >
               {concept.preferredName}
@@ -206,7 +206,7 @@ function PropertyRow({
           )}
         </div>
         {typeLabel && (
-          <span className="text-[10px] font-mono text-zinc-400 shrink-0 hidden sm:block">
+          <span className="text-xs font-mono text-zinc-400 shrink-0 hidden sm:block">
             {typeLabel}
           </span>
         )}
@@ -214,7 +214,7 @@ function PropertyRow({
       </div>
 
       {/* col 2: type label chip */}
-      <span className="text-[10px] font-medium text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded shrink-0">
+      <span className="text-xs font-medium text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded shrink-0">
         {meta.label}
       </span>
 
@@ -275,10 +275,10 @@ function GroupBlock({
           {node.idShort}
         </span>
         <ConceptHint node={node} />
-        <span className="text-[10px] font-medium text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded shrink-0">
+        <span className="text-xs font-medium text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded shrink-0">
           {meta.label}
         </span>
-        <span className="text-[10px] text-zinc-400 shrink-0 tabular-nums mr-1">
+        <span className="text-xs text-zinc-400 shrink-0 tabular-nums mr-1">
           {children.length}
         </span>
       </button>
@@ -397,7 +397,7 @@ function SubmodelSection({
         className="w-full flex items-center gap-3 px-4 py-3 bg-zinc-50 hover:bg-zinc-100/70 transition-colors text-left border-b border-zinc-200"
       >
         {/* index */}
-        <span className="w-5 h-5 rounded bg-zinc-200 text-zinc-600 text-[10px] font-bold flex items-center justify-center shrink-0 tabular-nums">
+        <span className="w-5 h-5 rounded bg-zinc-200 text-zinc-600 text-xs font-bold flex items-center justify-center shrink-0 tabular-nums">
           {index + 1}
         </span>
 
@@ -406,7 +406,7 @@ function SubmodelSection({
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-zinc-900 truncate">{node.idShort}</span>
             {node.id && (
-              <span className="text-[10px] font-mono text-zinc-400 truncate hidden md:block max-w-[220px]">
+              <span className="text-xs font-mono text-zinc-400 truncate hidden md:block max-w-[220px]">
                 {node.id}
               </span>
             )}
@@ -418,7 +418,7 @@ function SubmodelSection({
           {showValues ? (
             <span
               className={cn(
-                "text-[10px] font-semibold px-2 py-0.5 rounded-full tabular-nums border",
+                "text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums border",
                 pct === 100
                   ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                   : pct > 0
@@ -429,9 +429,9 @@ function SubmodelSection({
               {filled}/{total}
             </span>
           ) : (
-            <span className="text-[10px] text-zinc-400 tabular-nums">{total} fields</span>
+            <span className="text-xs text-zinc-400 tabular-nums">{total} fields</span>
           )}
-          <span className="text-[10px] font-medium text-zinc-400 bg-zinc-200 px-1.5 py-0.5 rounded">SM</span>
+          <span className="text-xs font-medium text-zinc-400 bg-zinc-200 px-1.5 py-0.5 rounded">SM</span>
           <ChevronRight
             className={cn(
               "size-3.5 text-zinc-400 transition-transform duration-150",
@@ -508,7 +508,7 @@ export default function TemplateBlueprint({ treeData, showValues = false }: Temp
                 {root.idShort}
               </p>
               {root.id && (
-                <p className="text-[10px] font-mono text-zinc-400 mt-0.5 truncate max-w-[300px]">
+                <p className="text-xs font-mono text-zinc-400 mt-0.5 truncate max-w-[300px]">
                   {root.id}
                 </p>
               )}

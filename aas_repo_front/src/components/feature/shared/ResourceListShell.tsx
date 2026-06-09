@@ -30,7 +30,7 @@ export function StatusBadge({ status, label }: { status?: string; label?: string
   const key = (status ?? "").toLowerCase();
   const s = STATUS_COLORS[key] ?? STATUS_COLORS.draft;
   return (
-    <span className={cn("inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border", s.bg, s.text)}>
+    <span className={cn("inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border", s.bg, s.text)}>
       <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", s.dot)} />
       {label ?? status}
     </span>
@@ -71,14 +71,14 @@ export function ResourceCard({
         </p>
 
         <div className="flex items-center justify-between gap-2 pt-3 border-t border-zinc-100">
-          <span className="text-[11px] text-zinc-400 font-medium truncate">
+          <span className="text-xs text-zinc-400 font-medium truncate">
             {category || "—"}
           </span>
           <StatusBadge status={status} label={statusLabel ?? status} />
         </div>
 
         {metaId && (
-          <p className="mt-2 text-[10px] font-mono text-zinc-400 truncate">{metaId}</p>
+          <p className="mt-2 text-xs font-mono text-zinc-400 truncate">{metaId}</p>
         )}
       </div>
     </Link>
@@ -222,7 +222,7 @@ export function ResourceListShell({
             {sidebarExtra}
 
             {/* Category label */}
-            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1 pt-2">
+            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1 pt-2">
               Category
             </p>
 
@@ -236,7 +236,7 @@ export function ResourceListShell({
               )}
             >
               <span>All</span>
-              <span className={cn("text-[11px] tabular-nums", activeCategory === "all" ? "text-zinc-300" : "text-zinc-400")}>
+              <span className={cn("text-xs tabular-nums", activeCategory === "all" ? "text-zinc-300" : "text-zinc-400")}>
                 {totalCount}
               </span>
             </button>

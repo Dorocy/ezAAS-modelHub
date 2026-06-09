@@ -279,7 +279,7 @@ export default function DistributeReviewForm({
                   <h2 className="text-sm font-semibold text-foreground">
                     Pending Review
                   </h2>
-                  <Badge variant="secondary" className="text-[11px]">
+                  <Badge variant="secondary" className="text-xs">
                     {drafts.length}
                   </Badge>
                 </div>
@@ -332,7 +332,7 @@ export default function DistributeReviewForm({
                                 variant={
                                   row.ty === "aasmodel" ? "default" : "secondary"
                                 }
-                                className="shrink-0 text-[11px]"
+                                className="shrink-0 text-xs"
                               >
                                 {row.ty === "aasmodel" ? "AAS" : "Submodel"}
                               </Badge>
@@ -340,7 +340,7 @@ export default function DistributeReviewForm({
                                 {row.target_name}
                               </span>
                               {row.target_version ? (
-                                <span className="shrink-0 text-[11px] text-muted-foreground">
+                                <span className="shrink-0 text-xs text-muted-foreground">
                                   v{row.target_version}
                                 </span>
                               ) : null}
@@ -348,10 +348,10 @@ export default function DistributeReviewForm({
                                 <Check className="size-4 shrink-0 text-primary" />
                               ) : null}
                             </div>
-                            <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
+                            <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
                               {row.template_id ?? "—"}
                             </p>
-                            <p className="truncate text-[11px] text-muted-foreground">
+                            <p className="truncate text-xs text-muted-foreground">
                               {row.category_name}
                             </p>
                           </button>
@@ -412,7 +412,7 @@ export default function DistributeReviewForm({
 
                 {selected.description ? (
                   <div className="rounded-lg border border-border bg-muted/30 p-3">
-                    <p className="text-[11px] font-medium text-muted-foreground mb-1">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">
                       Template Description
                     </p>
                     <p className="text-sm text-foreground leading-relaxed">
@@ -552,7 +552,7 @@ function ReadField({
 }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <span className={cn("text-sm text-foreground break-all", mono && "font-mono text-xs")}>
         {value || "—"}
       </span>

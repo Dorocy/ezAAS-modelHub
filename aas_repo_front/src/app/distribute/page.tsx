@@ -196,7 +196,7 @@ export default function DistributePage() {
             </div>
 
             {/* Model type toggle */}
-            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
+            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
               Model Type
             </p>
             <div className="space-y-1 mb-4">
@@ -221,7 +221,7 @@ export default function DistributePage() {
                     <span className="flex-1">{label}</span>
                     <span
                       className={cn(
-                        "text-[11px] tabular-nums",
+                        "text-xs tabular-nums",
                         active ? "text-zinc-300" : "text-zinc-400"
                       )}
                     >
@@ -233,7 +233,7 @@ export default function DistributePage() {
             </div>
 
             {/* Category */}
-            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
+            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
               Category
             </p>
             <button
@@ -248,7 +248,7 @@ export default function DistributePage() {
               <span>All</span>
               <span
                 className={cn(
-                  "text-[11px] tabular-nums",
+                  "text-xs tabular-nums",
                   categoryFilter === "all" ? "text-zinc-300" : "text-zinc-400"
                 )}
               >
@@ -271,7 +271,7 @@ export default function DistributePage() {
                   <span className="truncate">{c.name}</span>
                   <span
                     className={cn(
-                      "text-[11px] tabular-nums shrink-0",
+                      "text-xs tabular-nums shrink-0",
                       active ? "text-zinc-300" : "text-zinc-400"
                     )}
                   >
@@ -317,19 +317,19 @@ export default function DistributePage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-zinc-200 bg-zinc-50/60 text-left">
-                    <th className="px-4 py-3 w-24 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 w-24 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                       Type
                     </th>
-                    <th className="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                       Template
                     </th>
-                    <th className="px-4 py-3 w-32 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider hidden md:table-cell">
+                    <th className="px-4 py-3 w-32 text-xs font-semibold text-zinc-400 uppercase tracking-wider hidden md:table-cell">
                       Category
                     </th>
-                    <th className="px-4 py-3 w-16 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 w-16 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                       Ver.
                     </th>
-                    <th className="px-4 py-3 w-24 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider text-right">
+                    <th className="px-4 py-3 w-24 text-xs font-semibold text-zinc-400 uppercase tracking-wider text-right">
                       Actions
                     </th>
                   </tr>
@@ -343,7 +343,7 @@ export default function DistributePage() {
                       <td className="px-4 py-3 align-top">
                         <span
                           className={cn(
-                            "inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border",
+                            "inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border",
                             model.type === "aasmodel"
                               ? "bg-blue-50 border-blue-200 text-blue-700"
                               : "bg-violet-50 border-violet-200 text-violet-700"
@@ -369,7 +369,7 @@ export default function DistributePage() {
                             {model.name}
                           </span>
                           {model.templateId && (
-                            <span className="mt-0.5 flex items-center gap-1 text-[11px] text-zinc-400 font-mono">
+                            <span className="mt-0.5 flex items-center gap-1 text-xs text-zinc-400 font-mono">
                               <Hash className="w-2.5 h-2.5 shrink-0" />
                               <span className="truncate max-w-[420px]">{model.templateId}</span>
                             </span>

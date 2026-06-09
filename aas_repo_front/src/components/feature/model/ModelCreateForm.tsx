@@ -716,7 +716,7 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
                 Structure
               </h2>
               {Object.keys(importedFiles).length > 0 && (
-                <span className="text-[11px] text-zinc-400">
+                <span className="text-xs text-zinc-400">
                   {Object.keys(importedFiles).length} attachment(s)
                 </span>
               )}

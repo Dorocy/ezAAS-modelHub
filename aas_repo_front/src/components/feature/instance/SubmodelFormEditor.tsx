@@ -310,7 +310,7 @@ function AddElementDialog({
                     <SelectItem key={t} value={t} className="text-sm">
                       <span className="flex flex-col">
                         <span className="font-medium">{t}</span>
-                        <span className="text-[11px] text-zinc-400">{ELEMENT_TYPE_HINTS[t]}</span>
+                        <span className="text-xs text-zinc-400">{ELEMENT_TYPE_HINTS[t]}</span>
                       </span>
                     </SelectItem>
                   ))}
@@ -336,7 +336,7 @@ function AddElementDialog({
                 <BookText size={13} className="text-zinc-500" />
                 <Label className="text-xs font-semibold text-zinc-700">개념 정의 연결</Label>
               </div>
-              <p className="text-[11px] text-zinc-400 leading-relaxed">
+              <p className="text-xs text-zinc-400 leading-relaxed">
                 모든 엘리먼트는 개념사전과 연결됩니다. 도움말(?) 설명에 사용돼요.
               </p>
 
@@ -348,7 +348,7 @@ function AddElementDialog({
                     type="button"
                     onClick={() => setConceptMode(m)}
                     className={cn(
-                      "flex-1 text-[11px] font-medium py-1 rounded transition-colors",
+                      "flex-1 text-xs font-medium py-1 rounded transition-colors",
                       conceptMode === m ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
                     )}
                   >
@@ -360,7 +360,7 @@ function AddElementDialog({
               {conceptMode === "new" ? (
                 <div className="space-y-2.5 pt-1">
                   <div className="space-y-1">
-                    <Label className="text-[11px] font-medium text-zinc-500">
+                    <Label className="text-xs font-medium text-zinc-500">
                       정의 (Definition) <span className="text-red-400">*</span>
                     </Label>
                     <Textarea
@@ -371,7 +371,7 @@ function AddElementDialog({
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[11px] font-medium text-zinc-500">ID (자동 생성)</Label>
+                    <Label className="text-xs font-medium text-zinc-500">ID (자동 생성)</Label>
                     <Input
                       value={customId || autoId}
                       onChange={(e) => setCustomId(e.target.value)}
@@ -408,7 +408,7 @@ function AddElementDialog({
                             {existingId === cd.id && <Check size={12} className="text-blue-500 shrink-0" />}
                             <span className="text-sm font-medium text-zinc-700 truncate">{cd.idShort}</span>
                           </div>
-                          <span className="block text-[10px] text-zinc-400 font-mono truncate mt-0.5">{cd.id}</span>
+                          <span className="block text-xs text-zinc-400 font-mono truncate mt-0.5">{cd.id}</span>
                         </button>
                       ))
                     )}
@@ -455,12 +455,12 @@ function DrawerField({
 }) {
   return (
     <div className="flex flex-col gap-1.5 py-3.5 px-5 border-b border-zinc-100 last:border-b-0">
-      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
         {icon && <span className="text-zinc-400">{icon}</span>}
         {label}
       </div>
       {children}
-      {hint && <p className="text-[11px] text-zinc-400 leading-relaxed">{hint}</p>}
+      {hint && <p className="text-xs text-zinc-400 leading-relaxed">{hint}</p>}
     </div>
   );
 }
@@ -593,7 +593,7 @@ function ReferencePicker({
             type="button"
             onClick={() => setRefType(t)}
             className={cn(
-              "text-[11px] font-medium px-2.5 py-1 rounded transition-colors",
+              "text-xs font-medium px-2.5 py-1 rounded transition-colors",
               refType === t ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
             )}
           >
@@ -618,7 +618,7 @@ function ReferencePicker({
                 if (group.length === 0) return null;
                 return (
                   <SelectGroup key={sm.id}>
-                    <SelectLabel className="text-[11px] text-zinc-400 font-medium flex items-center gap-1">
+                    <SelectLabel className="text-xs text-zinc-400 font-medium flex items-center gap-1">
                       <Boxes size={11} /> {getDisplayLabel(sm.idShort)}
                     </SelectLabel>
                     {group.map((t) => (
@@ -636,7 +636,7 @@ function ReferencePicker({
           </Select>
 
           {selected && (
-            <div className="flex items-start gap-1.5 text-[11px] text-zinc-500 bg-zinc-50 rounded-md px-2 py-1.5">
+            <div className="flex items-start gap-1.5 text-xs text-zinc-500 bg-zinc-50 rounded-md px-2 py-1.5">
               <Boxes size={12} className="text-zinc-400 shrink-0 mt-0.5" />
               <span className="font-mono break-all leading-relaxed">
                 <span className="text-zinc-400">{selected.submodelLabel} › </span>
@@ -716,7 +716,7 @@ function InlineReferencePicker({
             type="button"
             onClick={() => setRefType(t)}
             className={cn(
-              "text-[11px] font-medium px-2 py-1 rounded transition-colors",
+              "text-xs font-medium px-2 py-1 rounded transition-colors",
               refType === t ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
             )}
           >
@@ -744,7 +744,7 @@ function InlineReferencePicker({
               if (group.length === 0) return null;
               return (
                 <SelectGroup key={sm.id}>
-                  <SelectLabel className="text-[11px] text-zinc-400 font-medium flex items-center gap-1">
+                  <SelectLabel className="text-xs text-zinc-400 font-medium flex items-center gap-1">
                     <Boxes size={11} /> {getDisplayLabel(sm.idShort)}
                   </SelectLabel>
                   {group.map((t) => (
@@ -821,7 +821,7 @@ function RelationshipElementEditor({
             "flex-1 min-w-0 rounded-lg border px-3 py-2",
             firstSummary.filled ? "border-blue-200 bg-blue-50" : "border-dashed border-zinc-200 bg-zinc-50"
           )}>
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-blue-500 mb-0.5">First</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-blue-500 mb-0.5">First</div>
             <div className={cn("text-xs font-mono truncate", firstSummary.filled ? "text-zinc-700" : "text-zinc-400 italic")}>
               {firstSummary.text}
             </div>
@@ -831,22 +831,22 @@ function RelationshipElementEditor({
             "flex-1 min-w-0 rounded-lg border px-3 py-2",
             secondSummary.filled ? "border-emerald-200 bg-emerald-50" : "border-dashed border-zinc-200 bg-zinc-50"
           )}>
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 mb-0.5">Second</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-emerald-600 mb-0.5">Second</div>
             <div className={cn("text-xs font-mono truncate", secondSummary.filled ? "text-zinc-700" : "text-zinc-400 italic")}>
               {secondSummary.text}
             </div>
           </div>
         </div>
-        <p className="text-[11px] text-zinc-400 leading-relaxed mt-2">
+        <p className="text-xs text-zinc-400 leading-relaxed mt-2">
           {"First 엘리먼트에서 Second 엘리먼트로의 관계를 정의합니다."}
         </p>
       </div>
 
-      <DrawerField icon={<span className="text-blue-500 font-bold text-[10px]">1st</span>} label="First (시작 엘리먼트)">
+      <DrawerField icon={<span className="text-blue-500 font-bold text-xs">1st</span>} label="First (시작 엘리먼트)">
         <ReferencePicker value={first} treeData={treeData} onChange={(ref) => onValueChange(firstKey, ref)} />
       </DrawerField>
 
-      <DrawerField icon={<span className="text-emerald-600 font-bold text-[10px]">2nd</span>} label="Second (대상 엘리먼트)">
+      <DrawerField icon={<span className="text-emerald-600 font-bold text-xs">2nd</span>} label="Second (대상 엘리먼트)">
         <ReferencePicker value={second} treeData={treeData} onChange={(ref) => onValueChange(secondKey, ref)} />
       </DrawerField>
     </>
@@ -1028,8 +1028,8 @@ function ElementDetailDrawer({
           </div>
           <SheetDescription className="sr-only">엘리먼트 상세 입력</SheetDescription>
           <div className="flex items-center gap-2 mt-1">
-            <Badge variant="secondary" className="text-[10px] font-mono">{modelType}</Badge>
-            <span className="text-[11px] text-zinc-400 font-mono truncate">{node.idShort}</span>
+            <Badge variant="secondary" className="text-xs font-mono">{modelType}</Badge>
+            <span className="text-xs text-zinc-400 font-mono truncate">{node.idShort}</span>
           </div>
         </SheetHeader>
 
@@ -1090,7 +1090,7 @@ function FieldLabelWithHint({
         </label>
       )}
       {typeLabel && (
-        <span className="shrink-0 text-[10px] text-zinc-400 font-mono bg-zinc-100 px-1.5 py-0.5 rounded hidden lg:block">
+        <span className="shrink-0 text-xs text-zinc-400 font-mono bg-zinc-100 px-1.5 py-0.5 rounded hidden lg:block">
           {typeLabel}
         </span>
       )}
@@ -1102,7 +1102,7 @@ function FieldLabelWithHint({
             onMouseLeave={() => setOpen(false)}
             onFocus={() => setOpen(true)}
             onBlur={() => setOpen(false)}
-            className="w-4 h-4 rounded-full border border-zinc-300 text-zinc-400 hover:border-blue-400 hover:text-blue-500 flex items-center justify-center text-[10px] font-bold transition-colors focus:outline-none"
+            className="w-4 h-4 rounded-full border border-zinc-300 text-zinc-400 hover:border-blue-400 hover:text-blue-500 flex items-center justify-center text-xs font-bold transition-colors focus:outline-none"
             aria-label={`${cdHint.idShort} 설명 보기`}
           >
             ?
@@ -1111,7 +1111,7 @@ function FieldLabelWithHint({
             <div className="absolute left-6 top-1/2 -translate-y-1/2 z-50 w-72 bg-white border border-zinc-200 rounded-lg shadow-lg p-3 pointer-events-none">
               {/* 화살표 */}
               <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-white border-l border-b border-zinc-200 rotate-45" />
-              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-1">
+              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">
                 {cdHint.idShort}
               </p>
               {cdHint.description ? (
@@ -1276,7 +1276,7 @@ function FieldInput({
                   </>
                 ) : (
                   <span className="text-sm text-zinc-800">
-                    <span className="text-[11px] font-mono text-zinc-400 mr-2">[{item.language}]</span>
+                    <span className="text-xs font-mono text-zinc-400 mr-2">[{item.language}]</span>
                     {item.text || <span className="italic text-zinc-400">—</span>}
                   </span>
                 )}
@@ -1397,11 +1397,11 @@ function ReferenceLikeRow({
           {isRelationship ? (
             <>
               <div className="flex items-center gap-2 min-w-0">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-blue-500 w-12 shrink-0">First</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-blue-500 w-12 shrink-0">First</span>
                 <InlineReferencePicker value={first} treeData={inlineRef.treeData} onChange={(ref) => inlineRef.onValueChange(`${node.valuePath}.first`, ref)} />
               </div>
               <div className="flex items-center gap-2 min-w-0">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 w-12 shrink-0">Second</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600 w-12 shrink-0">Second</span>
                 <InlineReferencePicker value={second} treeData={inlineRef.treeData} onChange={(ref) => inlineRef.onValueChange(`${node.valuePath}.second`, ref)} />
               </div>
             </>
@@ -1507,7 +1507,7 @@ function GroupSection({
         <div className="flex items-center gap-2 shrink-0">
           {total > 0 && (
             <span className={cn(
-              "text-[10px] font-semibold px-2 py-0.5 rounded-full",
+              "text-xs font-semibold px-2 py-0.5 rounded-full",
               pct === 100 ? "bg-emerald-100 text-emerald-700" :
               pct > 0 ? "bg-amber-100 text-amber-700" :
               "bg-zinc-100 text-zinc-500"
@@ -1708,7 +1708,7 @@ function SubmodelPanel({
             {filled} of {total} fields filled
           </span>
           {submodel.id && (
-            <span className="font-mono text-[11px] text-zinc-400 truncate max-w-[300px]" title={submodel.id}>
+            <span className="font-mono text-xs text-zinc-400 truncate max-w-[300px]" title={submodel.id}>
               {submodel.id}
             </span>
           )}
@@ -1719,8 +1719,8 @@ function SubmodelPanel({
       <div className="flex-1 overflow-y-auto">
         {/* Column headers */}
         <div className="grid grid-cols-[240px_1fr] gap-4 px-4 py-2 bg-zinc-50 border-b border-zinc-200 sticky top-0 z-10">
-          <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Field</span>
-          <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Value</span>
+          <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Field</span>
+          <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Value</span>
         </div>
 
         {children.length === 0 ? (
@@ -1872,7 +1872,7 @@ export default function SubmodelFormEditor({
       <div className="w-56 shrink-0 flex flex-col border-r border-zinc-200 bg-zinc-50">
         {/* AAS identity header */}
         <div className="px-4 py-3 border-b border-zinc-200">
-          <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-0.5">Asset</div>
+          <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-0.5">Asset</div>
           <div className="text-sm font-semibold text-zinc-800 truncate leading-tight" title={root?.idShort}>
             {root?.idShort ?? "AAS"}
           </div>
@@ -1887,20 +1887,20 @@ export default function SubmodelFormEditor({
                 style={{ width: `${pctAll}%` }}
               />
             </div>
-            <span className="text-[11px] font-semibold text-zinc-500 tabular-nums shrink-0">{pctAll}%</span>
+            <span className="text-xs font-semibold text-zinc-500 tabular-nums shrink-0">{pctAll}%</span>
           </div>
         </div>
 
         {/* Submodel nav list */}
         <nav className="flex-1 overflow-y-auto py-2">
           <div className="px-3 mb-1 flex items-center justify-between">
-            <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Submodels</span>
+            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Submodels</span>
             {editMode && onAddSubmodel && (
               <button
                 type="button"
                 onClick={onAddSubmodel}
                 title="Submodel 추가"
-                className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 font-medium"
+                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
               >
                 <Plus size={12} /> 추가
               </button>
@@ -1935,7 +1935,7 @@ export default function SubmodelFormEditor({
                     {getDisplayLabel(sm.idShort)}
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[11px] text-zinc-400 tabular-nums">
+                    <span className="text-xs text-zinc-400 tabular-nums">
                       {filled}/{total}
                     </span>
                     {pct === 100 && (
@@ -1953,7 +1953,7 @@ export default function SubmodelFormEditor({
           <button
             type="button"
             onClick={onToggleAdvanced}
-            className="flex items-center gap-2 text-[11px] text-zinc-400 hover:text-zinc-600 transition-colors w-full py-1"
+            className="flex items-center gap-2 text-xs text-zinc-400 hover:text-zinc-600 transition-colors w-full py-1"
           >
             <Code2 size={12} />
             {showAdvanced ? "Hide advanced view" : "Advanced (Tree) view"}

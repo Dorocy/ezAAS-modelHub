@@ -80,7 +80,7 @@ function CopyButton({ text, size = 12 }: { text: string; size?: number }) {
 function DetailRow({ icon, label, children }: { icon?: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5 py-3.5 px-4 border-b border-zinc-100 last:border-b-0">
-      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-400">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400">
         {icon && <span className="text-zinc-400">{icon}</span>}
         {label}
       </div>
@@ -99,7 +99,7 @@ function MultiLangBlock({ entries }: { entries: Array<{ language: string; text: 
     <div className="flex flex-col gap-1.5">
       {entries.map((e) => (
         <div key={e.language} className="flex items-start gap-2">
-          <span className="text-[10px] font-mono bg-zinc-100 text-zinc-500 px-1.5 py-0.5 rounded shrink-0 mt-0.5">{e.language}</span>
+          <span className="text-xs font-mono bg-zinc-100 text-zinc-500 px-1.5 py-0.5 rounded shrink-0 mt-0.5">{e.language}</span>
           <span className="text-sm text-zinc-800 leading-relaxed">{e.text}</span>
         </div>
       ))}
@@ -136,7 +136,7 @@ function CDDetailPanel({ cd, onClose }: { cd: any; onClose: () => void }) {
             </h2>
           </div>
           {cd.category && (
-            <Badge variant="secondary" className="text-[10px] font-semibold uppercase tracking-wider">
+            <Badge variant="secondary" className="text-xs font-semibold uppercase tracking-wider">
               {cd.category}
             </Badge>
           )}
@@ -158,7 +158,7 @@ function CDDetailPanel({ cd, onClose }: { cd: any; onClose: () => void }) {
           <p className="text-xs font-semibold text-zinc-500 mb-3">식별자</p>
           <div className="flex flex-col gap-2.5">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-[11px] text-zinc-400 shrink-0 w-14">ID</span>
+              <span className="text-xs text-zinc-400 shrink-0 w-14">ID</span>
               <span className="text-xs font-mono text-zinc-700 truncate flex-1 min-w-0" title={cd.id}>{cd.id}</span>
               <CopyButton text={cd.id} />
               {isIri(cd.id) && (
@@ -170,7 +170,7 @@ function CDDetailPanel({ cd, onClose }: { cd: any; onClose: () => void }) {
             </div>
             {cd.idShort && (
               <div className="flex items-center gap-2 min-w-0">
-                <span className="text-[11px] text-zinc-400 shrink-0 w-14">idShort</span>
+                <span className="text-xs text-zinc-400 shrink-0 w-14">idShort</span>
                 <span className="text-xs font-mono text-zinc-700">{cd.idShort}</span>
               </div>
             )}
@@ -235,7 +235,7 @@ function CDDetailPanel({ cd, onClose }: { cd: any; onClose: () => void }) {
                     {Object.entries(levelType)
                       .filter(([, v]) => v)
                       .map(([k]) => (
-                        <span key={k} className="text-[10px] font-semibold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                        <span key={k} className="text-xs font-semibold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
                           {k}
                         </span>
                       ))}
@@ -327,7 +327,7 @@ function CDListItem({ cd, selected, onClick }: { cd: any; selected: boolean; onC
             {displayName}
           </p>
           {unit && (
-            <span className="shrink-0 text-[10px] font-semibold bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.5 rounded leading-none">
+            <span className="shrink-0 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.5 rounded leading-none">
               {unit}
             </span>
           )}
@@ -337,10 +337,10 @@ function CDListItem({ cd, selected, onClick }: { cd: any; selected: boolean; onC
         )}
         <div className="flex items-center gap-2 mt-1.5">
           {dataType && (
-            <span className="text-[10px] font-mono text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded">{dataType}</span>
+            <span className="text-xs font-mono text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded">{dataType}</span>
           )}
           {cd.category && (
-            <span className="text-[10px] text-zinc-400">{cd.category}</span>
+            <span className="text-xs text-zinc-400">{cd.category}</span>
           )}
         </div>
       </div>
@@ -431,7 +431,7 @@ export default function ConceptDescriptionPanel({
       {/* ── 1) Category sidebar ── */}
       <aside className="w-[180px] shrink-0 border-r border-zinc-100 flex flex-col overflow-y-auto bg-zinc-50/50">
         <div className="px-3 py-3 border-b border-zinc-100 shrink-0">
-          <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">카테고리</p>
+          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">카테고리</p>
         </div>
         <nav className="flex flex-col gap-0.5 p-2 flex-1">
           <button
@@ -443,7 +443,7 @@ export default function ConceptDescriptionPanel({
             )}
           >
             <span>전체</span>
-            <span className={cn("text-[11px] font-mono", activeCategory === "all" ? "text-zinc-300" : "text-zinc-400")}>
+            <span className={cn("text-xs font-mono", activeCategory === "all" ? "text-zinc-300" : "text-zinc-400")}>
               {allCDs.length}
             </span>
           </button>
@@ -463,7 +463,7 @@ export default function ConceptDescriptionPanel({
                 )}
               >
                 <span className="truncate text-xs">{cat}</span>
-                <span className={cn("text-[11px] font-mono shrink-0", activeCategory === cat ? "text-zinc-300" : "text-zinc-400")}>
+                <span className={cn("text-xs font-mono shrink-0", activeCategory === cat ? "text-zinc-300" : "text-zinc-400")}>
                   {count}
                 </span>
               </button>
@@ -492,7 +492,7 @@ export default function ConceptDescriptionPanel({
               className="pl-8 h-8 text-sm bg-white border-zinc-200"
             />
           </div>
-          <p className="text-[11px] text-zinc-400 mt-1.5">
+          <p className="text-xs text-zinc-400 mt-1.5">
             {filtered.length}개 / 전체 {allCDs.length}개
           </p>
         </div>

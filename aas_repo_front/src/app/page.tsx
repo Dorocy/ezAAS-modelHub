@@ -42,7 +42,7 @@ export default async function Home() {
 
             {/* 왼쪽: 제목 + 설명 + stat + CTA */}
             <div className="flex flex-col gap-6 lg:w-[44%] shrink-0">
-              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-semibold text-blue-600 tracking-wide">
+              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600 tracking-wide">
                 <span className="size-1.5 rounded-full bg-blue-500 animate-pulse" />
                 IEC 63278 · AAS Part 1&amp;2 준수
               </span>
@@ -73,7 +73,7 @@ export default async function Home() {
                     <span className="text-2xl font-bold tabular-nums text-zinc-900 group-hover:text-blue-600 transition-colors">
                       {s.value.toLocaleString()}
                     </span>
-                    <span className="text-[10px] font-medium text-zinc-400 whitespace-nowrap">{s.label}</span>
+                    <span className="text-xs font-medium text-zinc-400 whitespace-nowrap">{s.label}</span>
                   </Link>
                 ))}
               </div>
@@ -136,7 +136,7 @@ export default async function Home() {
                   <LayoutTemplate className="size-5" />
                 </div>
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-500">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blue-500">
                     Step 1 · 템플릿
                   </p>
                   <p className="text-sm font-bold text-zinc-900">AAS 템플릿 = 설계도</p>
@@ -161,7 +161,7 @@ export default async function Home() {
                   <Puzzle className="size-5" />
                 </div>
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-500">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500">
                     Step 2 · 서브모델
                   </p>
                   <p className="text-sm font-bold text-zinc-900">서브모델 = 부품 블록</p>
@@ -186,7 +186,7 @@ export default async function Home() {
                   <Box className="size-5" />
                 </div>
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-500">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-500">
                     Step 3 · 인스턴스
                   </p>
                   <p className="text-sm font-bold text-zinc-900">인스턴스 = 실제 제품</p>
@@ -267,7 +267,7 @@ export default async function Home() {
                 className={`group flex flex-col gap-6 p-8 transition-colors ${item.bg}`}
               >
                 <div className="flex items-start justify-between">
-                  <span className="text-[11px] font-mono font-bold text-zinc-300">{item.num}</span>
+                  <span className="text-xs font-mono font-bold text-zinc-300">{item.num}</span>
                   <Icon className={`size-5 text-zinc-300 transition-colors ${item.accent}`} />
                 </div>
                 <div className="flex flex-col gap-2">
@@ -336,7 +336,7 @@ export default async function Home() {
                     <div className="flex size-10 items-center justify-center rounded-xl bg-zinc-700">
                       <Icon className="size-4 text-zinc-300" />
                     </div>
-                    <span className="text-[10px] font-mono font-semibold text-zinc-500 border border-zinc-700 px-2 py-0.5 rounded-full">
+                    <span className="text-xs font-mono font-semibold text-zinc-500 border border-zinc-700 px-2 py-0.5 rounded-full">
                       {f.tag}
                     </span>
                   </div>

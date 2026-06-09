@@ -148,7 +148,7 @@ export default function DistributeDetailView({
           <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
             {fields.map((f) => (
               <div key={f.label} className="flex flex-col gap-0.5">
-                <dt className="text-[11px] font-medium text-muted-foreground">
+                <dt className="text-xs font-medium text-muted-foreground">
                   {f.label}
                 </dt>
                 <dd
@@ -177,7 +177,7 @@ export default function DistributeDetailView({
 
           {model.description && (
             <div className="mt-5 border-t border-border pt-4">
-              <p className="text-[11px] font-medium text-muted-foreground mb-1">
+              <p className="text-xs font-medium text-muted-foreground mb-1">
                 Description
               </p>
               <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">

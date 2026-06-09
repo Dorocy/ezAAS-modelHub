@@ -114,7 +114,7 @@ export default function VerifyDetailView({
           <div className="h-44 overflow-y-auto px-4 py-3 space-y-1.5">
             {activeMessages.map((msg, i) => (
               <div key={i} className="flex items-start gap-2">
-                <span className="text-[11px] text-red-300 font-mono shrink-0 pt-0.5">
+                <span className="text-xs text-red-300 font-mono shrink-0 pt-0.5">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <p className="text-xs text-zinc-700 leading-relaxed break-words">{msg}</p>

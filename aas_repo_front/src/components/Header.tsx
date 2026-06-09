@@ -120,7 +120,7 @@ function Header() {
                       <ChevronRight className={cn("mt-0.5 size-3.5 shrink-0", isNavActive(link.href) ? "text-primary" : "text-muted-foreground/50")} />
                       <span className="flex flex-col">
                         <span>{link.label}</span>
-                        <span className="text-[11px] font-normal text-muted-foreground/70">{link.desc}</span>
+                        <span className="text-xs font-normal text-muted-foreground/70">{link.desc}</span>
                       </span>
                     </Link>
                   ))}
@@ -190,7 +190,7 @@ function Header() {
                     <div className="flex flex-col gap-0.5 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm font-semibold truncate">{profile?.user_name}</span>
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">{profile?.user_group_name}</Badge>
+                        <Badge variant="secondary" className="text-xs px-1.5 py-0 h-4">{profile?.user_group_name}</Badge>
                       </div>
                       <span className="text-xs text-muted-foreground truncate">{profile?.user_id}</span>
                     </div>

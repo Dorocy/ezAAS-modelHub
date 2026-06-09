@@ -54,7 +54,7 @@ export function CategorySidebar({
           />
         </div>
 
-        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-2 pb-1">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 pb-1">
           Category
         </p>
 
@@ -68,7 +68,7 @@ export function CategorySidebar({
           <span>All</span>
           <span
             className={cn(
-              "text-[11px] tabular-nums",
+              "text-xs tabular-nums",
               activeCategory === "all" ? "text-primary-foreground/70" : "text-muted-foreground"
             )}
           >

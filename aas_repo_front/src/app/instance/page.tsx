@@ -36,7 +36,7 @@ function VerificationBadge({ value }: { value: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border",
+        "inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border",
         ok
           ? "bg-emerald-50 border-emerald-200 text-emerald-700"
           : "bg-red-50 border-red-200 text-red-600"
@@ -167,7 +167,7 @@ export default function InstancePage() {
             {/* Scope toggle */}
             {user && user.user_group_seq !== UserRole.User && (
               <>
-                <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
                   Scope
                 </p>
                 <div className="flex rounded-lg border border-zinc-200 bg-white overflow-hidden mb-4 text-sm">
@@ -190,7 +190,7 @@ export default function InstancePage() {
             )}
 
             {/* Category label */}
-            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
+            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
               Category
             </p>
 
@@ -205,7 +205,7 @@ export default function InstancePage() {
               )}
             >
               <span>All</span>
-              <span className={cn("text-[11px] tabular-nums", categoryFilter === "all" ? "text-zinc-300" : "text-zinc-400")}>
+              <span className={cn("text-xs tabular-nums", categoryFilter === "all" ? "text-zinc-300" : "text-zinc-400")}>
                 {totalCount}
               </span>
             </button>
@@ -260,14 +260,14 @@ export default function InstancePage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-zinc-200 bg-zinc-50/60 text-left">
-                    <th className="px-4 py-3 w-36 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Category</th>
-                    <th className="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Instance</th>
-                    <th className="px-4 py-3 w-28 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Verification</th>
+                    <th className="px-4 py-3 w-36 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Category</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Instance</th>
+                    <th className="px-4 py-3 w-28 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Verification</th>
                     {showUser && (
-                      <th className="px-4 py-3 w-44 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider hidden md:table-cell">User</th>
+                      <th className="px-4 py-3 w-44 text-xs font-semibold text-zinc-400 uppercase tracking-wider hidden md:table-cell">User</th>
                     )}
                     {canCreate && (
-                      <th className="px-4 py-3 w-44 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider text-right">Actions</th>
+                      <th className="px-4 py-3 w-44 text-xs font-semibold text-zinc-400 uppercase tracking-wider text-right">Actions</th>
                     )}
                   </tr>
                 </thead>
