@@ -268,10 +268,12 @@ export async function getInstanceDetail(params: GetInstanceParams) {
 // ── User ──────────────────────────────────────────────────────────────────────
 
 export async function getUserList(params: GetUserListParams) {
-  // API: user/info/list  — DataTables 형식 응답 { draw, recordsTotal, recordsFiltered, data }
-  const searchKey = (params.searchParams as any)?.searchKey;
-  const query = searchKey ? `?search=${encodeURIComponent(searchKey)}` : "";
-  const url = `user/info/list${query}`;
+  // 백엔드 검증된 엔드포인트: user/list/{pageNumber}/{pageSize}?{searchParams}
+  // (이전 운영 버전에서 사용하던 경로. user/info/list 는 빈 결과를 반환해 교체함)
+  const qs = new URLSearchParams(
+    params.searchParams as Record<string, string>
+  ).toString();
+  const url = `user/list/${params.pageNumber}/${params.pageSize}${qs ? `?${qs}` : ""}`;
   return apiRequest({ url, withToast: params.withToast });
 }
 

@@ -79,21 +79,25 @@ export default function UserPage() {
       })
   );
 
-  // user/info/list 는 DataTables 형식: { draw, recordsTotal, recordsFiltered, data }
-  // apiRequest 가 result.data 를 반환하므로 userData 는 이미 data 필드 값
-  const rawUsers: User[] = Array.isArray(userData)
-    ? userData
-    : Array.isArray(userData?.data)
-      ? userData.data
+  // user/list/{page}/{size} 응답: DataTables 형식 { recordsTotal, data: [...] } 또는 배열.
+  // apiRequest 가 result.data 를 반환하므로 한 단계 더 감싸여 있을 수 있다.
+  // 가능한 모든 위치(userData / userData.data / userData.data.data / userData.list)를 탐색한다.
+  const payload: any = userData?.data ?? userData;
+  const rawUsers: User[] = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : Array.isArray(payload?.list)
+        ? payload.list
         : Array.isArray(userData?.list)
           ? userData.list
           : [];
-  // 총 개수도 한 단계 더 들어간 곳에 있을 수 있다.
+  // 총 개수는 여러 위치에 있을 수 있다.
   const totalCount: number =
-    userData?.recordsTotal != null
-      ? Number(userData.recordsTotal)
-      : userData?.data?.recordsTotal != null
-        ? Number(userData.data.recordsTotal)
+    payload?.recordsTotal != null
+      ? Number(payload.recordsTotal)
+      : userData?.recordsTotal != null
+        ? Number(userData.recordsTotal)
         : userData?.totalCount ?? rawUsers.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
