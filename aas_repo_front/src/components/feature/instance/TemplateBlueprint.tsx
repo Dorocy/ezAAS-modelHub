@@ -3,7 +3,13 @@
 
 import React, { useState } from "react";
 import { cn } from "@/lib/utils";
-import { ChevronRight, Layers, Box, List, Tag, FileText, Link2, ToggleLeft, Hash } from "lucide-react";
+import { ChevronRight, Layers, Box, List, Tag, FileText, Link2, ToggleLeft, Hash, Info, Ruler } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /* ─────────────────────────────────────────────
    Type icons & labels  (no per-type colors —
@@ -53,6 +59,108 @@ function extractValue(node: any): string | null {
 }
 
 /* ─────────────────────────────────────────────
+   Semantic / ConceptDescription helpers
+   - semanticId 와 (있다면) ConceptDescription 에서
+     사람이 읽을 수 있는 개념 정보를 추출한다.
+───────────────────────────────────────────── */
+function mlText(arr: any): string {
+  if (!arr) return "";
+  if (typeof arr === "string") return arr;
+  if (Array.isArray(arr)) {
+    const en = arr.find((d: any) => d.language === "en");
+    const ko = arr.find((d: any) => d.language === "ko");
+    return (ko || en || arr[0])?.text ?? "";
+  }
+  return "";
+}
+
+function getSemanticIdValue(node: any): string {
+  const keys = node?.semanticId?.keys;
+  if (Array.isArray(keys) && keys.length > 0) return keys[0]?.value ?? "";
+  return "";
+}
+
+/* ConceptDescription 의 dataSpecificationContent 추출 */
+function getDataSpec(cd: any) {
+  const specs = cd?.embeddedDataSpecifications;
+  if (!Array.isArray(specs) || specs.length === 0) return null;
+  return specs[0]?.dataSpecificationContent ?? null;
+}
+
+/* 노드에서 사람이 읽을 수 있는 개념 정보를 모은다. */
+function getConceptInfo(node: any) {
+  const semanticId = getSemanticIdValue(node);
+  const cd = node?.ConceptDescription;
+  const ds = getDataSpec(cd);
+
+  const preferredName = mlText(ds?.preferredName);
+  const definition = mlText(ds?.definition) || mlText(cd?.description);
+  const unit = ds?.unit ?? "";
+  const dataType = ds?.dataType ?? "";
+
+  return {
+    semanticId,
+    // 사용자에게 보여줄 사람이 읽을 수 있는 이름 (없으면 빈 값)
+    preferredName,
+    definition,
+    unit,
+    dataType,
+    hasInfo: Boolean(semanticId || preferredName || definition || unit),
+  };
+}
+
+/* idShort 옆에 표시할 개념 정보 툴팁 */
+function ConceptHint({ node }: { node: any }) {
+  const info = getConceptInfo(node);
+  if (!info.hasInfo) return null;
+
+  return (
+    <TooltipProvider delay={150}>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <span
+              role="button"
+              tabIndex={0}
+              className="inline-flex text-zinc-300 hover:text-primary transition-colors shrink-0 cursor-help"
+              aria-label="개념 정보 보기"
+            >
+              <Info className="size-3.5" />
+            </span>
+          }
+        />
+        <TooltipContent side="top" className="max-w-sm flex-col items-start gap-2 py-2.5 px-3 text-left">
+          {info.preferredName && (
+            <div className="font-semibold text-[13px] leading-snug">{info.preferredName}</div>
+          )}
+          {info.definition && (
+            <div className="text-[11px] leading-relaxed opacity-90">{info.definition}</div>
+          )}
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            {info.unit && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-background/15 px-1.5 py-0.5 rounded">
+                <Ruler className="size-3" />
+                {info.unit}
+              </span>
+            )}
+            {info.dataType && (
+              <span className="text-[10px] font-mono bg-background/15 px-1.5 py-0.5 rounded">
+                {info.dataType}
+              </span>
+            )}
+          </div>
+          {info.semanticId && (
+            <div className="text-[10px] font-mono opacity-70 break-all border-t border-background/20 pt-1.5 mt-0.5 w-full">
+              {info.semanticId}
+            </div>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+/* ─────────────────────────────────────────────
    Property row  — key : value table row
 ───────────────────────────────────────────── */
 function PropertyRow({
@@ -69,6 +177,7 @@ function PropertyRow({
   const typeLabel = vt(node.valueType);
   const value = showValues ? extractValue(node) : null;
   const hasValue = Boolean(value);
+  const concept = getConceptInfo(node);
 
   return (
     <div
@@ -80,17 +189,28 @@ function PropertyRow({
         !showValues && "hover:bg-zinc-50/60",
       )}
     >
-      {/* col 1: name + icon */}
+      {/* col 1: name + icon (+ 개념 이름) */}
       <div className="flex items-center gap-2 min-w-0">
         <Icon className="size-3.5 text-zinc-400 shrink-0" />
-        <span className="text-zinc-700 font-medium truncate" title={node.idShort}>
-          {node.idShort}
-        </span>
+        <div className="min-w-0 flex flex-col">
+          <span className="text-zinc-700 font-medium truncate leading-tight" title={node.idShort}>
+            {node.idShort}
+          </span>
+          {concept.preferredName && concept.preferredName !== node.idShort && (
+            <span
+              className="text-[11px] text-zinc-400 truncate leading-tight"
+              title={concept.preferredName}
+            >
+              {concept.preferredName}
+            </span>
+          )}
+        </div>
         {typeLabel && (
           <span className="text-[10px] font-mono text-zinc-400 shrink-0 hidden sm:block">
             {typeLabel}
           </span>
         )}
+        <ConceptHint node={node} />
       </div>
 
       {/* col 2: type label chip */}
@@ -154,6 +274,7 @@ function GroupBlock({
         <span className="text-sm font-semibold text-zinc-800 truncate flex-1 min-w-0">
           {node.idShort}
         </span>
+        <ConceptHint node={node} />
         <span className="text-[10px] font-medium text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded shrink-0">
           {meta.label}
         </span>

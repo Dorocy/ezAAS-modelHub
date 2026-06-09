@@ -115,10 +115,21 @@ export default function SubmodelPage() {
   const [layoutType, setLayoutType]   = useState<"grid" | "list">("grid");
   const [page, setPage]               = useState(1);
 
-  const { data: categories = [] } = useSWR(
+  const { data: categoriesRaw = [] } = useSWR(
     isAuthenticated ? "categories-submodel" : null,
     () => getCodeList("category")
   );
+
+  // 카테고리 중복 제거: API가 같은 항목을 두 번 내려주는 경우를 대비해 고유 키로 dedupe
+  const categories = useMemo(() => {
+    const seen = new Set<string>();
+    return (categoriesRaw as any[]).filter((c) => {
+      const key = String(c.category_seq ?? c.id ?? c.category_name ?? c.text);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [categoriesRaw]);
 
   const searchParams: Record<string, string> = {};
   if (searchKey) searchParams.searchKey = searchKey;
