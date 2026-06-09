@@ -21,14 +21,12 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   let aasCount = 0;
   let smCount  = 0;
-  let insCount = 0;
 
   try {
     const raw = await getPublishedCount();
     const list: Array<{ ty: string; cnt: number }> = Array.isArray(raw) ? raw : [];
     aasCount = list.find((r) => r.ty === "aasmodel")?.cnt ?? 0;
     smCount  = list.find((r) => r.ty === "submodel")?.cnt ?? 0;
-    insCount = list.find((r) => r.ty === "instance")?.cnt ?? 0;
   } catch {
     // backend unreachable
   }
@@ -65,7 +63,6 @@ export default async function Home() {
                 {[
                   { label: "AAS 템플릿",     value: aasCount,  href: "/aas" },
                   { label: "서브모델 템플릿", value: smCount,   href: "/submodel" },
-                  { label: "인스턴스",        value: insCount,  href: "/instance" },
                 ].map((s, i) => (
                   <Link
                     key={i}
@@ -253,8 +250,6 @@ export default async function Home() {
               icon: Layers,
               title: "인스턴스 생성",
               desc: "템플릿을 골라 필드를 채우기만 하면 완성됩니다. 코드 없이 실제 자산의 디지털 트윈을 만드세요.",
-              count: insCount,
-              countLabel: "개 인스턴스",
               cta: "만들기",
               accent: "group-hover:text-emerald-600",
               bg: "group-hover:bg-emerald-50/40",
@@ -278,8 +273,12 @@ export default async function Home() {
                 </div>
                 <div className="flex items-end justify-between mt-auto pt-2 border-t border-zinc-100">
                   <span className="flex items-center gap-1.5 text-xs text-zinc-400">
-                    <span className={`size-1.5 rounded-full ${item.dot}`} />
-                    {item.count.toLocaleString()}{item.countLabel}
+                    {item.count != null ? (
+                      <>
+                        <span className={`size-1.5 rounded-full ${item.dot}`} />
+                        {item.count.toLocaleString()}{item.countLabel}
+                      </>
+                    ) : null}
                   </span>
                   <span className={`flex items-center gap-1 text-xs font-semibold text-zinc-400 transition-all ${item.accent} group-hover:gap-2`}>
                     {item.cta} <ArrowRight className="size-3" />
@@ -316,7 +315,7 @@ export default async function Home() {
               },
               {
                 icon: Activity,
-                title: "노코드 인스턴스 생성",
+                title: "���코드 인스턴스 생성",
                 body: "템플릿을 선택하고 필드를 채우기만 하면 완성된 AAS 인스턴스가 만들어집니다. 개념 사전으로 각 필드를 바로 이해하세요.",
                 tag: "No-Code",
               },
