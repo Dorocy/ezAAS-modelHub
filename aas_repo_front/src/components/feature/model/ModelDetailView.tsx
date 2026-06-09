@@ -24,7 +24,6 @@ interface FieldDef {
 const FIELD_CONFIG: Record<ModelType, FieldDef[]> = {
   aasmodel: [
     { label: "AAS ID", key: "aasmodel_id", mono: true },
-    { label: "Template ID", key: "aasmodel_template_id", mono: true },
     { label: "Version", key: "version" },
     { label: "Category", key: "category_name" },
     { label: "Asset Type", key: "asset_type" },
@@ -35,7 +34,6 @@ const FIELD_CONFIG: Record<ModelType, FieldDef[]> = {
   submodel: [
     { label: "Submodel ID", key: "submodel_id", mono: true },
     { label: "Semantic ID", key: "submodel_semantic_id", mono: true },
-    { label: "Template ID", key: "submodel_template_id", mono: true },
     { label: "Version", key: "submodel_version" },
     { label: "Category", key: "category_name" },
     { label: "Type", key: "submodel_type" },

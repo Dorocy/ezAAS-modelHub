@@ -71,13 +71,6 @@ function TemplateCard({ model }: { model: any }) {
           </span>
           <StatusBadge status={model.status} label={model.status_nm ?? model.status} />
         </div>
-
-        {/* template id */}
-        {model.aasmodel_template_id && (
-          <p className="mt-2 text-[10px] font-mono text-zinc-400 truncate">
-            {model.aasmodel_template_id}
-          </p>
-        )}
       </div>
     </Link>
   );
@@ -148,7 +141,7 @@ export default function AASPage() {
   // 이름 일치를 최우선으로, 그다음 설명/ID/카테고리 키워드 순으로 재정렬
   const models = rankByQuery(rawModels, searchKey, {
     getName: (m) => m.aasmodel_name,
-    getKeywords: (m) => [m.description, m.aasmodel_template_id, m.category_name],
+    getKeywords: (m) => [m.description, m.category_name],
   });
 
   const handleSearch = useCallback(() => {
