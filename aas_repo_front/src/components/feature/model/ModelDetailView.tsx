@@ -6,6 +6,7 @@ import useSWR from "swr";
 import { getModel } from "@/api/index";
 import { ROUTES } from "@/constants/routes";
 import { addValuePaths, parsingAAS } from "@/utils/aas";
+import { resolveThumbnailSrc } from "@/utils/index";
 import TemplateBlueprint from "@/components/feature/instance/TemplateBlueprint";
 import { StatusBadge } from "@/components/feature/shared/ResourceListShell";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -62,6 +63,9 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
   );
 
   const model: any = Array.isArray(data) ? data[0] : data?.data?.[0] ?? data;
+
+  // 상세 응답에 담겨오는 썸네일(base64/URL) → 이미지 소스로 변환.
+  const thumbnailSrc = useMemo(() => resolveThumbnailSrc(model), [model]);
 
   const treeData = useMemo(() => {
     const metadata = model?.metadata;
@@ -136,6 +140,16 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
           <div className="grid gap-6 lg:grid-cols-3 items-start">
             {/* ── Metadata panel ── */}
             <div className="lg:col-span-1 bg-white border border-zinc-200 rounded-xl p-5">
+              {thumbnailSrc && (
+                <div className="mb-5 -mt-1 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={thumbnailSrc || "/placeholder.svg"}
+                    alt={`${model?.[meta.nameKey] || "Template"} thumbnail`}
+                    className="w-full h-44 object-contain"
+                  />
+                </div>
+              )}
               <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-4">
                 Details
               </h2>

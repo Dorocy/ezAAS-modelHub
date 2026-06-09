@@ -5,6 +5,7 @@ import Link from "next/link";
 import useSWR from "swr";
 import { getModelList, getCodeList } from "@/api/index";
 import { rankByQuery } from "@/utils/search";
+import { resolveThumbnailSrc } from "@/utils/index";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/constants/roles";
@@ -43,13 +44,23 @@ function StatusBadge({ status, label }: { status: string; label: string }) {
 }
 
 function TemplateCard({ model }: { model: any }) {
+  const thumb = resolveThumbnailSrc(model);
   return (
     <Link href={ROUTES.AASMODEL.VIEW(model.aasmodel_seq)} className="group block">
       <div className="relative flex flex-col h-full bg-white border border-zinc-200 rounded-xl p-5 hover:border-zinc-400 hover:shadow-sm transition-all duration-150">
         {/* top row */}
         <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="w-9 h-9 rounded-lg bg-zinc-100 flex items-center justify-center shrink-0">
-            <FileStack className="w-4 h-4 text-zinc-500" />
+          <div className="w-9 h-9 rounded-lg bg-zinc-100 flex items-center justify-center shrink-0 overflow-hidden">
+            {thumb ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={thumb || "/placeholder.svg"}
+                alt={`${model.aasmodel_name || "Template"} thumbnail`}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <FileStack className="w-4 h-4 text-zinc-500" />
+            )}
           </div>
           <ArrowUpRight className="w-4 h-4 text-zinc-300 group-hover:text-zinc-500 transition-colors shrink-0 mt-0.5" />
         </div>
@@ -77,13 +88,23 @@ function TemplateCard({ model }: { model: any }) {
 }
 
 function TemplateRow({ model }: { model: any }) {
+  const thumb = resolveThumbnailSrc(model);
   return (
     <Link
       href={ROUTES.AASMODEL.VIEW(model.aasmodel_seq)}
       className="group flex items-center gap-4 px-4 py-3 border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50 transition-colors"
     >
-      <div className="w-7 h-7 rounded-md bg-zinc-100 flex items-center justify-center shrink-0">
-        <FileStack className="w-3.5 h-3.5 text-zinc-400" />
+      <div className="w-7 h-7 rounded-md bg-zinc-100 flex items-center justify-center shrink-0 overflow-hidden">
+        {thumb ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={thumb || "/placeholder.svg"}
+            alt={`${model.aasmodel_name || "Template"} thumbnail`}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <FileStack className="w-3.5 h-3.5 text-zinc-400" />
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <span className="text-sm font-medium text-zinc-900 truncate group-hover:text-blue-600 transition-colors block">
