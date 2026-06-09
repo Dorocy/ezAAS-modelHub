@@ -1,4 +1,5 @@
 import { getPublishedCount } from "@/api";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- 검색 섹션 숨김 처리 중. 되살릴 때 사용.
 import AASSearchBar from "@/components/feature/app/AASSearchBar";
 import VideoEmbed from "@/components/feature/app/VideoEmbed";
 import { ROUTES } from "@/constants/routes";
@@ -101,12 +102,14 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ─── 검색 ────────────────────────────────────────────────── */}
+      {/* ─── 검색 (일단 숨김 처리. 다시 보이려면 아래 주석 해제) ──── */}
+      {/*
       <section className="border-b border-border bg-zinc-50/60">
         <div className="mx-auto max-w-screen-xl px-6 lg:px-10 py-5">
           <AASSearchBar />
         </div>
       </section>
+      */}
 
       {/* ─── AAS가 처음이신가요? 개념 설명 ──────────────────────── */}
       <section className="border-b border-border bg-white">
@@ -316,7 +319,7 @@ export default async function Home() {
               {
                 icon: Activity,
                 title: "���코드 인스턴스 생성",
-                body: "템플릿을 선택하고 필드를 채우기만 하면 완성된 AAS 인스턴스가 만들어집니다. 개념 사전으로 각 필드를 바로 이해하세요.",
+                body: "템플릿을 선택하고 필드를 채우기만 하면 완성��� AAS 인스턴스가 만들어집니다. 개념 사전으로 각 필드를 바로 이해하세요.",
                 tag: "No-Code",
               },
               {
