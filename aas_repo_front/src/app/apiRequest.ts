@@ -13,6 +13,11 @@ interface ApiRequestParams {
   responseType?: "json" | "blob";
   errorThrow?: boolean;
   withToast?: boolean;
+  /**
+   * 401(미인증) 응답을 받아도 자동 로그아웃/로그인 리다이렉트를 하지 않는다.
+   * 비로그인 사용자에게도 공개되는 조회(예: 템플릿 목록)에 사용한다.
+   */
+  silent401?: boolean;
 }
 
 export async function apiRequest({
@@ -22,6 +27,7 @@ export async function apiRequest({
   responseType = "json",
   errorThrow = true,
   withToast = false,
+  silent401 = false,
 }: ApiRequestParams): Promise<any> {
   const isServer = typeof window === "undefined";
 
@@ -103,7 +109,7 @@ export async function apiRequest({
     const response = await fetch(fullUrl, options);
 
     if (!response.ok) {
-      if (response.status === 401) {
+      if (response.status === 401 && !silent401) {
         if (isServer) {
           // 서버사이드: 자기 라우트를 fetch해도 Set-Cookie가 브라우저로 전달되지
           // 않아 무의미하고, 절대 URL이 없으면 "undefined/api/logout"으로 파싱
@@ -114,6 +120,12 @@ export async function apiRequest({
           await fetch("/api/logout", { method: "POST" });
           window.location.replace(ROUTES.LOGIN);
         }
+      }
+
+      // 비로그인 공개 조회(silent401)에서 401을 받으면 에러 토스트나 throw 없이
+      // 조용히 빈 결과를 돌려준다. 로그인하면 정상적으로 데이터가 채워진다.
+      if (response.status === 401 && silent401) {
+        return responseType === "blob" ? null : [];
       }
 
       const json = await parseJsonSafe(response);

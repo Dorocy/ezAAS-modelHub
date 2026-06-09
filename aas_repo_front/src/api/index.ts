@@ -79,7 +79,8 @@ export async function getModelList(params: GetModelListParams) {
   const searchKey = (params.searchParams as any)?.searchKey;
   const query = searchKey ? `?search=${encodeURIComponent(searchKey)}` : "";
   const url = `instance/list/${params.modelType}/${categorySeq}${query}`;
-  return apiRequest({ url, withToast: params.withToast });
+  // 비로그인 사용자도 템플릿 목록을 조회할 수 있도록 401 시 강제 리다이렉트하지 않는다.
+  return apiRequest({ url, withToast: params.withToast, silent401: true });
 }
 
 export async function getModel(params: GetModelParams) {
@@ -162,7 +163,8 @@ export async function exportModel(params: ExportModelParams): Promise<void> {
 // ── Code ──────────────────────────────────────────────────────────────────────
 
 export async function getCodeList(type: string, withToast = false) {
-  return apiRequest({ url: `common/code/${type}`, withToast });
+  // 공개 리스트 페이지의 카테고리 사이드바에서도 쓰이므로 401 시 리다이렉트하지 않는다.
+  return apiRequest({ url: `common/code/${type}`, withToast, silent401: true });
 }
 
 // ── Published ─────────────────────────────────────────────────────────────────

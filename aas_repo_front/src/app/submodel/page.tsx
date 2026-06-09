@@ -107,7 +107,7 @@ function TemplateRow({ model }: { model: any }) {
 }
 
 export default function SubmodelPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
 
   const [inputValue, setInputValue]   = useState("");
   const [searchKey, setSearchKey]     = useState("");
@@ -116,7 +116,7 @@ export default function SubmodelPage() {
   const [page, setPage]               = useState(1);
 
   const { data: categoriesRaw = [] } = useSWR(
-    isAuthenticated ? "categories-submodel" : null,
+    "categories-submodel",
     () => getCodeList("category")
   );
 
@@ -136,7 +136,7 @@ export default function SubmodelPage() {
   if (activeCategory !== "all") searchParams.category_seq = activeCategory;
 
   const { data: modelData, isLoading, error } = useSWR(
-    isAuthenticated ? ["submodel-list", page, searchKey, activeCategory] : null,
+    ["submodel-list", page, searchKey, activeCategory],
     () => getModelList({ modelType: "submodel", pageNumber: page, pageSize: PAGE_SIZE, searchParams })
   );
 
