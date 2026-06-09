@@ -257,17 +257,17 @@ export default function InstancePage() {
             </div>
           ) : (
             <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
-              <table className="w-full text-sm">
+              <table className="w-full table-auto text-sm">
                 <thead>
                   <tr className="border-b border-zinc-200 bg-zinc-50/60 text-left">
-                    <th className="px-4 py-3 w-36 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Category</th>
-                    <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Instance</th>
-                    <th className="px-4 py-3 w-28 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Verification</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider whitespace-nowrap">Category</th>
+                    <th className="px-4 py-3 w-full text-xs font-semibold text-zinc-400 uppercase tracking-wider">Instance</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider whitespace-nowrap">Verification</th>
                     {showUser && (
-                      <th className="px-4 py-3 w-44 text-xs font-semibold text-zinc-400 uppercase tracking-wider hidden md:table-cell">User</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider whitespace-nowrap hidden md:table-cell">User</th>
                     )}
                     {canCreate && (
-                      <th className="px-4 py-3 w-44 text-xs font-semibold text-zinc-400 uppercase tracking-wider text-right">Actions</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider text-right whitespace-nowrap">Actions</th>
                     )}
                   </tr>
                 </thead>
@@ -283,30 +283,30 @@ export default function InstancePage() {
                         key={instance.instance_seq}
                         className="border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50 transition-colors"
                       >
-                        <td className="px-4 py-3 text-zinc-500 align-middle">{instance.category_name}</td>
-                        <td className="px-4 py-3 align-middle">
+                        <td className="px-4 py-3 text-zinc-500 align-middle whitespace-nowrap">{instance.category_name}</td>
+                        <td className="px-4 py-3 align-middle max-w-0">
                           <Link
                             href={ROUTES.INSTANCE.VIEW(instance.instance_seq)}
-                            className="block group"
+                            className="block group min-w-0"
                           >
-                            <span className="block text-sm font-medium text-zinc-900 group-hover:text-blue-600 transition-colors truncate max-w-[320px]">
+                            <span className="block text-sm font-medium text-zinc-900 group-hover:text-blue-600 transition-colors truncate">
                               {instance.instance_name}
                             </span>
-                            <span className="block text-xs text-zinc-400 truncate mt-0.5 max-w-[320px]">
+                            <span className="block text-xs text-zinc-400 truncate mt-0.5">
                               {instance.description || "—"}
                             </span>
                           </Link>
                         </td>
-                        <td className="px-4 py-3 align-middle">
+                        <td className="px-4 py-3 align-middle whitespace-nowrap">
                           <VerificationBadge value={instance.verification} />
                         </td>
                         {showUser && (
-                          <td className="px-4 py-3 align-middle text-zinc-500 hidden md:table-cell">
-                            <span className="block max-w-[160px] truncate">{instance.user_id}</span>
+                          <td className="px-4 py-3 align-middle text-zinc-500 whitespace-nowrap hidden md:table-cell">
+                            <span className="block max-w-[200px] truncate">{instance.user_id}</span>
                           </td>
                         )}
                         {canCreate && (
-                          <td className="px-4 py-3 align-middle text-right">
+                          <td className="px-4 py-3 align-middle text-right whitespace-nowrap">
                             {hasPermission && (
                               <div className="flex items-center justify-end gap-1.5">
                                 <DropdownMenu>
