@@ -1,6 +1,6 @@
 import { getPublishedCount } from "@/api";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- 검색 섹션 숨김 처리 중. 되살릴 때 사용.
-import AASSearchBar from "@/components/feature/app/AASSearchBar";
+// 검색 섹션 숨김 처리 중. 되살리려면 아래 import 와 본문의 <AASSearchBar /> 섹션 주석을 함께 해제한다.
+// import AASSearchBar from "@/components/feature/app/AASSearchBar";
 import VideoEmbed from "@/components/feature/app/VideoEmbed";
 import { ROUTES } from "@/constants/routes";
 import Link from "next/link";
@@ -319,7 +319,7 @@ export default async function Home() {
               {
                 icon: Activity,
                 title: "���코드 인스턴스 생성",
-                body: "템플릿을 선택하고 필드를 채우기만 하면 완성��� AAS 인스턴스가 만들어집니다. 개념 사전으로 각 필드를 바로 이해하세요.",
+                body: "템플릿을 선���하고 필드를 채우기만 하면 완성��� AAS 인스턴스가 만들어집니다. 개념 사전으로 각 필드를 바로 이해하세요.",
                 tag: "No-Code",
               },
               {
