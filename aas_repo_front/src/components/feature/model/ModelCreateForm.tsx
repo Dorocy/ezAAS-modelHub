@@ -10,7 +10,7 @@ import { importModel, upsertModel, verifyModel, apiVerifyInstance } from "@/api/
 import { ROUTES } from "@/constants/routes";
 import { base64ToFile } from "@/utils/index";
 import { addValuePaths, parsingAAS } from "@/utils/aas";
-import { environmentFromJson, validate } from "@/lib/aas";
+import { environmentFromJson, submodelFromJson, validate } from "@/lib/aas";
 import type { JsonValue } from "@/lib/aas";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -216,10 +216,38 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
       const result: any = await importModel({ modelType, file });
       if (!result) return;
 
-      const parsed =
+      // 백엔드(BaSyx)가 돌려준 metadata 를 SDK 로 역직렬화하여 정규화 + 검증한다.
+      // - environmentFromJson/submodelFromJson 은 문자열/객체 입력을 모두 처리한다.
+      // - metadata state 에는 다운스트림(parsingAAS·썸네일 매칭·백엔드 재전송) 호환을
+      //   위해 "원본 raw JSON" 을 그대로 유지한다. SDK 객체로 치환하지 않는다.
+      // - 차단 정책(승인됨): 역직렬화 실패(구조적으로 깨진 AAS)만 경고하고,
+      //   메타모델 위반은 콘솔 경고로만 남긴다.
+      const rawMetadata =
         typeof result.metadata === "string"
           ? JSON.parse(result.metadata)
           : result.metadata;
+
+      const parseResult =
+        modelType === "aasmodel"
+          ? environmentFromJson(result.metadata as string | JsonValue)
+          : submodelFromJson(result.metadata as string | JsonValue);
+
+      if (!parseResult.ok || parseResult.value === null) {
+        toast(`AAS 구조를 해석할 수 없습니다: ${parseResult.error ?? "알 수 없는 오류"}`, {
+          icon: "⚠️",
+        });
+        return;
+      }
+
+      const sdkIssues = validate(parseResult.value);
+      if (!sdkIssues.valid) {
+        console.warn(
+          `[v0] import SDK 메타모델 경고 ${sdkIssues.issues.length}건 (계속 진행):`,
+          sdkIssues.issues.slice(0, 10),
+        );
+      }
+
+      const parsed = rawMetadata;
       setMetadata(parsed);
 
       // A freshly imported model must be re-verified before saving.
