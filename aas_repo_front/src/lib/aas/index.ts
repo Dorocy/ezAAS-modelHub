@@ -37,7 +37,13 @@ export { environmentFromJson, submodelFromJson } from "./importAas";
 export { toJsonObject, toJsonString } from "./exportAas";
 
 // Validation
-export { validate, isValid } from "./validateAas";
+export { validate, isValid, validateModelMetadata } from "./validateAas";
+export type {
+  ValidationSeverity,
+  ClassifiedIssue,
+  ModelValidationReport,
+  ModelMetadataKind,
+} from "./validateAas";
 
 // Edit (불변 지향)
 export {

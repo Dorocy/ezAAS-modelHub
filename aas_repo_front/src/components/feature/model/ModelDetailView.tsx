@@ -8,6 +8,8 @@ import { ROUTES } from "@/constants/routes";
 import { addValuePaths, parsingAAS } from "@/utils/aas";
 import { resolveThumbnailSrc } from "@/utils/index";
 import TemplateBlueprint from "@/components/feature/instance/TemplateBlueprint";
+import ValidationSummary from "@/components/feature/model/ValidationSummary";
+import { validateModelMetadata } from "@/lib/aas";
 import { StatusBadge } from "@/components/feature/shared/ResourceListShell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buttonVariants } from "@/components/ui/button";
@@ -77,6 +79,15 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
       return undefined;
     }
   }, [model]);
+
+  // 읽기 전용 SDK 검증. metadata 가 바뀔 때만 재실행하여 매 렌더 검증을 피한다.
+  // SDK 객체는 보관하지 않고 검증 리포트(요약/이슈)만 메모이즈한다.
+  const validationReport = useMemo(() => {
+    const metadata = model?.metadata;
+    if (!metadata) return undefined;
+    const kind = modelType === "submodel" ? "submodel" : "environment";
+    return validateModelMetadata(metadata, kind);
+  }, [model, modelType]);
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -178,6 +189,15 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
                   <FileDown className="w-3.5 h-3.5" />
                   Open guide document
                 </a>
+              )}
+
+              {validationReport && (
+                <div className="mt-5">
+                  <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+                    Validation
+                  </h2>
+                  <ValidationSummary report={validationReport} />
+                </div>
               )}
             </div>
 
