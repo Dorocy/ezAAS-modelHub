@@ -145,15 +145,15 @@ export async function deleteModel(params: DeleteModelParams) {
 
 export async function exportModel(params: ExportModelParams): Promise<void> {
   const format = params.format ?? "json";
-  const filename = params.filename ?? params.modelType;
+  const filename = params.filename ?? params.apiModelType;
   const payload = {
     name: filename,
     source: "db",
     model_key: String(params.modelSeq),
-    modelType: params.modelType,
+    modelType: params.apiModelType,
   };
   const blob = await apiRequest({
-    url: `basyx/${params.modelType}/download?format=${format}`,
+    url: `basyx/${params.apiModelType}/download?format=${format}`,
     options: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -169,6 +169,8 @@ export async function exportModel(params: ExportModelParams): Promise<void> {
   // - 역직렬화 실패(구조적으로 깨진 AAS)면 export 를 차단하고,
   // - 메타모델 위반은 현 정책대로 콘솔 경고만 남긴 뒤 정규화된 JSON 으로 저장한다.
   // XML/AASX 는 SDK 가 처리하지 않으므로 백엔드 blob 을 그대로 통과시킨다.
+  //
+  // 직렬화 분기는 백엔드 API 문자열이 아니라 canonical type(modelType) 기준으로 한다.
   let outputBlob: Blob = blob;
   if (format === "json") {
     const text = await blob.text();
@@ -211,7 +213,7 @@ export async function exportModel(params: ExportModelParams): Promise<void> {
 // ── Code ──────────────────────────────────────────────────────────────────────
 
 export async function getCodeList(type: string, withToast = false) {
-  // 공개 리스트 페이지의 카테고리 사이드바에서도 쓰이므로 401 시 리다이렉트하지 않는다.
+  // 공개 리스트 페이지의 카테고리 사이드��에서도 쓰이므로 401 시 리다이렉트하지 않는다.
   return apiRequest({ url: `common/code/${type}`, withToast, silent401: true });
 }
 

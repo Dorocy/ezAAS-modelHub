@@ -109,7 +109,8 @@ export default function InstancePage() {
 
   const handleExport = async (instance: any, format: "json" | "xml" | "aasx") => {
     await exportModel({
-      modelType: "aasmodel",
+      modelType: "environment",
+      apiModelType: "aasmodel",
       modelSeq: instance.instance_seq,
       format,
       filename: instance.instance_name,

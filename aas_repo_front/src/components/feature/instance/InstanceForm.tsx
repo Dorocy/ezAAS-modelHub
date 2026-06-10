@@ -583,7 +583,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
   };
 
   const handleExport = (format: string, inst: AASInstance) => {
-    exportModel({ modelType: "instance", format, modelSeq: inst.instance_seq, filename: inst.instance_name, source: "db", withToast: true });
+    exportModel({ modelType: "environment", apiModelType: "instance", format: format as "json" | "xml" | "aasx", modelSeq: inst.instance_seq, filename: inst.instance_name, withToast: true });
   };
 
   const combinedAASTreeData = useMemo(() => {
