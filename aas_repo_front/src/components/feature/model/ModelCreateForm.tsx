@@ -10,6 +10,8 @@ import { importModel, upsertModel, verifyModel, apiVerifyInstance } from "@/api/
 import { ROUTES } from "@/constants/routes";
 import { base64ToFile } from "@/utils/index";
 import { addValuePaths, parsingAAS } from "@/utils/aas";
+import { environmentFromJson, validate } from "@/lib/aas";
+import type { JsonValue } from "@/lib/aas";
 import { useAuth } from "@/contexts/AuthContext";
 
 import TemplateBlueprint from "@/components/feature/instance/TemplateBlueprint";
@@ -320,6 +322,34 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
     let result: "success" | "fail";
     try {
       setVerifying(true);
+
+      // ── 1차 게이트: 클라이언트 SDK 검증(주 검증) ──
+      // 백엔드 호출 전에 클라이언트에서 먼저 점검한다.
+      // metadata 는 shells/submodels 를 담은 Environment 형태이므로 그대로 역직렬화한다.
+      //
+      // 차단 정책: "역직렬화 실패(= 구조적으로 깨진 AAS)"만 저장을 차단한다.
+      // 메타모델 제약 위반(중복 언어 description 등)은 기존 정상 템플릿에도
+      // 다수 존재하므로 차단하지 않고 콘솔 경고로만 남긴다(회귀 방지).
+      const parsedEnv = environmentFromJson(metadata as JsonValue);
+      if (!parsedEnv.ok || parsedEnv.value === null) {
+        verificationRef.current = null;
+        setVerificationActive(null);
+        setVerificationSummary(null);
+        setVerificationError(
+          `AAS 구조를 해석할 수 없습니다: ${parsedEnv.error ?? "알 수 없는 오류"}`,
+        );
+        setVerification("fail");
+        return "fail";
+      }
+      const sdkResult = validate(parsedEnv.value);
+      if (!sdkResult.valid) {
+        console.warn(
+          `[v0] SDK 메타모델 경고 ${sdkResult.issues.length}건 (저장은 계속):`,
+          sdkResult.issues.slice(0, 10),
+        );
+      }
+
+      // ── 2차: 백엔드 검증(보조) ──
       let summary: string | undefined;
       if (modelType === "aasmodel") {
         // Real structure verification via the backend /instance/verification
