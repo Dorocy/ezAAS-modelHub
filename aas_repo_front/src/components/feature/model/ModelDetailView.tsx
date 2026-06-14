@@ -5,6 +5,7 @@ import Link from "next/link";
 import useSWR from "swr";
 import { getModel } from "@/api/index";
 import { ROUTES } from "@/constants/routes";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { addValuePaths, parsingAAS } from "@/utils/aas";
 import { resolveThumbnailSrc } from "@/utils/index";
 import TemplateBlueprint from "@/components/feature/instance/TemplateBlueprint";

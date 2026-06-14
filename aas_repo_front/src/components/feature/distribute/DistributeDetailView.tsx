@@ -37,6 +37,7 @@ export default function DistributeDetailView({
   modelType: ModelType;
   targetSeq: string;
 }) {
+  const { t } = useLanguage();
   const { data, isLoading } = useSWR(
     ["published-model", modelType, targetSeq],
     () => getPublishedModel({ modelType, target_seq: targetSeq })
@@ -115,7 +116,7 @@ export default function DistributeDetailView({
               className={buttonVariants({ size: "sm" })}
             >
               <Pencil data-icon="inline-start" />
-              Edit
+              {t("Edit")}
             </Link>
           </div>
         </div>
@@ -127,19 +128,19 @@ export default function DistributeDetailView({
           <div className="flex items-center gap-2 mb-2">
             <Gauge className="size-4 text-primary" />
             <span className="text-sm font-semibold text-foreground">
-              Maturity Level
+              {t("Maturity Level")}
             </span>
           </div>
           {maturity ? (
             <div className="flex flex-wrap items-center gap-3">
               <Badge className="text-sm px-3 py-1">{maturity}</Badge>
               <span className="text-sm text-muted-foreground">
-                {MATURITY_DESC[maturity] ?? ""}
+                {MATURITY_DESC[maturity] ? t(MATURITY_DESC[maturity]) : ""}
               </span>
             </div>
           ) : (
             <p className="text-sm text-amber-600">
-              성숙도가 아직 부여되지 않았습니다.
+              {t("No maturity level has been assigned yet.")}
             </p>
           )}
         </div>
@@ -179,7 +180,7 @@ export default function DistributeDetailView({
           {model.description && (
             <div className="mt-5 border-t border-border pt-4">
               <p className="text-xs font-medium text-muted-foreground mb-1">
-                Description
+                {t("Description")}
               </p>
               <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
                 {model.description}
@@ -193,7 +194,7 @@ export default function DistributeDetailView({
             href={ROUTES.DISTRIBUTE.LIST}
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
-            목록으로
+            {t("Back to list")}
           </Link>
         </div>
       </div>

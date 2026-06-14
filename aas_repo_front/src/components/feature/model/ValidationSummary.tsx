@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import type { ModelValidationReport, ClassifiedIssue } from "@/lib/aas";
 
 /** Detail Panel 에 표시할 최대 이슈 수. */
@@ -28,6 +29,7 @@ interface ValidationSummaryProps {
  * 이 컴포넌트는 어떤 편집 상태도 변경하지 않는다(정보 제공 전용).
  */
 export default function ValidationSummary({ report, className }: ValidationSummaryProps) {
+  const { t } = useLanguage();
   const { parsed, errorCount, warningCount, issues } = report;
 
   const tone: "valid" | "warning" | "error" = !parsed
@@ -46,15 +48,15 @@ export default function ValidationSummary({ report, className }: ValidationSumma
         <SummaryIcon tone={tone} />
         <div className="min-w-0">
           <p className={cn("text-sm font-semibold", toneText[tone])}>
-            {tone === "valid" && "Valid"}
-            {tone === "warning" && `Warnings: ${warningCount}`}
-            {tone === "error" && (errorCount > 0 ? `Errors: ${errorCount}` : "Invalid")}
+            {tone === "valid" && t("Valid")}
+            {tone === "warning" && `${t("Warnings")}: ${warningCount}`}
+            {tone === "error" && (errorCount > 0 ? `${t("Errors")}: ${errorCount}` : t("Invalid"))}
           </p>
           <p className="text-xs text-zinc-400 mt-0.5">
-            {tone === "valid" && "Conforms to the AAS metamodel."}
+            {tone === "valid" && t("Conforms to the AAS metamodel.")}
             {tone === "warning" &&
-              "Deserialized successfully. Metamodel constraints were not fully satisfied."}
-            {tone === "error" && "The structure could not be parsed as a valid AAS."}
+              t("Deserialized successfully. Metamodel constraints were not fully satisfied.")}
+            {tone === "error" && t("The structure could not be parsed as a valid AAS.")}
           </p>
         </div>
       </div>
@@ -65,8 +67,8 @@ export default function ValidationSummary({ report, className }: ValidationSumma
           <Accordion>
             <AccordionItem value="issues" className="border-b-0">
               <AccordionTrigger className="px-2 text-xs font-medium text-zinc-500 hover:no-underline">
-                View details ({Math.min(issues.length, MAX_VISIBLE_ISSUES)}
-                {hiddenCount > 0 ? ` of ${issues.length}` : ""})
+                {t("View details")} ({Math.min(issues.length, MAX_VISIBLE_ISSUES)}
+                {hiddenCount > 0 ? ` ${t("of")} ${issues.length}` : ""})
               </AccordionTrigger>
               <AccordionContent className="px-2">
                 <ul className="flex flex-col gap-1.5 pb-1">
@@ -76,7 +78,7 @@ export default function ValidationSummary({ report, className }: ValidationSumma
                 </ul>
                 {hiddenCount > 0 && (
                   <p className="text-xs text-zinc-400 px-2 pb-1">
-                    {`+ ${hiddenCount} more not shown`}
+                    {`+ ${hiddenCount} ${t("more not shown")}`}
                   </p>
                 )}
               </AccordionContent>
