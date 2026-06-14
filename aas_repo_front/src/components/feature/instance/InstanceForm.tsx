@@ -118,6 +118,9 @@ const normalizeMetadataPaths = (obj: any) => {
 
 const initialState = { aasmodel: { aasmodel: "", aasmodel_metadata: {} } };
 
+// 사용자가 장비 이미지를 업로드하지 않았을 때 Asset defaultThumbnail 로 쓰는 기본 경로
+const DEFAULT_THUMBNAIL_PATH = "/assets/media/thumbnail_placeholder.svg";
+
 /* ─────────────────────── Stepper component ─────────────────────── */
 const STEPS = [
   {
@@ -438,6 +441,8 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
           modelType: node.modelType,
           semanticIdValue: override ? override.id : baseSemanticId,
           linkedSourceLabel: override ? SOURCE_LABELS[override.source] : undefined,
+          dataType: node.valueType ?? undefined,
+          unit: node.unit ?? undefined,
         });
       }
       if (Array.isArray(node.children))
@@ -449,6 +454,17 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     });
     return rows;
   }, [treeData, semanticOverrides]);
+
+  // Concept Dictionary 전체 개념 목록 (미사용 개념 판별용).
+  // metadata.conceptDescriptions 를 {id, idShort} 로 평탄화한다.
+  const dictionaryConcepts = useMemo(() => {
+    const cds = ((aasmodel.aasmodel_metadata as any)?.conceptDescriptions ?? []) as any[];
+    const map = new Map<string, { id: string; idShort: string }>();
+    cds.forEach((cd) => {
+      if (cd?.id) map.set(cd.id, { id: cd.id, idShort: cd.idShort ?? "" });
+    });
+    return Array.from(map.values());
+  }, [aasmodel.aasmodel_metadata]);
 
   // 누락 element 에 표준 개념을 연결한다.
   // 1) treeDataRef 에 `${valuePath}.semanticId` 로 주입 → 저장 시 applyMetadata 의 _.set 으로 metadata 에 머지됨.
@@ -519,6 +535,29 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     const payloadMetadata = Array.isArray(metadata) ? [...metadata] : { ...metadata };
     const refObj = treeDataRef.current[getModelId(mt as any, payloadMetadata)];
     for (const key in refObj) _.set(payloadMetadata, key, refObj[key]);
+    // 장비 이미지를 AAS Asset 의 defaultThumbnail 로 반영한다.
+    // 위치: assetAdministrationShells[0].assetInformation.defaultThumbnail = { path, contentType }
+    // 사용자가 업로드하지 않으면 기본 썸네일 경로를 사용한다. (import/export 구조 변경 없음)
+    if (mt === "aasmodel") {
+      const assetInfo = (payloadMetadata as any)?.assetAdministrationShells?.[0]?.assetInformation;
+      if (assetInfo) {
+        const userThumb = inputState.thumbnail;
+        if (userThumb) {
+          // data URL(base64) → contentType 추출 (예: data:image/png;base64,....)
+          const m = userThumb.match(/^data:([^;]+);/);
+          assetInfo.defaultThumbnail = {
+            path: userThumb,
+            contentType: m?.[1] ?? "image/png",
+          };
+        } else if (!assetInfo.defaultThumbnail?.path) {
+          // 업로드 이미지가 없고 기존 썸네일도 없으면 기본 썸네일 적용
+          assetInfo.defaultThumbnail = {
+            path: DEFAULT_THUMBNAIL_PATH,
+            contentType: "image/svg+xml",
+          };
+        }
+      }
+    }
     return payloadMetadata;
   };
 
@@ -1722,13 +1761,17 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                         <p className="text-xs text-zinc-400">이 AAS 인스턴스를 구분할 고유한 이름</p>
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-zinc-800">회사 URL</label>
+                        <label className="text-sm font-semibold text-zinc-800">
+                          회사 URL <span className="text-red-500">*</span>
+                        </label>
                         <Input
                           value={inputState.company_url ?? ""}
                           placeholder="https://company.com"
                           onChange={(e) => setInputState((prev) => ({ ...prev, company_url: e.target.value }))}
                         />
-                        <p className="text-xs text-zinc-400">제조사 또는 운영사 웹사이트 주소</p>
+                        <p className="text-xs text-zinc-400">
+                          Custom Concept ID(semanticId) 생성에 사용됩니다. (필수)
+                        </p>
                       </div>
                     </div>
 
@@ -2003,6 +2046,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                               elements={semanticElementRows}
                               editMode={mode !== "view"}
                               onRequestLink={(row) => setLinkDialogTarget(row)}
+                              dictionaryConcepts={dictionaryConcepts}
                             />
                           </div>
                         </TabsContent>
@@ -2147,6 +2191,10 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                     <Button
                       onClick={() => {
                         if (activeStep === 0 && !inputState.instance_name) return showToast.error("인스턴스 이름을 입력해주세요.");
+                        // companyUrl 은 Custom Concept ID(/ezAAS/cd/) 생성에 필요하므로 필수.
+                        if (activeStep === 0 && !normalizeCompanyUrl(inputState.company_url)) {
+                          return showToast.error("회사 URL은 Custom Concept ID 생성을 위해 필요합니다.");
+                        }
                         if (activeStep === 1 && !Array.isArray(treeData)) return showToast.error("AAS 템플릿을 선택해주세요.");
                         setActiveStep(activeStep + 1);
                       }}
