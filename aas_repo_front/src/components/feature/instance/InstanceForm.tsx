@@ -22,7 +22,7 @@ import SubmodelFormEditor from "@/components/feature/instance/SubmodelFormEditor
 import ConceptDescriptionPanel from "@/components/feature/instance/ConceptDescriptionPanel";
 import SemanticQualityPanel, { type SemanticElementRow } from "@/components/feature/instance/SemanticQualityPanel";
 import ConceptSearchDialog, { type ConceptSearchResult } from "@/components/feature/instance/ConceptSearchDialog";
-import { buildTreePath, buildAasElementId, buildCustomConceptSemanticId, normalizeCompanyUrl } from "@/lib/aas";
+import { buildTreePath, buildCustomConceptSemanticId, normalizeCompanyUrl } from "@/lib/aas";
 import { InstanceSavePayload } from "@/types/api";
 import { confirmSave } from "@/utils/modal";
 import type { AASInstance, VerifyInstanceParams } from "@/types/api";
@@ -794,10 +794,8 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
       ? { type: "ExternalReference", keys: [{ type: "GlobalReference", value: conceptId }] }
       : { type: "ModelReference", keys: [{ type: "GlobalReference", value: "" }] };
 
+    // SubmodelElement 는 AAS 표준상 id 필드가 없으므로 element.id 는 부여하지 않는다(비표준 → export 시 유실).
     const newElement: any = { idShort, modelType: elementType, description: [{ language: "en", text: "" }], semanticId };
-    // 새로 추가하는 Custom element 에만 element.id 자동 부여. companyUrl 없으면 생략(빈 문자열 미주입).
-    const elementId = buildAasElementId({ companyUrl, elementTreePath });
-    if (elementId) newElement.id = elementId;
     switch (elementType) {
       case "Property": newElement.valueType = "xs:string"; newElement.value = ""; newElement.category = "PARAMETER"; break;
       case "MultiLanguageProperty": newElement.valueType = "xs:string"; newElement.value = [{ language: "en-US", text: "" }]; break;
