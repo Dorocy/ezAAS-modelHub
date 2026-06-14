@@ -45,6 +45,14 @@ export type {
   ModelMetadataKind,
 } from "./validateAas";
 
+// ID 발급 규칙 (Custom Concept / Element)
+export {
+  normalizeCompanyUrl,
+  buildTreePath,
+  buildAasElementId,
+  buildCustomConceptSemanticId,
+} from "./idRules";
+
 // Edit (불변 지향)
 export {
   cloneEnvironment,

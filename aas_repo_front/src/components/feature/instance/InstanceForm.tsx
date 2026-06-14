@@ -22,6 +22,7 @@ import SubmodelFormEditor from "@/components/feature/instance/SubmodelFormEditor
 import ConceptDescriptionPanel from "@/components/feature/instance/ConceptDescriptionPanel";
 import SemanticQualityPanel, { type SemanticElementRow } from "@/components/feature/instance/SemanticQualityPanel";
 import ConceptSearchDialog, { type ConceptSearchResult } from "@/components/feature/instance/ConceptSearchDialog";
+import { buildTreePath, buildAasElementId, buildCustomConceptSemanticId, normalizeCompanyUrl } from "@/lib/aas";
 import { InstanceSavePayload } from "@/types/api";
 import { confirmSave } from "@/utils/modal";
 import type { AASInstance, VerifyInstanceParams } from "@/types/api";
@@ -409,7 +410,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
 
   // 의미 정의 현황용 element 목록.
   // parsingAAS 출력(treeData)을 순회해 valuePath/idShort/modelType/semanticId 를 수집하고,
-  // semanticOverrides(방금 연결한 개념)를 병합해 현재 연결 상태를 만든다.
+  // semanticOverrides(방금 ��결한 개념)를 병합해 현재 연결 상태를 만든다.
   // valuePath 계산은 기존 parsingAAS/addValuePaths 결과를 그대로 재사용한다(리팩터링 없음).
   const semanticElementRows = useMemo<SemanticElementRow[]>(() => {
     const rows: SemanticElementRow[] = [];
@@ -419,25 +420,32 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
       IDTA: "IDTA Template",
       CUSTOM: "Custom",
     };
-    const walk = (node: any) => {
+    // ancestorIdShorts: 현재 노드의 조상 idShort 체인 (submodel → ... → 부모)
+    const walk = (node: any, ancestorIdShorts: string[]) => {
       if (!node || typeof node !== "object") return;
       // AAS 루트 노드는 valuePath 가 없으므로 자연히 건너뛴다. semanticId 를 가질 수 있는 요소만 수집.
+      const nextAncestors = node.idShort
+        ? [...ancestorIdShorts, node.idShort]
+        : ancestorIdShorts;
       if (node.valuePath && node.modelType) {
         const override = semanticOverrides[node.valuePath];
         const baseSemanticId: string | null =
           node.semanticId?.keys?.[0]?.value ?? null;
         rows.push({
           valuePath: node.valuePath,
+          treePath: buildTreePath(...nextAncestors),
           idShort: node.idShort ?? "",
           modelType: node.modelType,
           semanticIdValue: override ? override.id : baseSemanticId,
           linkedSourceLabel: override ? SOURCE_LABELS[override.source] : undefined,
         });
       }
-      if (Array.isArray(node.children)) node.children.forEach(walk);
+      if (Array.isArray(node.children))
+        node.children.forEach((c: any) => walk(c, nextAncestors));
     };
     (treeData ?? []).forEach((root: any) => {
-      if (Array.isArray(root?.children)) root.children.forEach(walk);
+      if (Array.isArray(root?.children))
+        root.children.forEach((c: any) => walk(c, []));
     });
     return rows;
   }, [treeData, semanticOverrides]);
@@ -744,14 +752,52 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
   };
 
   const handleAddElement = (parentNode: any, elementType: string, idShort: string, concept?: any) => {
-    // 개념(ConceptDescription) 연결: semanticId 를 개념 id 로 설정
+    const companyUrl = inputState.company_url ?? "";
+
+    // 부모 valuePath(예: submodels[0].submodelElements[3])를 metadata 에서 idShort 체인으로 해석.
+    // valuePath 의 각 `[n]` 경계마다 해당 노드의 idShort 를 모아 tree path 를 만든다(valuePath 구조 변경 없음).
+    const resolveAncestorIdShorts = (vp: string | undefined): string[] => {
+      if (!vp) return [];
+      const ids: string[] = [];
+      const regex = /\[\d+\]/g;
+      let m: RegExpExecArray | null;
+      while ((m = regex.exec(vp)) !== null) {
+        const prefix = vp.slice(0, m.index + m[0].length);
+        const n = _.get((aasmodel as any).aasmodel_metadata, prefix);
+        if (n && n.idShort) ids.push(n.idShort);
+      }
+      return ids;
+    };
+    const elementTreePath = buildTreePath(...resolveAncestorIdShorts(parentNode.valuePath), idShort);
+
+    // 새 개념 정의(mode "new")는 Custom Concept → companyUrl 없으면 semanticId 생성 불가하므로 차단.
+    if (concept?.mode === "new" && !normalizeCompanyUrl(companyUrl)) {
+      showToast.error("Custom 개념을 만들려면 기본 정보에 회사 URL을 먼저 입력해주세요.");
+      return;
+    }
+
+    // semanticId 결정:
+    //  · mode "new"      → Custom Concept: /ezAAS/cd/ 규칙으로 생성 (companyUrl 기반)
+    //  · mode "existing" → 표준 개념: 기존 semanticId 그대로 사용 (재생성 금지)
+    //  · mode "none"     → 연결 없음
+    const customSemanticId =
+      concept?.mode === "new"
+        ? buildCustomConceptSemanticId({ companyUrl, conceptTreePath: elementTreePath })
+        : undefined;
     const conceptId: string | undefined =
-      concept && concept.mode !== "none" ? concept.id : undefined;
+      concept?.mode === "new"
+        ? customSemanticId
+        : concept && concept.mode !== "none"
+          ? concept.id
+          : undefined;
     const semanticId = conceptId
       ? { type: "ExternalReference", keys: [{ type: "GlobalReference", value: conceptId }] }
       : { type: "ModelReference", keys: [{ type: "GlobalReference", value: "" }] };
 
     const newElement: any = { idShort, modelType: elementType, description: [{ language: "en", text: "" }], semanticId };
+    // 새로 추가하는 Custom element 에만 element.id 자동 부여. companyUrl 없으면 생략(빈 문자열 미주입).
+    const elementId = buildAasElementId({ companyUrl, elementTreePath });
+    if (elementId) newElement.id = elementId;
     switch (elementType) {
       case "Property": newElement.valueType = "xs:string"; newElement.value = ""; newElement.category = "PARAMETER"; break;
       case "MultiLanguageProperty": newElement.valueType = "xs:string"; newElement.value = [{ language: "en-US", text: "" }]; break;
@@ -794,7 +840,8 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             return {
               idShort,
               modelType: "ConceptDescription",
-              id: concept.id,
+              // Custom Concept 의 id 는 element 와 동일한 tree path 의 /ezAAS/cd/ semanticId 를 사용한다.
+              id: conceptId,
               description: definitionStrings.length
                 ? definitionStrings
                 : [{ language: "en", text: "" }],
@@ -1644,6 +1691,8 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             <ConceptSearchDialog
               open={linkDialogTarget !== null}
               targetIdShort={linkDialogTarget?.idShort}
+              companyUrl={inputState.company_url ?? ""}
+              conceptTreePath={linkDialogTarget?.treePath ?? ""}
               onClose={() => setLinkDialogTarget(null)}
               onSelect={(concept) => {
                 if (linkDialogTarget) handleLinkConcept(linkDialogTarget, concept);

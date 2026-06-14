@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 export interface SemanticElementRow {
   /** lodash 경로 (예: submodels[0].submodelElements[3]) — 주입 키로 사용 */
   valuePath: string;
+  /** idShort 조상 체인 (예: Nameplate/TechnicalData/Temperature) — Custom semanticId 생성용 */
+  treePath: string;
   idShort: string;
   modelType: string;
   /** 현재 연결된 semanticId 값 (override 반영). 없으면 null */

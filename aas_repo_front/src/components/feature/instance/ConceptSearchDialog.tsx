@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Search, Plus, ArrowLeft, Ruler, Type } from "lucide-react";
+import { Search, Plus, ArrowLeft, Ruler, Type, AlertTriangle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { buildCustomConceptSemanticId, normalizeCompanyUrl } from "@/lib/aas";
 
 /* 개념 검색 결과 1건 (mock placeholder).
    실제 ECLASS/IEC CDD/IDTA API 연동은 하지 않으며, 이 구조만 미리 맞춰 둔다.
@@ -81,21 +82,14 @@ const MOCK_CONCEPTS: ConceptSearchResult[] = [
   { id: "https://example.com/ids/cd/custom_operating_hours", idShort: "OperatingHours", preferredName: "Operating hours", definition: "accumulated operating time of the asset (custom-defined concept)", source: "CUSTOM", dataType: "REAL_COUNT", unit: "h", example: "12500" },
 ];
 
-/* preferredName/customId 로부터 urn:custom:concept:<slug> 형태의 semanticId 자동 생성 */
-function buildCustomId(seed: string): string {
-  const slug = seed
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  const suffix = Math.random().toString(36).slice(2, 7);
-  return `urn:custom:concept:${slug || "concept"}-${suffix}`;
-}
-
 interface ConceptSearchDialogProps {
   open: boolean;
   /** 연결 대상 element 의 idShort (헤더 안내 + 새 개념 기본 이름) */
   targetIdShort?: string;
+  /** 기본 정보의 회사 URL. Custom 개념 semanticId 생성에 필수 */
+  companyUrl: string;
+  /** 대상 element 의 idShort tree path (예: Nameplate/test). Custom semanticId 경로로 사용 */
+  conceptTreePath: string;
   onClose: () => void;
   onSelect: (concept: ConceptSearchResult) => void;
 }
@@ -103,6 +97,8 @@ interface ConceptSearchDialogProps {
 export default function ConceptSearchDialog({
   open,
   targetIdShort,
+  companyUrl,
+  conceptTreePath,
   onClose,
   onSelect,
 }: ConceptSearchDialogProps) {
@@ -117,8 +113,15 @@ export default function ConceptSearchDialog({
   const [pDataType, setPDataType] = useState<string>("STRING");
   const [pUnit, setPUnit] = useState("");
   const [pUnitId, setPUnitId] = useState("");
-  const [pCustomId, setPCustomId] = useState("");
   const [pExample, setPExample] = useState("");
+
+  // companyUrl + treePath 로 자동 생성되는 Custom Concept semanticId (`/ezAAS/cd/...`).
+  // companyUrl 이 없으면 빈 문자열 → 생성/연결 차단.
+  const hasCompanyUrl = normalizeCompanyUrl(companyUrl).length > 0;
+  const generatedSemanticId = useMemo(
+    () => buildCustomConceptSemanticId({ companyUrl, conceptTreePath }),
+    [companyUrl, conceptTreePath],
+  );
 
   const allConcepts = useMemo(
     () => [...sessionConcepts, ...MOCK_CONCEPTS],
@@ -154,7 +157,6 @@ export default function ConceptSearchDialog({
     setPDataType("STRING");
     setPUnit("");
     setPUnitId("");
-    setPCustomId("");
     setPExample("");
   };
 
@@ -164,13 +166,14 @@ export default function ConceptSearchDialog({
     setView("define");
   };
 
-  const canCreate = pName.trim().length > 0 && pDefinition.trim().length > 0;
+  // companyUrl 이 없으면 semanticId 를 만들 수 없으므로 생성 불가.
+  const canCreate =
+    pName.trim().length > 0 && pDefinition.trim().length > 0 && hasCompanyUrl && !!generatedSemanticId;
 
   const handleCreate = () => {
     if (!canCreate) return;
-    const id = pCustomId.trim() || buildCustomId(pName);
     const concept: ConceptSearchResult = {
-      id,
+      id: generatedSemanticId,
       idShort: pName.trim().replace(/\s+/g, ""),
       preferredName: pName.trim(),
       definition: pDefinition.trim(),
@@ -379,16 +382,30 @@ export default function ConceptSearchDialog({
               />
             </div>
 
+            {/* 자동 생성 semanticId preview (수동 입력 불가) */}
             <div className="space-y-1">
               <Label className="text-xs font-medium text-zinc-500">
-                semanticId (선택 — 비우면 자동 생성)
+                생성될 semanticId (자동)
               </Label>
-              <Input
-                value={pCustomId}
-                onChange={(e) => setPCustomId(e.target.value)}
-                placeholder={pName.trim() ? buildCustomId(pName) : "urn:custom:concept:..."}
-                className="h-8 text-xs font-mono bg-white text-zinc-500"
-              />
+              {hasCompanyUrl ? (
+                <div className="rounded-md border border-zinc-200 bg-zinc-50 px-2.5 py-2">
+                  <p className="break-all font-mono text-[11px] text-zinc-600">
+                    {generatedSemanticId}
+                  </p>
+                  <p className="mt-1 text-[10px] text-zinc-400">
+                    회사 URL + 항목 경로 기반으로 자동 발급됩니다. (source: Custom)
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-start gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2">
+                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-500" />
+                  <p className="text-[11px] leading-relaxed text-amber-700">
+                    기본 정보에 <span className="font-semibold">회사 URL</span>이 없어 Custom 개념
+                    semanticId를 만들 수 없습니다. 1단계 기본 정보에서 회사 URL을 입력한 뒤 다시
+                    시도해주세요.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-between gap-2 pt-1">
