@@ -8,6 +8,7 @@ import { rankByQuery } from "@/utils/search";
 import { resolveThumbnailSrc } from "@/utils/index";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { UserRole } from "@/constants/roles";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,20 +91,22 @@ function Chip({
 
 // Guide 문서가 있을 때 표시되는 작은 아이콘 (hover 시 "Guide Available")
 function GuideIcon() {
+  const { t } = useLanguage();
   return (
     <span
       className="group/guide relative inline-flex shrink-0"
-      title="Guide Available"
+      title={t("Guide Available")}
     >
       <FileText className="w-4 h-4 text-blue-500" />
       <span className="pointer-events-none absolute right-0 top-full z-10 mt-1 whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover/guide:opacity-100">
-        Guide Available
+        {t("Guide Available")}
       </span>
     </span>
   );
 }
 
 function TemplateCard({ model }: { model: any }) {
+  const { t } = useLanguage();
   const thumb = resolveThumbnailSrc(model);
   const hasGuide = !!model.guide_filename;
   return (
@@ -134,7 +137,7 @@ function TemplateCard({ model }: { model: any }) {
               {model.submodel_name}
             </h3>
             <div className="flex flex-wrap items-center gap-1 mt-1.5">
-              <Chip tone="sky">{model.category_name || "Uncategorized"}</Chip>
+              <Chip tone="sky">{model.category_name || t("Uncategorized")}</Chip>
               {model.submodel_type && <Chip>{model.submodel_type}</Chip>}
             </div>
           </div>

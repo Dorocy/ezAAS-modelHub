@@ -1,8 +1,14 @@
 /*
  * 파일명: src/components/Footer.tsx
- * 설명: shadcn/ui 기반으로 재작성된 푸터 컴포넌트.
+ * 설명: shadcn/ui 기반 푸터 컴포넌트. 다국어(useLanguage) 지원.
  */
+"use client";
+
+import { useLanguage } from "@/contexts/LanguageContext";
+
 function Footer() {
+  const { t } = useLanguage();
+
   return (
     <footer className="mt-auto border-t border-border bg-background">
       <div className="mx-auto max-w-screen-2xl px-4 py-5 lg:px-8">
@@ -16,11 +22,11 @@ function Footer() {
             >
               ezAAS Model Hub
             </a>
-            {" "}
-            — All rights reserved.
+            {" — "}
+            {t("All rights reserved.")}
           </p>
           <p className="text-xs text-muted-foreground">
-            KETI · Korea Electronics Technology Institute
+            {t("KETI · Korea Electronics Technology Institute")}
           </p>
         </div>
       </div>

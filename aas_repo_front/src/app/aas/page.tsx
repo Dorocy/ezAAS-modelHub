@@ -8,6 +8,7 @@ import { rankByQuery } from "@/utils/search";
 import { resolveThumbnailSrc } from "@/utils/index";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { UserRole } from "@/constants/roles";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,20 +91,22 @@ function Chip({
 
 // Guide 문서가 있을 때 표시되는 작은 아이콘 (hover 시 "Guide Available")
 function GuideIcon() {
+  const { t } = useLanguage();
   return (
     <span
       className="group/guide relative inline-flex shrink-0"
-      title="Guide Available"
+      title={t("Guide Available")}
     >
       <FileText className="w-4 h-4 text-blue-500" />
       <span className="pointer-events-none absolute right-0 top-full z-10 mt-1 whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover/guide:opacity-100">
-        Guide Available
+        {t("Guide Available")}
       </span>
     </span>
   );
 }
 
 function TemplateCard({ model }: { model: any }) {
+  const { t } = useLanguage();
   const thumb = resolveThumbnailSrc(model);
   const hasGuide = !!model.guide_filename;
   return (
@@ -134,7 +137,7 @@ function TemplateCard({ model }: { model: any }) {
               {model.aasmodel_name}
             </h3>
             <div className="flex flex-wrap items-center gap-1 mt-1.5">
-              <Chip tone="sky">{model.category_name || "Uncategorized"}</Chip>
+              <Chip tone="sky">{model.category_name || t("Uncategorized")}</Chip>
               {model.asset_type && <Chip>{model.asset_type}</Chip>}
               {model.aas_maturity_level && (
                 <Chip tone="amber">{model.aas_maturity_level}</Chip>
@@ -208,6 +211,7 @@ function TemplateRow({ model }: { model: any }) {
 
 export default function AASPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const [inputValue, setInputValue]       = useState("");
   const [searchKey, setSearchKey]         = useState("");
@@ -274,15 +278,15 @@ export default function AASPage() {
       <div className="bg-white border-b border-zinc-200 px-6 py-5">
         <div className="mx-auto max-w-screen-xl flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-bold text-zinc-900">AAS Templates</h1>
+            <h1 className="text-lg font-bold text-zinc-900">{t("AAS Templates")}</h1>
             <p className="text-sm text-zinc-500 mt-0.5">
-              {isLoading ? "Loading..." : `${totalCount} templates available`}
+              {isLoading ? t("Loading...") : `${totalCount} ${t("templates available")}`}
             </p>
           </div>
           {user && user.user_group_seq <= UserRole.User && (
             <Link href={ROUTES.AASMODEL.CREATE} className={cn(buttonVariants({ size: "sm" }))}>
               <Plus className="w-3.5 h-3.5 mr-1.5" />
-              New Template
+              {t("New Template")}
             </Link>
           )}
         </div>
@@ -298,7 +302,7 @@ export default function AASPage() {
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
                 <Input
                   className="h-8 pl-8 text-sm bg-white border-zinc-200 rounded-lg"
-                  placeholder="Search by name..."
+                  placeholder={t("Search by name...")}
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -306,13 +310,13 @@ export default function AASPage() {
               </div>
               <Button size="sm" className="w-full h-8" onClick={handleSearch}>
                 <Search className="w-3.5 h-3.5 mr-1.5" />
-                Search
+                {t("Search")}
               </Button>
             </div>
 
             {/* Category label */}
             <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
-              Category
+              {t("Category")}
             </p>
 
             {/* All */}
@@ -325,7 +329,7 @@ export default function AASPage() {
                   : "text-zinc-600 hover:bg-zinc-100"
               )}
             >
-              <span>All</span>
+              <span>{t("All")}</span>
               <span className={cn("text-xs tabular-nums", activeCategory === "all" ? "text-zinc-300" : "text-zinc-400")}>
                 {totalCount}
               </span>
@@ -358,10 +362,10 @@ export default function AASPage() {
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-zinc-500 flex items-center gap-2">
               {searchKey && <span className="text-zinc-900 font-medium">&quot;{searchKey}&quot; · </span>}
-              {isLoading ? "Loading..." : `${models.length} shown`}
+              {isLoading ? t("Loading...") : `${models.length} ${t("shown")}`}
               {isAdmin && !isLoading && (
                 <span className="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
-                  draft 포함
+                  {t("incl. draft")}
                 </span>
               )}
             </p>
@@ -384,7 +388,7 @@ export default function AASPage() {
           {/* error */}
           {error && (
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 mb-4">
-              Failed to load templates. Please check your connection and try again.
+              {t("Failed to load templates. Please check your connection and try again.")}
             </div>
           )}
 
@@ -413,8 +417,8 @@ export default function AASPage() {
               {models.length === 0 && (
                 <div className="col-span-full flex flex-col items-center justify-center py-24 text-zinc-400">
                   <FileStack className="w-10 h-10 mb-3 opacity-30" />
-                  <p className="text-sm font-medium">No templates found</p>
-                  <p className="text-xs mt-1">Try adjusting your search or category filter</p>
+                  <p className="text-sm font-medium">{t("No templates found")}</p>
+                  <p className="text-xs mt-1">{t("Try adjusting your search or category filter")}</p>
                 </div>
               )}
             </div>
@@ -429,7 +433,7 @@ export default function AASPage() {
               {models.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-24 text-zinc-400">
                   <FileStack className="w-10 h-10 mb-3 opacity-30" />
-                  <p className="text-sm font-medium">No templates found</p>
+                  <p className="text-sm font-medium">{t("No templates found")}</p>
                 </div>
               )}
             </div>
