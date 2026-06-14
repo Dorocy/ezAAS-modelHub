@@ -22,9 +22,9 @@ import {
   ArrowUpRight,
   LayoutGrid,
   AlignJustify,
-  Tag,
   User as UserIcon,
   CalendarDays,
+  FileText,
 } from "lucide-react";
 
 const PAGE_SIZE = 24;
@@ -63,14 +63,61 @@ function StatusBadge({ status, label }: { status: string; label: string }) {
   );
 }
 
+// 카테고리/타입/성숙도 등을 표시하는 소형 칩
+function Chip({
+  children,
+  tone = "zinc",
+}: {
+  children: React.ReactNode;
+  tone?: "zinc" | "sky" | "amber";
+}) {
+  const tones = {
+    zinc: "bg-zinc-100 text-zinc-600 border-zinc-200",
+    sky: "bg-sky-50 text-sky-700 border-sky-200",
+    amber: "bg-amber-50 text-amber-700 border-amber-200",
+  };
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-md border px-1.5 py-0.5 text-[11px] font-medium leading-none max-w-full truncate",
+        tones[tone],
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+// Guide 문서가 있을 때 표시되는 작은 아이콘 (hover 시 "Guide Available")
+function GuideIcon() {
+  return (
+    <span
+      className="group/guide relative inline-flex shrink-0"
+      title="Guide Available"
+    >
+      <FileText className="w-4 h-4 text-blue-500" />
+      <span className="pointer-events-none absolute right-0 top-full z-10 mt-1 whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover/guide:opacity-100">
+        Guide Available
+      </span>
+    </span>
+  );
+}
+
 function TemplateCard({ model }: { model: any }) {
   const thumb = resolveThumbnailSrc(model);
+  const hasGuide = !!model.guide_filename;
   return (
     <Link href={ROUTES.AASMODEL.VIEW(model.aasmodel_seq)} className="group block h-full">
-      <div className="relative flex flex-col h-full bg-white border border-zinc-200 rounded-xl p-5 hover:border-zinc-400 hover:shadow-sm transition-all duration-150">
-        {/* top row: icon + deployment status */}
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="w-9 h-9 rounded-lg bg-zinc-100 flex items-center justify-center shrink-0 overflow-hidden">
+      <div className="relative flex flex-col h-full bg-white border border-zinc-200 rounded-xl p-4 hover:border-zinc-400 hover:shadow-sm transition-all duration-150">
+        {/* top row: status + guide indicator */}
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <StatusBadge status={model.status} label={model.status_nm ?? model.status} />
+          {hasGuide && <GuideIcon />}
+        </div>
+
+        {/* main: thumbnail + name + chips (가로 배치) */}
+        <div className="flex gap-3">
+          <div className="w-14 h-14 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center shrink-0 overflow-hidden">
             {thumb ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -79,36 +126,33 @@ function TemplateCard({ model }: { model: any }) {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <FileStack className="w-4 h-4 text-zinc-500" />
+              <FileStack className="w-5 h-5 text-zinc-400" />
             )}
           </div>
-          <StatusBadge status={model.status} label={model.status_nm ?? model.status} />
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-semibold text-zinc-900 leading-snug line-clamp-2">
+              {model.aasmodel_name}
+            </h3>
+            <div className="flex flex-wrap items-center gap-1 mt-1.5">
+              <Chip tone="sky">{model.category_name || "Uncategorized"}</Chip>
+              {model.asset_type && <Chip>{model.asset_type}</Chip>}
+              {model.aas_maturity_level && (
+                <Chip tone="amber">{model.aas_maturity_level}</Chip>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* name */}
-        <h3 className="text-sm font-semibold text-zinc-900 leading-snug line-clamp-2 mb-1.5">
-          {model.aasmodel_name}
-        </h3>
-
-        {/* description */}
-        <p className="text-xs text-zinc-500 leading-relaxed line-clamp-2 flex-1 mb-4">
-          {model.description || "No description provided."}
-        </p>
-
-        {/* meta: category / creator / created date */}
-        <div className="mt-auto pt-3 border-t border-zinc-100 space-y-1.5">
-          <div className="flex items-center gap-2 text-xs text-zinc-500">
-            <Tag className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-            <span className="truncate">{model.category_name || "Uncategorized"}</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-zinc-500">
+        {/* footer: creator (좌) | last modified (우) */}
+        <div className="flex items-center justify-between gap-2 mt-auto pt-3 border-t border-zinc-100 text-xs text-zinc-500">
+          <span className="inline-flex items-center gap-1 min-w-0">
             <UserIcon className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
             <span className="truncate">{getCreator(model)}</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-zinc-500">
-            <CalendarDays className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-            <span>{formatDate(model.create_date)}</span>
-          </div>
+          </span>
+          <span className="inline-flex items-center gap-1 shrink-0">
+            <CalendarDays className="w-3.5 h-3.5 text-zinc-400" />
+            {formatDate(model.last_mod_date)}
+          </span>
         </div>
       </div>
     </Link>
@@ -140,17 +184,21 @@ function TemplateRow({ model }: { model: any }) {
         </span>
         <p className="text-xs text-zinc-400 truncate mt-0.5">{model.description || "—"}</p>
       </div>
-      <span className="text-xs text-zinc-400 shrink-0 hidden lg:flex items-center gap-1 w-28 truncate">
-        <Tag className="w-3 h-3 shrink-0" />
-        <span className="truncate">{model.category_name || "—"}</span>
+      <span className="hidden lg:flex items-center gap-1 shrink-0 w-28">
+        <Chip tone="sky">{model.category_name || "—"}</Chip>
       </span>
+      {model.guide_filename ? (
+        <GuideIcon />
+      ) : (
+        <span className="w-4 shrink-0 hidden lg:block" />
+      )}
       <span className="text-xs text-zinc-400 shrink-0 hidden lg:flex items-center gap-1 w-28 truncate">
         <UserIcon className="w-3 h-3 shrink-0" />
         <span className="truncate">{getCreator(model)}</span>
       </span>
       <span className="text-xs text-zinc-400 shrink-0 hidden md:flex items-center gap-1 w-24">
         <CalendarDays className="w-3 h-3 shrink-0" />
-        {formatDate(model.create_date)}
+        {formatDate(model.last_mod_date)}
       </span>
       <StatusBadge status={model.status} label={model.status_nm ?? model.status} />
       <ArrowUpRight className="w-3.5 h-3.5 text-zinc-300 group-hover:text-zinc-500 shrink-0 transition-colors" />
