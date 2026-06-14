@@ -7,6 +7,7 @@ import { getUserList } from "@/api/index";
 import { ROUTES } from "@/constants/routes";
 import { UserRole } from "@/constants/roles";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { buttonVariants } from "@/components/ui/button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,6 +87,7 @@ function roleMeta(groupSeq: number | string) {
 
 export default function UserPage() {
   const { isAuthenticated, user } = useAuth();
+  const { t } = useLanguage();
   const [inputValue, setInputValue] = useState("");
   const [searchKey, setSearchKey] = useState("");
   const [groupFilter, setGroupFilter] = useState("all");
@@ -148,9 +150,9 @@ export default function UserPage() {
       <div className="bg-white border-b border-zinc-200 px-6 py-5">
         <div className="mx-auto max-w-screen-xl flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-lg font-bold text-zinc-900">User Management</h1>
+            <h1 className="text-lg font-bold text-zinc-900">{t("User Management")}</h1>
             <p className="mt-0.5 text-sm text-zinc-500">
-              Review members and assign access permissions
+              {t("Review members and assign access permissions")}
             </p>
           </div>
           {isAdmin && (
@@ -159,7 +161,7 @@ export default function UserPage() {
               className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}
             >
               <Plus className="size-3.5" />
-              New User
+              {t("New User")}
             </Link>
           )}
         </div>
@@ -178,7 +180,7 @@ export default function UserPage() {
                   : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100",
               )}
             >
-              All Roles
+              {t("All Roles")}
             </button>
             {ROLES.map((r) => {
               const Icon = r.icon;
@@ -195,7 +197,7 @@ export default function UserPage() {
                   )}
                 >
                   <Icon className="size-3.5" />
-                  {r.label}
+                  {t(r.label)}
                 </button>
               );
             })}
@@ -206,14 +208,14 @@ export default function UserPage() {
               <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-zinc-400" />
               <Input
                 className="h-9 bg-white pl-8 text-sm"
-                placeholder="Search name, ID, or phone"
+                placeholder={t("Search name, ID, or phone")}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               />
             </div>
             <Button size="sm" className="h-9" onClick={handleSearch}>
-              Search
+              {t("Search")}
             </Button>
           </div>
         </div>
@@ -222,12 +224,12 @@ export default function UserPage() {
           {searchKey && (
             <span className="font-medium text-zinc-900">&quot;{searchKey}&quot; · </span>
           )}
-          {isLoading ? "Loading..." : `${totalCount} users`}
+          {isLoading ? t("Loading...") : `${totalCount} ${t("users")}`}
         </p>
 
         {error && (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
-            Failed to load data. Please check your connection or try again.
+            {t("Failed to load data. Please check your connection or try again.")}
           </div>
         )}
 
@@ -244,22 +246,22 @@ export default function UserPage() {
               <TableHeader>
                 <TableRow className="bg-zinc-50/60 hover:bg-zinc-50/60">
                   <TableHead className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                    Member
+                    {t("Member")}
                   </TableHead>
                   <TableHead className="w-28 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                    Social
+                    {t("Social")}
                   </TableHead>
                   <TableHead className="w-32 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                    Joined
+                    {t("Joined")}
                   </TableHead>
                   <TableHead className="w-44 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                    Role
+                    {t("Role")}
                   </TableHead>
                   <TableHead className="w-24 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                    Status
+                    {t("Status")}
                   </TableHead>
                   <TableHead className="w-28 text-right text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                    Permission
+                    {t("Permission")}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -302,7 +304,7 @@ export default function UserPage() {
                           )}
                         >
                           <meta.icon className="size-3" />
-                          {u.user_group_name || meta.label}
+                          {u.user_group_name || t(meta.label)}
                         </span>
                       </TableCell>
                       <TableCell>
@@ -330,7 +332,7 @@ export default function UserPage() {
                           )}
                         >
                           <Settings2 className="size-3.5" />
-                          Manage
+                          {t("Manage")}
                         </Link>
                       </TableCell>
                     </TableRow>
@@ -342,7 +344,7 @@ export default function UserPage() {
                       colSpan={6}
                       className="h-32 text-center text-sm text-zinc-400"
                     >
-                      No users found.
+                      {t("No users found.")}
                     </TableCell>
                   </TableRow>
                 )}

@@ -9,6 +9,7 @@ import Link from "next/link";
 import { ROUTES } from "@/constants/routes";
 import { showToast } from "@/utils/toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -27,13 +28,14 @@ interface LoginContentProps {
 
 export default function LoginContent({ redirectUrl }: LoginContentProps) {
   const { login, loginWithSocial } = useAuth();
+  const { t } = useLanguage();
   const [email, setEmail] = useState("admin");
   const [password, setPassword] = useState("1234");
   const [resetOpen, setResetOpen] = useState(false);
 
   const onClickLogin = () => {
-    if (!email) return showToast.error("Please enter email");
-    if (!password) return showToast.error("Please enter password");
+    if (!email) return showToast.error(t("Please enter email"));
+    if (!password) return showToast.error(t("Please enter password"));
     login(email, password, redirectUrl);
   };
 
@@ -54,10 +56,10 @@ export default function LoginContent({ redirectUrl }: LoginContentProps) {
             </Link>
             <div className="text-center">
               <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                Welcome back
+                {t("Welcome back")}
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Sign in to your account to continue
+                {t("Sign in to your account to continue")}
               </p>
             </div>
           </div>
@@ -76,14 +78,14 @@ export default function LoginContent({ redirectUrl }: LoginContentProps) {
                 className="size-4 shrink-0"
                 data-icon="inline-start"
               />
-              Continue with Google
+              {t("Continue with Google")}
             </Button>
 
             {/* Divider */}
             <div className="relative my-5">
               <Separator />
               <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs text-muted-foreground">
-                or
+                {t("or")}
               </span>
             </div>
 

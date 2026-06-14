@@ -7,6 +7,7 @@ import { getPublishedList } from "@/api/index";
 import { rankByQuery } from "@/utils/search";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,6 +42,7 @@ interface PublishedRow {
 
 export default function DistributePage() {
   const { isAuthenticated } = useAuth();
+  const { t } = useLanguage();
 
   const [inputValue, setInputValue] = useState("");
   const [searchKey, setSearchKey] = useState("");
@@ -159,16 +161,16 @@ export default function DistributePage() {
       <div className="bg-white border-b border-zinc-200 px-6 py-5">
         <div className="mx-auto max-w-screen-xl flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-bold text-zinc-900">Publish</h1>
+            <h1 className="text-lg font-bold text-zinc-900">{t("Publish")}</h1>
             <p className="text-sm text-zinc-500 mt-0.5">
               {isLoading
-                ? "Loading..."
-                : `${typeCounts.all} published templates · AAS ${typeCounts.aasmodel} · Submodel ${typeCounts.submodel}`}
+                ? t("Loading...")
+                : `${typeCounts.all} ${t("published templates")} · AAS ${typeCounts.aasmodel} · Submodel ${typeCounts.submodel}`}
             </p>
           </div>
           <Link href="/distribute/ins" className={cn(buttonVariants({ size: "sm" }))}>
             <Plus className="w-3.5 h-3.5 mr-1.5" />
-            Register
+            {t("Register")}
           </Link>
         </div>
       </div>
@@ -183,7 +185,7 @@ export default function DistributePage() {
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
                 <Input
                   className="h-8 pl-8 text-sm bg-white border-zinc-200 rounded-lg"
-                  placeholder="이름 / ID 검색..."
+                  placeholder={t("Search by name / ID...")}
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -191,17 +193,17 @@ export default function DistributePage() {
               </div>
               <Button size="sm" className="w-full h-8" onClick={handleSearch}>
                 <Search className="w-3.5 h-3.5 mr-1.5" />
-                Search
+                {t("Search")}
               </Button>
             </div>
 
             {/* Model type toggle */}
             <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
-              Model Type
+              {t("Model Type")}
             </p>
             <div className="space-y-1 mb-4">
               {([
-                { key: "all", label: "All", icon: Layers, count: typeCounts.all },
+                { key: "all", label: t("All"), icon: Layers, count: typeCounts.all },
                 { key: "aasmodel", label: "AAS", icon: Boxes, count: typeCounts.aasmodel },
                 { key: "submodel", label: "Submodel", icon: Package, count: typeCounts.submodel },
               ] as const).map(({ key, label, icon: Icon, count }) => {
@@ -234,7 +236,7 @@ export default function DistributePage() {
 
             {/* Category */}
             <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
-              Category
+              {t("Category")}
             </p>
             <button
               onClick={() => handleCategory("all")}
@@ -245,7 +247,7 @@ export default function DistributePage() {
                   : "text-zinc-600 hover:bg-zinc-100"
               )}
             >
-              <span>All</span>
+              <span>{t("All")}</span>
               <span
                 className={cn(
                   "text-xs tabular-nums",
@@ -268,7 +270,7 @@ export default function DistributePage() {
                       : "text-zinc-600 hover:bg-zinc-100"
                   )}
                 >
-                  <span className="truncate">{c.name}</span>
+                  <span className="truncate">{c.name === "Uncategorized" ? t("Uncategorized") : c.name}</span>
                   <span
                     className={cn(
                       "text-xs tabular-nums shrink-0",
@@ -291,14 +293,14 @@ export default function DistributePage() {
               {searchKey && (
                 <span className="text-zinc-900 font-medium">&quot;{searchKey}&quot; · </span>
               )}
-              {isLoading ? "Loading..." : `${totalCount} templates`}
+              {isLoading ? t("Loading...") : `${totalCount} ${t("templates")}`}
             </p>
           </div>
 
           {/* error */}
           {error && (
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 mb-4">
-              Failed to load data. Please check your connection or try again.
+              {t("Failed to load data. Please check your connection or try again.")}
             </div>
           )}
 
@@ -318,19 +320,19 @@ export default function DistributePage() {
                 <thead>
                   <tr className="border-b border-zinc-200 bg-zinc-50/60 text-left">
                     <th className="px-4 py-3 w-20 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                      Type
+                      {t("Type")}
                     </th>
                     <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                      Template
+                      {t("Template")}
                     </th>
                     <th className="px-4 py-3 w-32 text-xs font-semibold text-zinc-400 uppercase tracking-wider hidden md:table-cell">
-                      Category
+                      {t("Category")}
                     </th>
                     <th className="px-4 py-3 w-16 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                      Ver.
+                      {t("Ver.")}
                     </th>
                     <th className="px-4 py-3 w-24 text-xs font-semibold text-zinc-400 uppercase tracking-wider text-right">
-                      Actions
+                      {t("Actions")}
                     </th>
                   </tr>
                 </thead>
@@ -382,7 +384,7 @@ export default function DistributePage() {
                         </Link>
                       </td>
                       <td className="px-4 py-3 align-top text-zinc-500 hidden md:table-cell">
-                        <span className="block truncate">{model.categoryName}</span>
+                        <span className="block truncate">{model.categoryName === "Uncategorized" ? t("Uncategorized") : model.categoryName}</span>
                       </td>
                       <td className="px-4 py-3 align-top text-zinc-500 tabular-nums">
                         {model.version ? `v${model.version}` : "—"}
@@ -396,7 +398,7 @@ export default function DistributePage() {
                           className={buttonVariants({ variant: "outline", size: "sm" })}
                         >
                           <Pencil className="size-3.5 mr-1.5" />
-                          수정
+                          {t("Edit")}
                         </Link>
                       </td>
                     </tr>
@@ -406,7 +408,7 @@ export default function DistributePage() {
                       <td colSpan={5} className="h-40">
                         <div className="flex flex-col items-center justify-center gap-2 text-zinc-400">
                           <Layers className="size-8 opacity-30" />
-                          <p className="text-sm">No published templates found.</p>
+                          <p className="text-sm">{t("No published templates found.")}</p>
                         </div>
                       </td>
                     </tr>

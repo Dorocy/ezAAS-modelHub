@@ -7,6 +7,7 @@ import { getInstanceList, getCodeList, exportModel } from "@/api/index";
 import { rankByQuery } from "@/utils/search";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { UserRole } from "@/constants/roles";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,7 @@ function VerificationBadge({ value }: { value: string }) {
 
 export default function InstancePage() {
   const { user, isAuthenticated } = useAuth();
+  const { t } = useLanguage();
 
   const [inputValue, setInputValue] = useState("");
   const [searchKey, setSearchKey] = useState("");
@@ -129,15 +131,15 @@ export default function InstancePage() {
       <div className="bg-white border-b border-zinc-200 px-6 py-5">
         <div className="mx-auto max-w-screen-xl flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-bold text-zinc-900">My AAS Instance</h1>
+            <h1 className="text-lg font-bold text-zinc-900">{t("My AAS Instance")}</h1>
             <p className="text-sm text-zinc-500 mt-0.5">
-              {isLoading ? "Loading..." : `${totalCount} instances`}
+              {isLoading ? t("Loading...") : `${totalCount} ${t("instances")}`}
             </p>
           </div>
           {canCreate && (
             <Link href="/instance/ins" className={cn(buttonVariants({ size: "sm" }))}>
               <Plus className="w-3.5 h-3.5 mr-1.5" />
-              Create AAS
+              {t("Create AAS")}
             </Link>
           )}
         </div>
@@ -153,7 +155,7 @@ export default function InstancePage() {
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
                 <Input
                   className="h-8 pl-8 text-sm bg-white border-zinc-200 rounded-lg"
-                  placeholder="Search by name..."
+                  placeholder={t("Search by name...")}
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -161,7 +163,7 @@ export default function InstancePage() {
               </div>
               <Button size="sm" className="w-full h-8" onClick={handleSearch}>
                 <Search className="w-3.5 h-3.5 mr-1.5" />
-                Search
+                {t("Search")}
               </Button>
             </div>
 
@@ -169,7 +171,7 @@ export default function InstancePage() {
             {user && user.user_group_seq !== UserRole.User && (
               <>
                 <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
-                  Scope
+                  {t("Scope")}
                 </p>
                 <div className="flex rounded-lg border border-zinc-200 bg-white overflow-hidden mb-4 text-sm">
                   {(["my", "all"] as const).map((mode) => (
@@ -183,7 +185,7 @@ export default function InstancePage() {
                           : "text-zinc-600 hover:bg-zinc-100"
                       )}
                     >
-                      {mode === "my" ? "Mine" : "All"}
+                      {mode === "my" ? t("Mine") : t("All")}
                     </button>
                   ))}
                 </div>
@@ -192,7 +194,7 @@ export default function InstancePage() {
 
             {/* Category label */}
             <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
-              Category
+              {t("Category")}
             </p>
 
             {/* All */}
@@ -205,7 +207,7 @@ export default function InstancePage() {
                   : "text-zinc-600 hover:bg-zinc-100"
               )}
             >
-              <span>All</span>
+              <span>{t("All")}</span>
               <span className={cn("text-xs tabular-nums", categoryFilter === "all" ? "text-zinc-300" : "text-zinc-400")}>
                 {totalCount}
               </span>
@@ -238,14 +240,14 @@ export default function InstancePage() {
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-zinc-500">
               {searchKey && <span className="text-zinc-900 font-medium">&quot;{searchKey}&quot; · </span>}
-              {isLoading ? "Loading..." : `${instances.length} of ${totalCount}`}
+              {isLoading ? t("Loading...") : `${instances.length} ${t("of")} ${totalCount}`}
             </p>
           </div>
 
           {/* error */}
           {error && (
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 mb-4">
-              Failed to load data. Please check your connection or try again.
+              {t("Failed to load data. Please check your connection or try again.")}
             </div>
           )}
 
@@ -261,14 +263,14 @@ export default function InstancePage() {
               <table className="w-full table-auto text-sm">
                 <thead>
                   <tr className="border-b border-zinc-200 bg-zinc-50/60 text-left">
-                    <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider whitespace-nowrap">Category</th>
-                    <th className="px-4 py-3 w-full text-xs font-semibold text-zinc-400 uppercase tracking-wider">Instance</th>
-                    <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider whitespace-nowrap">Verification</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider whitespace-nowrap">{t("Category")}</th>
+                    <th className="px-4 py-3 w-full text-xs font-semibold text-zinc-400 uppercase tracking-wider">{t("Instance")}</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider whitespace-nowrap">{t("Verification")}</th>
                     {showUser && (
-                      <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider whitespace-nowrap hidden md:table-cell">User</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider whitespace-nowrap hidden md:table-cell">{t("User")}</th>
                     )}
                     {canCreate && (
-                      <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider text-right whitespace-nowrap">Actions</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider text-right whitespace-nowrap">{t("Actions")}</th>
                     )}
                   </tr>
                 </thead>
@@ -314,7 +316,7 @@ export default function InstancePage() {
                                   <DropdownMenuTrigger render={
                                     <Button variant="outline" size="sm">
                                       <Download className="size-3.5 mr-1.5" />
-                                      내보내기
+                                      {t("Export")}
                                       <ChevronDown className="size-3 ml-1" />
                                     </Button>
                                   } />
@@ -335,7 +337,7 @@ export default function InstancePage() {
                                   className={buttonVariants({ variant: "outline", size: "sm" })}
                                 >
                                   <Pencil className="size-3.5 mr-1.5" />
-                                  수정
+                                  {t("Edit")}
                                 </Link>
                               </div>
                             )}
@@ -349,7 +351,7 @@ export default function InstancePage() {
                       <td colSpan={3 + (showUser ? 1 : 0) + (canCreate ? 1 : 0)} className="h-40">
                         <div className="flex flex-col items-center justify-center gap-2 text-zinc-400">
                           <Layers className="size-8 opacity-30" />
-                          <p className="text-sm">No instances found.</p>
+                          <p className="text-sm">{t("No instances found.")}</p>
                         </div>
                       </td>
                     </tr>
