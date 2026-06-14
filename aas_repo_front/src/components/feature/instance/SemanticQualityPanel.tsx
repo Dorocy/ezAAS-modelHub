@@ -9,6 +9,7 @@ import {
   HelpCircle,
   PackageOpen,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { classifyConceptSource, type ConceptSource } from "@/lib/aas";
@@ -29,6 +30,8 @@ export interface SemanticElementRow {
   dataType?: string;
   /** 단위 (있으면 표시) */
   unit?: string;
+  /** 연결된 개념의 의미설명(definition). 있으면 표시 */
+  definition?: string;
 }
 
 /* Concept Dictionary/local concept list 의 개념 1건 (미사용 개념 판별용) */
@@ -44,6 +47,8 @@ interface SemanticQualityPanelProps {
   onRequestLink: (row: SemanticElementRow) => void;
   /** Concept Dictionary 에 존재하는 전체 개념 목록 (미사용 개념 판별용) */
   dictionaryConcepts?: DictionaryConceptRow[];
+  /** 미사용 개념 삭제 콜백 (개념 id 전달) */
+  onDeleteConcept?: (conceptId: string) => void;
 }
 
 /** 출처별 표시 순서 + 라벨 + 배지 색 */
@@ -60,6 +65,7 @@ export default function SemanticQualityPanel({
   editMode,
   onRequestLink,
   dictionaryConcepts = [],
+  onDeleteConcept,
 }: SemanticQualityPanelProps) {
   // 출처 그룹별 펼침 상태 (기본 접힘)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
@@ -280,7 +286,7 @@ export default function SemanticQualityPanel({
                             <tr>
                               <th className="px-3 py-1.5 font-medium">이름</th>
                               <th className="px-3 py-1.5 font-medium">semanticId</th>
-                              <th className="px-3 py-1.5 font-medium">타입</th>
+                              <th className="px-3 py-1.5 font-medium">의미설명</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -289,15 +295,18 @@ export default function SemanticQualityPanel({
                                 key={row.valuePath}
                                 className="border-t border-zinc-100 align-top"
                               >
-                                <td className="max-w-[180px] truncate px-3 py-1.5 font-medium text-zinc-700">
+                                <td className="max-w-[160px] truncate px-3 py-1.5 font-medium text-zinc-700">
                                   {displayName(row)}
                                 </td>
-                                <td className="max-w-[260px] truncate px-3 py-1.5 font-mono text-[11px] text-zinc-400">
+                                <td className="max-w-[220px] truncate px-3 py-1.5 font-mono text-[11px] text-zinc-400">
                                   {row.semanticIdValue}
                                 </td>
-                                <td className="whitespace-nowrap px-3 py-1.5 text-zinc-500">
-                                  {row.dataType || row.modelType}
-                                  {row.unit ? ` · ${row.unit}` : ""}
+                                <td className="max-w-[240px] px-3 py-1.5 text-zinc-500">
+                                  <span className="line-clamp-2">
+                                    {row.definition || (
+                                      <span className="text-zinc-300">—</span>
+                                    )}
+                                  </span>
                                 </td>
                               </tr>
                             ))}
@@ -356,6 +365,17 @@ export default function SemanticQualityPanel({
                       {c.id}
                     </span>
                   </div>
+                  {editMode && onDeleteConcept && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteConcept(c.id)}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-100"
+                      aria-label={`${c.idShort || c.id} 삭제`}
+                    >
+                      <Trash2 className="size-3.5" />
+                      삭제
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>

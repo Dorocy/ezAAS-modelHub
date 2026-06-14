@@ -423,6 +423,31 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
       IDTA: "IDTA Template",
       CUSTOM: "Custom",
     };
+    // LangString 배열/문자열에서 사람이 읽을 텍스트를 뽑는다 (ko → en → 첫번째 순).
+    const pickText = (src: any): string => {
+      if (!src) return "";
+      if (typeof src === "string") return src;
+      if (Array.isArray(src)) {
+        return (
+          src.find((d: any) => d?.language === "ko")?.text ||
+          src.find((d: any) => d?.language === "en")?.text ||
+          src[0]?.text ||
+          ""
+        );
+      }
+      return "";
+    };
+    // semanticId → conceptDescription.description 매핑 (의미설명 표시용)
+    const cdDefById = new Map<string, string>();
+    (((aasmodel.aasmodel_metadata as any)?.conceptDescriptions ?? []) as any[]).forEach(
+      (cd: any) => {
+        if (!cd?.id) return;
+        const fromSpec =
+          cd.embeddedDataSpecifications?.[0]?.dataSpecificationContent?.definition;
+        const def = pickText(cd.description) || pickText(fromSpec);
+        if (def) cdDefById.set(cd.id, def);
+      },
+    );
     // ancestorIdShorts: 현재 노드의 조상 idShort 체인 (submodel → ... → 부모)
     const walk = (node: any, ancestorIdShorts: string[]) => {
       if (!node || typeof node !== "object") return;
@@ -434,15 +459,22 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         const override = semanticOverrides[node.valuePath];
         const baseSemanticId: string | null =
           node.semanticId?.keys?.[0]?.value ?? null;
+        const semanticIdValue = override ? override.id : baseSemanticId;
+        // 의미설명: 방금 연결한 개념의 definition → CD 매핑 → element 자체 description 순
+        const definition =
+          (override ? pickText(override.definition) : "") ||
+          (semanticIdValue ? cdDefById.get(semanticIdValue) ?? "" : "") ||
+          pickText(node.description);
         rows.push({
           valuePath: node.valuePath,
           treePath: buildTreePath(...nextAncestors),
           idShort: node.idShort ?? "",
           modelType: node.modelType,
-          semanticIdValue: override ? override.id : baseSemanticId,
+          semanticIdValue,
           linkedSourceLabel: override ? SOURCE_LABELS[override.source] : undefined,
           dataType: node.valueType ?? undefined,
           unit: node.unit ?? undefined,
+          definition: definition || undefined,
         });
       }
       if (Array.isArray(node.children))
@@ -465,6 +497,21 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     });
     return Array.from(map.values());
   }, [aasmodel.aasmodel_metadata]);
+
+  // 미사용 개념(conceptDescription) 삭제. id 로 conceptDescriptions 에서 제거한다.
+  // element 의 semanticId 는 건드리지 않으므로(미사용 = 어떤 element 와도 미연결) 안전하다.
+  const handleDeleteConcept = (conceptId: string) => {
+    setAasmodel((prev) => {
+      const newMetadata = _.cloneDeep((prev as any).aasmodel_metadata);
+      if (Array.isArray(newMetadata.conceptDescriptions)) {
+        newMetadata.conceptDescriptions = newMetadata.conceptDescriptions.filter(
+          (cd: any) => cd?.id !== conceptId,
+        );
+      }
+      return { ...prev, aasmodel_metadata: newMetadata };
+    });
+    showToast.success("미사용 개념을 삭제했습니다.");
+  };
 
   // 누락 element 에 표준 개념을 연결한다.
   // 1) treeDataRef 에 `${valuePath}.semanticId` 로 주입 → 저장 시 applyMetadata 의 _.set 으로 metadata 에 머지됨.
@@ -2047,6 +2094,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                               editMode={mode !== "view"}
                               onRequestLink={(row) => setLinkDialogTarget(row)}
                               dictionaryConcepts={dictionaryConcepts}
+                              onDeleteConcept={handleDeleteConcept}
                             />
                           </div>
                         </TabsContent>
@@ -2179,7 +2227,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                   <span className="font-semibold text-zinc-700">{activeStep + 1} / {STEPS.length}</span>
                   {" "}— {STEPS[activeStep]?.label}
                 </p>
-                {/* 오른쪽: 버튼 */}
+                {/* 오��쪽: 버튼 */}
                 <div className="flex items-center gap-2">
                   <CancelButton />
                   {activeStep > 0 && (
