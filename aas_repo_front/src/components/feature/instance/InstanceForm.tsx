@@ -20,6 +20,8 @@ import AASTree, { RenderObject } from "@/components/feature/model/AASTree";
 import TemplateBlueprint from "@/components/feature/instance/TemplateBlueprint";
 import SubmodelFormEditor from "@/components/feature/instance/SubmodelFormEditor";
 import ConceptDescriptionPanel from "@/components/feature/instance/ConceptDescriptionPanel";
+import SemanticQualityPanel, { type SemanticElementRow } from "@/components/feature/instance/SemanticQualityPanel";
+import ConceptSearchDialog, { type ConceptSearchResult } from "@/components/feature/instance/ConceptSearchDialog";
 import { InstanceSavePayload } from "@/types/api";
 import { confirmSave } from "@/utils/modal";
 import type { AASInstance, VerifyInstanceParams } from "@/types/api";
@@ -246,6 +248,10 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
   const [modelSeq, setModelSeq] = useState("");
   const [aasmodel, setAasmodel] = useState(initialState.aasmodel);
   const [treeData, setTreeData] = useState<any[] | undefined>(undefined);
+  // 의미 정의 현황: valuePath -> 방금 연결한 개념. treeDataRef 는 ref 라 렌더를 못 깨우므로 별도 reactive state 로 관리.
+  const [semanticOverrides, setSemanticOverrides] = useState<Record<string, ConceptSearchResult>>({});
+  // 개념 검색 다이얼로그 연결 대상 element (null 이면 닫힘)
+  const [linkDialogTarget, setLinkDialogTarget] = useState<SemanticElementRow | null>(null);
   const [previewModel, setPreviewModel] = useState<any | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
@@ -400,6 +406,57 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
       },
     ];
   }, [aasmodel.aasmodel_metadata]);
+
+  // 의미 정의 현황용 element 목록.
+  // parsingAAS 출력(treeData)을 순회해 valuePath/idShort/modelType/semanticId 를 수집하고,
+  // semanticOverrides(방금 연결한 개념)를 병합해 현재 연결 상태를 만든다.
+  // valuePath 계산은 기존 parsingAAS/addValuePaths 결과를 그대로 재사용한다(리팩터링 없음).
+  const semanticElementRows = useMemo<SemanticElementRow[]>(() => {
+    const rows: SemanticElementRow[] = [];
+    const SOURCE_LABELS: Record<ConceptSearchResult["source"], string> = {
+      ECLASS: "ECLASS",
+      IEC_CDD: "IEC CDD",
+      IDTA: "IDTA Template",
+      CUSTOM: "Custom",
+    };
+    const walk = (node: any) => {
+      if (!node || typeof node !== "object") return;
+      // AAS 루트 노드는 valuePath 가 없으므로 자연히 건너뛴다. semanticId 를 가질 수 있는 요소만 수집.
+      if (node.valuePath && node.modelType) {
+        const override = semanticOverrides[node.valuePath];
+        const baseSemanticId: string | null =
+          node.semanticId?.keys?.[0]?.value ?? null;
+        rows.push({
+          valuePath: node.valuePath,
+          idShort: node.idShort ?? "",
+          modelType: node.modelType,
+          semanticIdValue: override ? override.id : baseSemanticId,
+          linkedSourceLabel: override ? SOURCE_LABELS[override.source] : undefined,
+        });
+      }
+      if (Array.isArray(node.children)) node.children.forEach(walk);
+    };
+    (treeData ?? []).forEach((root: any) => {
+      if (Array.isArray(root?.children)) root.children.forEach(walk);
+    });
+    return rows;
+  }, [treeData, semanticOverrides]);
+
+  // 누락 element 에 표준 개념을 연결한다.
+  // 1) treeDataRef 에 `${valuePath}.semanticId` 로 주입 → 저장 시 applyMetadata 의 _.set 으로 metadata 에 머지됨.
+  // 2) semanticOverrides state 갱신 → 완료율/목록 즉시 리렌더.
+  const handleLinkConcept = (row: SemanticElementRow, concept: ConceptSearchResult) => {
+    const rootId = treeData?.[0]?.id;
+    if (rootId) {
+      if (!treeDataRef.current[rootId]) treeDataRef.current[rootId] = {};
+      treeDataRef.current[rootId][`${row.valuePath}.semanticId`] = {
+        type: "ExternalReference",
+        keys: [{ type: "GlobalReference", value: concept.id }],
+      };
+    }
+    setSemanticOverrides((prev) => ({ ...prev, [row.valuePath]: concept }));
+    setLinkDialogTarget(null);
+  };
 
   useEffect(() => {
     if (!getModelId("aasmodel", aasmodel.aasmodel_metadata)) {
@@ -1584,6 +1641,14 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         ) : (
           <>
             {templateSelectDialog}
+            <ConceptSearchDialog
+              open={linkDialogTarget !== null}
+              targetIdShort={linkDialogTarget?.idShort}
+              onClose={() => setLinkDialogTarget(null)}
+              onSelect={(concept) => {
+                if (linkDialogTarget) handleLinkConcept(linkDialogTarget, concept);
+              }}
+            />
             {/* Stepper */}
             <div className="mb-4 rounded-xl border border-zinc-200 bg-white px-5 py-4">
               <StepIndicator active={activeStep} onStepClick={setActiveStep} />
@@ -1764,7 +1829,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                               value="cdTree"
                               className="h-10 rounded-none px-5 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                             >
-                              개념 사전
+                              의미 정의 현황
                             </TabsTrigger>
                           </TabsList>
                         </div>
@@ -1884,14 +1949,13 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                           </div>
                         </TabsContent>
 
-                        {/* CD Tree 탭 */}
+                        {/* 의미 정의 현황 탭 */}
                         <TabsContent value="cdTree" className="mt-0">
                           <div className="h-[calc(100vh-320px)] min-h-[600px] border border-zinc-200 rounded-xl overflow-hidden bg-white">
-                            <ConceptDescriptionPanel
-                              conceptDescriptionTreeData={conceptDescriptionTreeData}
+                            <SemanticQualityPanel
+                              elements={semanticElementRows}
                               editMode={mode !== "view"}
-                              onAdd={() => handleAddConceptDescription(null, "ConceptDescription", "NewConceptDescription")}
-                              onDelete={handleDeleteConceptDescription}
+                              onRequestLink={(row) => setLinkDialogTarget(row)}
                             />
                           </div>
                         </TabsContent>
