@@ -45,11 +45,10 @@ export type {
   ModelMetadataKind,
 } from "./validateAas";
 
-// ID 발급 규칙 (Custom Concept / Element)
+// ID 발급 규칙 (Custom Concept semanticId)
 export {
   normalizeCompanyUrl,
   buildTreePath,
-  buildAasElementId,
   buildCustomConceptSemanticId,
 } from "./idRules";
 

@@ -1,12 +1,12 @@
 /**
- * Custom Concept / Element ID 자동 발급 규칙.
+ * Custom ConceptDescription semanticId 자동 발급 규칙.
  *
- * 두 종류의 ID 를 생성하며 절대 서로 같지 않다.
- *  A. Element id                : https://{companyUrl}/ezAAS/{elementTreePath}/{version}/{revision}
- *  B. Custom ConceptDescription : https://{companyUrl}/ezAAS/cd/{conceptTreePath}/{version}/{revision}
+ *  Custom ConceptDescription : https://{companyUrl}/ezAAS/cd/{conceptTreePath}/{version}/{revision}
  *
  * `/ezAAS/cd/` 경로는 **Custom Concept 에만** 적용한다.
  * ECLASS / IEC CDD / IDTA 등 표준 개념의 semanticId 는 절대 재생성하지 않는다.
+ *
+ * 참고: AAS SubmodelElement 는 표준상 id 필드가 없으므로 element.id 는 발급하지 않는다.
  */
 
 /** 회사 URL 정규화: 스킴 보강(없으면 https://) + trailing slash 제거. */
@@ -30,25 +30,6 @@ export function buildTreePath(...segments: Array<string | null | undefined>): st
     .filter((s) => s.length > 0)
     .map((s) => encodeURIComponent(s))
     .join("/");
-}
-
-export interface BuildAasElementIdParams {
-  companyUrl: string;
-  elementTreePath: string;
-  version?: number | string;
-  revision?: number | string;
-}
-
-/** AAS element 자체의 id 생성. companyUrl 이 없으면 빈 문자열 반환. */
-export function buildAasElementId({
-  companyUrl,
-  elementTreePath,
-  version = 1,
-  revision = 0,
-}: BuildAasElementIdParams): string {
-  const base = normalizeCompanyUrl(companyUrl);
-  if (!base || !elementTreePath) return "";
-  return `${base}/ezAAS/${elementTreePath}/${version}/${revision}`;
 }
 
 export interface BuildCustomConceptSemanticIdParams {
