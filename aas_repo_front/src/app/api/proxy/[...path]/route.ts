@@ -34,9 +34,20 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
     "ngrok-skip-browser-warning": "true",
   };
 
+  // 인증 토큰 부착.
+  // 1순위: 클라이언트가 보낸 Authorization 헤더 (메모리 토큰)
+  // 2순위: token_message 쿠키 (httpOnly=false로 저장됨)
+  // 클라이언트 토큰은 메모리(tokenStore)에만 있어 페이지 새로고침/SSR 직후에는
+  // AuthContext가 토큰을 메모리에 복원하기 전까지 비어 있다. 이때 헤더 없이 요청이
+  // 나가 백엔드가 401을 주는 문제가 있었으므로, 헤더가 없으면 쿠키로 폴백한다.
   const authHeader = req.headers.get("authorization");
   if (authHeader) {
     forwardHeaders["Authorization"] = authHeader;
+  } else {
+    const tokenCookie = req.cookies.get("token_message")?.value;
+    if (tokenCookie) {
+      forwardHeaders["Authorization"] = `Bearer ${tokenCookie}`;
+    }
   }
 
   // body는 ArrayBuffer로 읽어 바이너리(파일 첨부 등 multipart/form-data)를 보존한다.
