@@ -4,6 +4,7 @@ import Link from "next/link";
 import useSWR from "swr";
 import { getPublishedModel } from "@/api/index";
 import { ROUTES } from "@/constants/routes";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { formatDateToDotYMD } from "@/utils";
 import { StatusBadge } from "@/components/feature/shared/ResourceListShell";
 import { Badge } from "@/components/ui/badge";

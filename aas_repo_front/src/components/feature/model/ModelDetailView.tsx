@@ -56,6 +56,7 @@ interface ModelDetailViewProps {
 }
 
 export default function ModelDetailView({ modelType, modelSeq }: ModelDetailViewProps) {
+  const { t } = useLanguage();
   const meta = META[modelType];
   const Icon = meta.icon;
 
@@ -99,7 +100,7 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
             className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-800 transition-colors mb-3"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            {meta.listLabel}
+            {t(meta.listLabel)}
           </Link>
 
           <div className="flex items-start justify-between gap-4">
@@ -110,16 +111,16 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-lg font-bold text-zinc-900 truncate">
-                    {isLoading ? "Loading..." : model?.[meta.nameKey] || "Untitled"}
+                    {isLoading ? t("Loading...") : model?.[meta.nameKey] || t("Untitled")}
                   </h1>
                   {model?.status && <StatusBadge status={model.status} label={model.status} />}
                   <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border bg-zinc-100 border-zinc-200 text-zinc-500">
                     <Lock className="w-3 h-3" />
-                    Read-only template
+                    {t("Read-only template")}
                   </span>
                 </div>
                 <p className="text-sm text-zinc-500 mt-1 leading-relaxed line-clamp-2 max-w-2xl">
-                  {model?.description || "No description provided."}
+                  {model?.description || t("No description provided.")}
                 </p>
               </div>
             </div>
@@ -130,7 +131,7 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
                 className={cn(buttonVariants({ size: "sm" }), "shrink-0")}
               >
                 <FilePlus className="w-3.5 h-3.5 mr-1.5" />
-                Create instance
+                {t("Create instance")}
               </Link>
             )}
           </div>
@@ -140,7 +141,7 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
       <div className="mx-auto max-w-screen-xl px-6 py-6">
         {error ? (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
-            Failed to load this template. Please check your connection and try again.
+            {t("Failed to load this template. Please check your connection and try again.")}
           </div>
         ) : isLoading ? (
           <div className="grid gap-6 lg:grid-cols-3">
@@ -162,7 +163,7 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
                 </div>
               )}
               <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-4">
-                Details
+                {t("Details")}
               </h2>
               <dl className="space-y-3">
                 {FIELD_CONFIG[modelType].map((f) => {
@@ -170,7 +171,7 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
                   if (value === undefined || value === null || value === "") return null;
                   return (
                     <div key={f.key} className="flex flex-col gap-0.5">
-                      <dt className="text-xs font-medium text-zinc-400">{f.label}</dt>
+                      <dt className="text-xs font-medium text-zinc-400">{t(f.label)}</dt>
                       <dd className={cn("text-sm text-zinc-800 break-all", f.mono && "font-mono text-xs")}>
                         {String(value)}
                       </dd>
@@ -187,14 +188,14 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
                   className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700"
                 >
                   <FileDown className="w-3.5 h-3.5" />
-                  Open guide document
+                  {t("Open guide document")}
                 </a>
               )}
 
               {validationReport && (
                 <div className="mt-5">
                   <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
-                    Validation
+                    {t("Validation")}
                   </h2>
                   <ValidationSummary report={validationReport} />
                 </div>
@@ -204,13 +205,13 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
             {/* ── Structure panel ── */}
             <div className="lg:col-span-2 bg-white border border-zinc-200 rounded-xl p-5">
               <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-4">
-                Structure
+                {t("Structure")}
               </h2>
               {treeData ? (
                 <TemplateBlueprint treeData={treeData} showValues />
               ) : (
                 <p className="text-sm text-zinc-400 py-8 text-center">
-                  No structure data available for this template.
+                  {t("No structure data available for this template.")}
                 </p>
               )}
             </div>
