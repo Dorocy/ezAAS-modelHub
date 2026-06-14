@@ -314,10 +314,10 @@ export default function DistributePage() {
             </div>
           ) : (
             <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm table-fixed">
                 <thead>
                   <tr className="border-b border-zinc-200 bg-zinc-50/60 text-left">
-                    <th className="px-4 py-3 w-24 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 w-20 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                       Type
                     </th>
                     <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
@@ -363,26 +363,26 @@ export default function DistributePage() {
                             modelType: model.type,
                             targetSeq: model.seq,
                           })}
-                          className="block group"
+                          className="block group min-w-0"
                         >
-                          <span className="block text-sm font-medium text-zinc-900 group-hover:text-blue-600 transition-colors">
+                          <span className="block truncate text-sm font-medium text-zinc-900 group-hover:text-blue-600 transition-colors">
                             {model.name}
                           </span>
                           {model.templateId && (
-                            <span className="mt-0.5 flex items-center gap-1 text-xs text-zinc-400 font-mono">
+                            <span className="mt-0.5 flex items-center gap-1 text-xs text-zinc-400 font-mono min-w-0">
                               <Hash className="w-2.5 h-2.5 shrink-0" />
-                              <span className="truncate max-w-[420px]">{model.templateId}</span>
+                              <span className="truncate">{model.templateId}</span>
                             </span>
                           )}
                           {model.description && (
-                            <span className="mt-1 block text-xs text-zinc-500 line-clamp-1 max-w-[460px]">
+                            <span className="mt-1 block truncate text-xs text-zinc-500">
                               {model.description}
                             </span>
                           )}
                         </Link>
                       </td>
                       <td className="px-4 py-3 align-top text-zinc-500 hidden md:table-cell">
-                        {model.categoryName}
+                        <span className="block truncate">{model.categoryName}</span>
                       </td>
                       <td className="px-4 py-3 align-top text-zinc-500 tabular-nums">
                         {model.version ? `v${model.version}` : "—"}
