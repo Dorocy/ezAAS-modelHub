@@ -708,27 +708,50 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     }
 
     // 새 개념을 정의한 경우 ConceptDescription 도 함께 생성 (IEC61360 데이터스펙)
+    // preferredName/shortName/definition 은 { en, ko } 형태이며, 값이 있는 언어만 LangString 배열로 변환한다.
+    const toLangStrings = (t: any): { language: string; text: string }[] => {
+      const arr: { language: string; text: string }[] = [];
+      if (t && typeof t === "object") {
+        if (t.en?.trim()) arr.push({ language: "en", text: t.en.trim() });
+        if (t.ko?.trim()) arr.push({ language: "ko", text: t.ko.trim() });
+      } else if (typeof t === "string" && t.trim()) {
+        arr.push({ language: "en", text: t.trim() });
+      }
+      return arr;
+    };
+
     const newCD =
       concept?.mode === "new"
-        ? {
-            idShort,
-            modelType: "ConceptDescription",
-            id: concept.id,
-            description: [{ language: "en", text: concept.definition }],
-            embeddedDataSpecifications: [
-              {
-                dataSpecification: {
-                  type: "ExternalReference",
-                  keys: [{ type: "GlobalReference", value: "https://admin-shell.io/DataSpecificationTemplates/DataSpecificationIEC61360/3/0" }],
+        ? (() => {
+            const definitionStrings = toLangStrings(concept.definition);
+            const shortNameStrings = toLangStrings(concept.shortName);
+            const content: any = {
+              modelType: "DataSpecificationIec61360",
+              preferredName: toLangStrings(concept.preferredName),
+              definition: definitionStrings,
+            };
+            if (shortNameStrings.length) content.shortName = shortNameStrings;
+            if (concept.dataType) content.dataType = concept.dataType;
+            if (concept.unit) content.unit = concept.unit;
+
+            return {
+              idShort,
+              modelType: "ConceptDescription",
+              id: concept.id,
+              description: definitionStrings.length
+                ? definitionStrings
+                : [{ language: "en", text: "" }],
+              embeddedDataSpecifications: [
+                {
+                  dataSpecification: {
+                    type: "ExternalReference",
+                    keys: [{ type: "GlobalReference", value: "https://admin-shell.io/DataSpecificationTemplates/DataSpecificationIEC61360/3/0" }],
+                  },
+                  dataSpecificationContent: content,
                 },
-                dataSpecificationContent: {
-                  modelType: "DataSpecificationIec61360",
-                  preferredName: [{ language: "en", text: concept.preferredName }],
-                  definition: [{ language: "en", text: concept.definition }],
-                },
-              },
-            ],
-          }
+              ],
+            };
+          })()
         : null;
 
     setAasmodel((prev) => {

@@ -83,14 +83,41 @@ const ELEMENT_TYPE_HINTS: Record<string, string> = {
   Entity: "자산 엔티티 (statements 포함)",
 };
 
+/* en/ko 2개 언어 텍스트 (IEC61360 다국어 필드) */
+export type CDLangText = { en: string; ko: string };
+
+/* 새 개념 정의 시 입력받는 IEC61360 표준 핵심 필드 묶음 */
+export interface NewConceptData {
+  preferredName: CDLangText;
+  shortName: CDLangText;
+  definition: CDLangText;
+  dataType?: string;
+  unit?: string;
+}
+
 /* 엘리먼트 추가 시 함께 연결할 개념(ConceptDescription) 정보
-   · mode "new"     → 새 개념을 정의하고 semanticId 로 연결 (id/preferredName/definition)
+   · mode "new"     → 새 개념을 정의하고 semanticId 로 연결 (IEC61360 표준 핵심 필드)
    · mode "existing"→ 기존 개념의 id 로 semanticId 만 연결
    · mode "none"    → 개념 연결 없음 (semanticId 비움) */
 type ConceptLink =
-  | { mode: "new"; id: string; preferredName: string; definition: string }
+  | ({ mode: "new"; id: string } & NewConceptData)
   | { mode: "existing"; id: string }
   | { mode: "none" };
+
+/* IEC61360 DataType 표준 열거값 (핵심 세트) */
+const IEC61360_DATA_TYPES = [
+  "STRING",
+  "STRING_TRANSLATABLE",
+  "INTEGER_MEASURE",
+  "INTEGER_COUNT",
+  "REAL_MEASURE",
+  "REAL_COUNT",
+  "BOOLEAN",
+  "DATE",
+  "TIMESTAMP",
+  "RATIONAL",
+  "IRI",
+] as const;
 
 type AddElementHandler = (
   parentNode: any,
@@ -226,7 +253,15 @@ function AddElementDialog({
   const [idShort, setIdShort] = useState("");
   // 개념 연결 상태
   const [conceptMode, setConceptMode] = useState<"new" | "existing">("new");
-  const [definition, setDefinition] = useState("");
+  // 새 개념 정의: IEC61360 표준 핵심 필드 (en/ko 다국어)
+  const [preferredNameEn, setPreferredNameEn] = useState("");
+  const [preferredNameKo, setPreferredNameKo] = useState("");
+  const [shortNameEn, setShortNameEn] = useState("");
+  const [shortNameKo, setShortNameKo] = useState("");
+  const [definitionEn, setDefinitionEn] = useState("");
+  const [definitionKo, setDefinitionKo] = useState("");
+  const [dataType, setDataType] = useState<string>("STRING");
+  const [unit, setUnit] = useState("");
   const [customId, setCustomId] = useState("");      // 비우면 idShort 기반 자동 생성
   const [existingId, setExistingId] = useState("");   // 기존 개념 연결 시 선택된 CD id
   const [conceptSearch, setConceptSearch] = useState("");
@@ -239,7 +274,14 @@ function AddElementDialog({
       setType("Property");
       setIdShort("");
       setConceptMode("new");
-      setDefinition("");
+      setPreferredNameEn("");
+      setPreferredNameKo("");
+      setShortNameEn("");
+      setShortNameKo("");
+      setDefinitionEn("");
+      setDefinitionKo("");
+      setDataType("STRING");
+      setUnit("");
       setCustomId("");
       setExistingId("");
       setConceptSearch("");
@@ -267,16 +309,28 @@ function AddElementDialog({
       .slice(0, 50);
   }, [conceptList, conceptSearch]);
 
-  // 추가 가능 여부: idShort 필수 + (새 개념이면 정의 필수 / 기존이면 선택 필수)
+  // 추가 가능 여부: idShort 필수 + (새 개념이면 정의(en) 필수 / 기존이면 선택 필수)
   const conceptValid =
-    conceptMode === "new" ? definition.trim().length > 0 : existingId !== "";
+    conceptMode === "new" ? definitionEn.trim().length > 0 : existingId !== "";
   const canAdd = !!type && !!trimmedIdShort && conceptValid;
 
   const handleAdd = () => {
     if (!canAdd) return;
     const concept: ConceptLink =
       conceptMode === "new"
-        ? { mode: "new", id: effectiveNewId, preferredName: trimmedIdShort, definition: definition.trim() }
+        ? {
+            mode: "new",
+            id: effectiveNewId,
+            // preferredName 이 비면 idShort 를 사람이 읽기 좋은 형태로 폴백
+            preferredName: {
+              en: preferredNameEn.trim() || getDisplayLabel(trimmedIdShort),
+              ko: preferredNameKo.trim(),
+            },
+            shortName: { en: shortNameEn.trim(), ko: shortNameKo.trim() },
+            definition: { en: definitionEn.trim(), ko: definitionKo.trim() },
+            dataType: dataType || undefined,
+            unit: unit.trim() || undefined,
+          }
         : { mode: "existing", id: existingId };
     onAdd(parentNode, type, trimmedIdShort, concept);
     setOpen(false);
@@ -288,7 +342,7 @@ function AddElementDialog({
     <>
       <span onClick={() => setOpen(true)}>{trigger}</span>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle className="text-base">
               {"하위 엘리먼트 추가"}
@@ -298,7 +352,7 @@ function AddElementDialog({
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-1">
+          <div className="space-y-4 py-1 min-w-0">
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-zinc-600">Element Type</Label>
               <Select value={type} onValueChange={(v) => setType(v as string)}>
@@ -358,18 +412,101 @@ function AddElementDialog({
               </div>
 
               {conceptMode === "new" ? (
-                <div className="space-y-2.5 pt-1">
+                <div className="space-y-3 pt-1">
+                  {/* Preferred Name (en/ko) */}
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-zinc-500">
+                      Preferred Name
+                    </Label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <Input
+                        value={preferredNameEn}
+                        onChange={(e) => setPreferredNameEn(e.target.value)}
+                        placeholder="English (비우면 idShort)"
+                        className="h-8 text-sm bg-white"
+                      />
+                      <Input
+                        value={preferredNameKo}
+                        onChange={(e) => setPreferredNameKo(e.target.value)}
+                        placeholder="한국어"
+                        className="h-8 text-sm bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Short Name (en/ko) */}
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-zinc-500">
+                      Short Name
+                    </Label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <Input
+                        value={shortNameEn}
+                        onChange={(e) => setShortNameEn(e.target.value)}
+                        placeholder="English"
+                        className="h-8 text-sm bg-white"
+                      />
+                      <Input
+                        value={shortNameKo}
+                        onChange={(e) => setShortNameKo(e.target.value)}
+                        placeholder="한국어"
+                        className="h-8 text-sm bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Definition (en 필수 / ko 선택) */}
                   <div className="space-y-1">
                     <Label className="text-xs font-medium text-zinc-500">
                       정의 (Definition) <span className="text-red-400">*</span>
                     </Label>
                     <Textarea
-                      value={definition}
-                      onChange={(e) => setDefinition(e.target.value)}
-                      placeholder="이 개념이 무엇을 의미하는지 한 줄로 설명하세요."
-                      className="text-sm min-h-[60px] bg-white"
+                      value={definitionEn}
+                      onChange={(e) => setDefinitionEn(e.target.value)}
+                      placeholder="English — 이 개념이 무엇을 의미하는지 설명하세요. (필수)"
+                      className="text-sm min-h-[56px] bg-white"
+                    />
+                    <Textarea
+                      value={definitionKo}
+                      onChange={(e) => setDefinitionKo(e.target.value)}
+                      placeholder="한국어 정의 (선택)"
+                      className="text-sm min-h-[56px] bg-white"
                     />
                   </div>
+
+                  {/* DataType + Unit */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <div className="space-y-1 min-w-0">
+                      <Label className="text-xs font-medium text-zinc-500">
+                        Data Type
+                      </Label>
+                      <Select value={dataType} onValueChange={(v) => setDataType((v as string) ?? "STRING")}>
+                        <SelectTrigger className="h-8 text-sm bg-white">
+                          <SelectValue placeholder="선택" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {IEC61360_DATA_TYPES.map((dt) => (
+                            <SelectItem key={dt} value={dt} className="text-sm">
+                              {dt}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1 min-w-0">
+                      <Label className="text-xs font-medium text-zinc-500">
+                        Unit
+                      </Label>
+                      <Input
+                        value={unit}
+                        onChange={(e) => setUnit(e.target.value)}
+                        placeholder="예: mm, V, kg"
+                        className="h-8 text-sm bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* ID (자동 생성) */}
                   <div className="space-y-1">
                     <Label className="text-xs font-medium text-zinc-500">ID (자동 생성)</Label>
                     <Input
@@ -400,15 +537,15 @@ function AddElementDialog({
                           type="button"
                           onClick={() => setExistingId(cd.id)}
                           className={cn(
-                            "w-full text-left px-3 py-2 transition-colors",
+                            "block w-full min-w-0 max-w-full text-left px-3 py-2 transition-colors",
                             existingId === cd.id ? "bg-blue-50" : "hover:bg-zinc-50"
                           )}
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
                             {existingId === cd.id && <Check size={12} className="text-blue-500 shrink-0" />}
-                            <span className="text-sm font-medium text-zinc-700 truncate">{cd.idShort}</span>
+                            <span className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-700">{cd.idShort}</span>
                           </div>
-                          <span className="block text-xs text-zinc-400 font-mono truncate mt-0.5">{cd.id}</span>
+                          <span className="block truncate text-xs text-zinc-400 font-mono mt-0.5">{cd.id}</span>
                         </button>
                       ))
                     )}
