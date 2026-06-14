@@ -50,3 +50,26 @@ export function buildCustomConceptSemanticId({
   if (!base || !conceptTreePath) return "";
   return `${base}/ezAAS/cd/${conceptTreePath}/${version}/${revision}`;
 }
+
+/** semanticId 의 출처 분류 결과 */
+export type ConceptSource = "ECLASS" | "IEC_CDD" | "CUSTOM" | "OTHER";
+
+/**
+ * semanticId 문자열로부터 출처(사전)를 추론한다.
+ *  - CUSTOM : `/ezAAS/cd/` 경로 (본 도구가 발급한 Custom Concept)
+ *  - ECLASS : ECLASS IRDI 는 `0173` 으로 시작 (예: 0173-1#02-AAO677#002)
+ *  - IEC_CDD: IEC CDD IRDI 는 `0112` 로 시작 (예: 0112/2///61360_4#AAA...)
+ *  - OTHER  : 그 외(임의 IRI 등)
+ */
+export function classifyConceptSource(
+  semanticId: string | null | undefined,
+): ConceptSource {
+  const id = (semanticId ?? "").trim();
+  if (!id) return "OTHER";
+  if (/\/ezAAS\/cd\//.test(id)) return "CUSTOM";
+  // 선행 공백/슬래시를 무시하고 ICD(국제 코드 지정자) prefix 확인
+  const icd = id.replace(/^[\s/]+/, "").slice(0, 4);
+  if (icd === "0173") return "ECLASS";
+  if (icd === "0112") return "IEC_CDD";
+  return "OTHER";
+}

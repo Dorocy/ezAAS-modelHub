@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, ChevronDown, Link2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { classifyConceptSource, type ConceptSource } from "@/lib/aas";
 
 /* 의미 정의 현황에서 다루는 element 1건 */
 export interface SemanticElementRow {
@@ -32,12 +33,23 @@ export default function SemanticQualityPanel({
 }: SemanticQualityPanelProps) {
   const [showCompleted, setShowCompleted] = useState(false);
 
-  const { missing, completed, rate } = useMemo(() => {
+  const { missing, completed, rate, sourceGroups } = useMemo(() => {
     const missing = elements.filter((e) => !e.semanticIdValue);
     const completed = elements.filter((e) => !!e.semanticIdValue);
     const total = elements.length;
     const rate = total === 0 ? 100 : Math.round((completed.length / total) * 100);
-    return { missing, completed, rate };
+
+    // 연결된 항목을 출처(ECLASS / IEC CDD / Custom / 기타)별로 분류
+    const sourceGroups: Record<ConceptSource, SemanticElementRow[]> = {
+      ECLASS: [],
+      IEC_CDD: [],
+      CUSTOM: [],
+      OTHER: [],
+    };
+    completed.forEach((row) => {
+      sourceGroups[classifyConceptSource(row.semanticIdValue)].push(row);
+    });
+    return { missing, completed, rate, sourceGroups };
   }, [elements]);
 
   const rateTone =
@@ -48,6 +60,31 @@ export default function SemanticQualityPanel({
         : "text-red-500";
   const barTone =
     rate >= 80 ? "bg-emerald-500" : rate >= 50 ? "bg-amber-500" : "bg-red-400";
+
+  // 출처별 표시 순서 + 라벨 + 배지 색
+  const SOURCE_META: Array<{
+    key: ConceptSource;
+    label: string;
+    badge: string;
+  }> = [
+    { key: "ECLASS", label: "ECLASS", badge: "border-sky-200 bg-sky-50 text-sky-700" },
+    { key: "IEC_CDD", label: "IEC CDD", badge: "border-violet-200 bg-violet-50 text-violet-700" },
+    { key: "CUSTOM", label: "Custom", badge: "border-amber-200 bg-amber-50 text-amber-700" },
+    { key: "OTHER", label: "기타", badge: "border-zinc-200 bg-zinc-100 text-zinc-600" },
+  ];
+
+  // 표시용 이름. SubmodelElementList(SML) 의 자식은 AAS 표준상 idShort 가 없어(위치 기반)
+  // 비어 있을 수 있다. 이 경우 부모 경로 + 인덱스로 사람이 읽을 수 있는 이름을 만든다.
+  const displayName = (row: SemanticElementRow): string => {
+    if (row.idShort) return row.idShort;
+    // treePath 의 마지막 의미 있는 세그먼트를 부모로 사용
+    const parent = row.treePath.split("/").filter(Boolean).pop();
+    // valuePath 끝의 [n] 인덱스 추출 (예: ...value[2] → 2)
+    const idxMatch = row.valuePath.match(/\[(\d+)\]\s*$/);
+    const idx = idxMatch ? `[${idxMatch[1]}]` : "";
+    if (parent) return `${decodeURIComponent(parent)}${idx} (목록 항목)`;
+    return idx ? `목록 항목 ${idx}` : "(이름 없음)";
+  };
 
   return (
     <div className="h-full overflow-y-auto p-5">
@@ -72,6 +109,28 @@ export default function SemanticQualityPanel({
             className={cn("h-full rounded-full transition-all", barTone)}
             style={{ width: `${rate}%` }}
           />
+        </div>
+
+        {/* 출처별 현황 요약 */}
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {SOURCE_META.map(({ key, label, badge }) => (
+            <div
+              key={key}
+              className="rounded-lg border border-zinc-200 bg-zinc-50/60 px-3 py-2 text-center"
+            >
+              <span
+                className={cn(
+                  "inline-block rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                  badge,
+                )}
+              >
+                {label}
+              </span>
+              <p className="mt-1.5 text-lg font-bold tabular-nums text-zinc-800">
+                {sourceGroups[key].length}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -102,7 +161,7 @@ export default function SemanticQualityPanel({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="truncate text-sm font-medium text-zinc-800">
-                      {row.idShort || "(이름 없음)"}
+                      {displayName(row)}
                     </span>
                     <span className="shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
                       {row.modelType}
@@ -148,39 +207,54 @@ export default function SemanticQualityPanel({
           />
         </button>
 
-        {showCompleted && (
-          <ul className="mt-2 space-y-1.5">
-            {completed.length === 0 ? (
+        {showCompleted &&
+          (completed.length === 0 ? (
+            <ul className="mt-2">
               <li className="rounded-lg border border-zinc-200 bg-white px-3 py-3 text-sm text-zinc-400">
                 아직 연결된 항목이 없습니다.
               </li>
-            ) : (
-              completed.map((row) => (
-                <li
-                  key={row.valuePath}
-                  className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2"
-                >
-                  <Link2 className="size-3.5 shrink-0 text-emerald-500" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="truncate text-sm font-medium text-zinc-800">
-                        {row.idShort || "(이름 없음)"}
+            </ul>
+          ) : (
+            <div className="mt-2 space-y-4">
+              {SOURCE_META.filter(({ key }) => sourceGroups[key].length > 0).map(
+                ({ key, label, badge }) => (
+                  <div key={key}>
+                    <div className="mb-1.5 flex items-center gap-2">
+                      <span
+                        className={cn(
+                          "rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                          badge,
+                        )}
+                      >
+                        {label}
                       </span>
-                      {row.linkedSourceLabel && (
-                        <span className="shrink-0 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
-                          {row.linkedSourceLabel}
-                        </span>
-                      )}
+                      <span className="text-xs text-zinc-400">
+                        {sourceGroups[key].length}개
+                      </span>
                     </div>
-                    <span className="mt-0.5 block truncate font-mono text-[11px] text-zinc-400">
-                      {row.semanticIdValue}
-                    </span>
+                    <ul className="space-y-1.5">
+                      {sourceGroups[key].map((row) => (
+                        <li
+                          key={row.valuePath}
+                          className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2"
+                        >
+                          <Link2 className="size-3.5 shrink-0 text-emerald-500" />
+                          <div className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-medium text-zinc-800">
+                              {displayName(row)}
+                            </span>
+                            <span className="mt-0.5 block truncate font-mono text-[11px] text-zinc-400">
+                              {row.semanticIdValue}
+                            </span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                </li>
-              ))
-            )}
-          </ul>
-        )}
+                ),
+              )}
+            </div>
+          ))}
       </section>
     </div>
   );

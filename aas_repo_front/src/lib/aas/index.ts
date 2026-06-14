@@ -50,7 +50,9 @@ export {
   normalizeCompanyUrl,
   buildTreePath,
   buildCustomConceptSemanticId,
+  classifyConceptSource,
 } from "./idRules";
+export type { ConceptSource } from "./idRules";
 
 // Edit (불변 지향)
 export {
