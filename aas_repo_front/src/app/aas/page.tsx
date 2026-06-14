@@ -22,9 +22,29 @@ import {
   ArrowUpRight,
   LayoutGrid,
   AlignJustify,
+  Tag,
+  User as UserIcon,
+  CalendarDays,
 } from "lucide-react";
 
 const PAGE_SIZE = 24;
+
+// 생성일 표시용 포맷터. 값이 없거나 파싱 불가하면 "—" 반환.
+function formatDate(value?: string | null): string {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return "—";
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+}
+
+// 모델 객체에서 생성자명을 안전하게 추출 (필드명이 백엔드에 따라 다를 수 있어 폴백 처리)
+function getCreator(model: any): string {
+  return model.creator || model.create_user_name || model.create_user_nm || "—";
+}
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
   published:  { bg: "bg-emerald-50 border-emerald-200", text: "text-emerald-700", dot: "bg-emerald-500" },
@@ -46,9 +66,9 @@ function StatusBadge({ status, label }: { status: string; label: string }) {
 function TemplateCard({ model }: { model: any }) {
   const thumb = resolveThumbnailSrc(model);
   return (
-    <Link href={ROUTES.AASMODEL.VIEW(model.aasmodel_seq)} className="group block">
+    <Link href={ROUTES.AASMODEL.VIEW(model.aasmodel_seq)} className="group block h-full">
       <div className="relative flex flex-col h-full bg-white border border-zinc-200 rounded-xl p-5 hover:border-zinc-400 hover:shadow-sm transition-all duration-150">
-        {/* top row */}
+        {/* top row: icon + deployment status */}
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="w-9 h-9 rounded-lg bg-zinc-100 flex items-center justify-center shrink-0 overflow-hidden">
             {thumb ? (
@@ -62,7 +82,7 @@ function TemplateCard({ model }: { model: any }) {
               <FileStack className="w-4 h-4 text-zinc-500" />
             )}
           </div>
-          <ArrowUpRight className="w-4 h-4 text-zinc-300 group-hover:text-zinc-500 transition-colors shrink-0 mt-0.5" />
+          <StatusBadge status={model.status} label={model.status_nm ?? model.status} />
         </div>
 
         {/* name */}
@@ -75,12 +95,20 @@ function TemplateCard({ model }: { model: any }) {
           {model.description || "No description provided."}
         </p>
 
-        {/* footer */}
-        <div className="flex items-center justify-between gap-2 pt-3 border-t border-zinc-100">
-          <span className="text-xs text-zinc-400 font-medium truncate">
-            {model.category_name || "—"}
-          </span>
-          <StatusBadge status={model.status} label={model.status_nm ?? model.status} />
+        {/* meta: category / creator / created date */}
+        <div className="mt-auto pt-3 border-t border-zinc-100 space-y-1.5">
+          <div className="flex items-center gap-2 text-xs text-zinc-500">
+            <Tag className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+            <span className="truncate">{model.category_name || "Uncategorized"}</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-zinc-500">
+            <UserIcon className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+            <span className="truncate">{getCreator(model)}</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-zinc-500">
+            <CalendarDays className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+            <span>{formatDate(model.create_date)}</span>
+          </div>
         </div>
       </div>
     </Link>
@@ -112,7 +140,18 @@ function TemplateRow({ model }: { model: any }) {
         </span>
         <p className="text-xs text-zinc-400 truncate mt-0.5">{model.description || "—"}</p>
       </div>
-      <span className="text-xs text-zinc-400 shrink-0 hidden md:block">{model.category_name}</span>
+      <span className="text-xs text-zinc-400 shrink-0 hidden lg:flex items-center gap-1 w-28 truncate">
+        <Tag className="w-3 h-3 shrink-0" />
+        <span className="truncate">{model.category_name || "—"}</span>
+      </span>
+      <span className="text-xs text-zinc-400 shrink-0 hidden lg:flex items-center gap-1 w-28 truncate">
+        <UserIcon className="w-3 h-3 shrink-0" />
+        <span className="truncate">{getCreator(model)}</span>
+      </span>
+      <span className="text-xs text-zinc-400 shrink-0 hidden md:flex items-center gap-1 w-24">
+        <CalendarDays className="w-3 h-3 shrink-0" />
+        {formatDate(model.create_date)}
+      </span>
       <StatusBadge status={model.status} label={model.status_nm ?? model.status} />
       <ArrowUpRight className="w-3.5 h-3.5 text-zinc-300 group-hover:text-zinc-500 shrink-0 transition-colors" />
     </Link>
@@ -159,8 +198,14 @@ export default function AASPage() {
   const totalCount: number = modelData?.totalCount ?? modelData?.total ?? rawModels.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
+  // 배포상태 필터: 일반 사용자는 published 만, admin(Manager)은 draft·published 모두 조회.
+  const isAdmin = user?.user_group_seq === UserRole.Manager;
+  const statusFiltered = isAdmin
+    ? rawModels
+    : rawModels.filter((m) => m.status === "published");
+
   // 이름 일치를 최우선으로, 그다음 설명/ID/카테고리 키워드 순으로 재정렬
-  const models = rankByQuery(rawModels, searchKey, {
+  const models = rankByQuery(statusFiltered, searchKey, {
     getName: (m) => m.aasmodel_name,
     getKeywords: (m) => [m.description, m.category_name],
   });
@@ -263,9 +308,14 @@ export default function AASPage() {
         <div className="flex-1 min-w-0">
           {/* toolbar */}
           <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-zinc-500 flex items-center gap-2">
               {searchKey && <span className="text-zinc-900 font-medium">&quot;{searchKey}&quot; · </span>}
-              {isLoading ? "Loading..." : `${models.length} of ${totalCount}`}
+              {isLoading ? "Loading..." : `${models.length} shown`}
+              {isAdmin && !isLoading && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                  draft 포함
+                </span>
+              )}
             </p>
             <div className="flex items-center gap-1 bg-white border border-zinc-200 rounded-lg p-0.5">
               <button
