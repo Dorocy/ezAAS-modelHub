@@ -13,6 +13,7 @@ import { addValuePaths, parsingAAS } from "@/utils/aas";
 import { environmentFromJson, submodelFromJson, validate } from "@/lib/aas";
 import type { JsonValue } from "@/lib/aas";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 import TemplateBlueprint from "@/components/feature/instance/TemplateBlueprint";
 import CategoryCombobox from "@/components/CategoryCombobox";
@@ -92,6 +93,7 @@ interface ModelCreateFormProps {
 export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const meta = META[modelType];
   const Icon = meta.icon;
   const routeKey = modelType.toUpperCase() as "AASMODEL" | "SUBMODEL";
@@ -540,7 +542,7 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
             className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-800 transition-colors mb-3"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            {meta.listLabel}
+            {t(meta.listLabel)}
           </Link>
 
           <div className="flex items-start justify-between gap-4">
@@ -549,10 +551,9 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
                 <Icon className="w-5 h-5 text-zinc-500" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-lg font-bold text-zinc-900">{meta.title}</h1>
+                <h1 className="text-lg font-bold text-zinc-900">{t(meta.title)}</h1>
                 <p className="text-sm text-zinc-500 mt-1 leading-relaxed max-w-2xl">
-                  Import a model file and fill in the details to register a new
-                  template.
+                  {t("Import a model file and fill in the details to register a new template.")}
                 </p>
               </div>
             </div>
@@ -570,12 +571,12 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
                 ) : (
                   <FileUp className="w-3.5 h-3.5 mr-1.5" />
                 )}
-                Import file
+                {t("Import file")}
               </Button>
               {metadata && (
                 <Button type="button" size="sm" variant="ghost" onClick={clearImport}>
                   <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-                  Reset
+                  {t("Reset")}
                 </Button>
               )}
             </div>
@@ -852,7 +853,7 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
             href={meta.listRoute}
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
           >
-            Cancel
+            {t("Cancel")}
           </Link>
           <Button
             type="button"
@@ -862,7 +863,7 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
             onClick={() => handleSubmit("temporary")}
           >
             <Save className="w-3.5 h-3.5 mr-1.5" />
-            Save as draft
+            {t("Save as draft")}
           </Button>
           <Button
             type="button"
@@ -877,7 +878,7 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
             ) : (
               <Upload className="w-3.5 h-3.5 mr-1.5" />
             )}
-            Register
+            {t("Register")}
           </Button>
         </div>
       </div>

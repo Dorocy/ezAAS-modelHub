@@ -35,6 +35,7 @@ import { showToast } from "@/utils/toast";
 import VerifyDetailView from "@/components/VerifyDetailView";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { UserRole } from "@/constants/roles";
 
 import {
@@ -236,6 +237,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
   };
 
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const [activeStep, setActiveStep] = useState(0);
   const [activeTab, setActiveTab] = useState("templateInfo");
@@ -728,7 +730,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
       router.push(ROUTES.INSTANCE.LIST);
     } catch (e) {
       console.error("instance upsert failed:", e);
-      showToast.error("저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      showToast.error("저장 중 오���가 발생했습니다. 잠시 후 다시 시도해주세요.");
     }
     finally { setLoading(false); }
   };
@@ -1255,7 +1257,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                 </DropdownMenuContent>
               </DropdownMenu>
               <Link href={ROUTES.INSTANCE.EDIT(instance?.instance_seq)}>
-                <Button><Pencil className="size-3.5 mr-1.5" />수정</Button>
+                <Button><Pencil className="size-3.5 mr-1.5" />{t("Edit")}</Button>
               </Link>
             </div>
           )}
@@ -1488,17 +1490,17 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-6 py-3.5 border-b shrink-0">
           <DialogTitle className="text-base font-semibold">
-            {modelType === "aasmodel" ? "AAS" : "Submodel"} Template 선택
+            {modelType === "aasmodel" ? t("Select AAS Template") : t("Select Submodel Template")}
           </DialogTitle>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               onClick={() => { setModalOpen(false); setModelSeq(""); setPreviewModel(null); }}
             >
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button disabled={!modelSeq} onClick={handleTemplateConfirm}>
-              선택 완료
+              {t("Confirm Selection")}
             </Button>
           </div>
         </div>
@@ -1715,23 +1717,23 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         <div className="mx-auto max-w-screen-2xl px-6 flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-lg font-bold text-foreground">
-              {mode === "create" ? "AAS 인스턴스 생성" : mode === "edit" ? "AAS 인스턴스 수정" : "AAS 인스턴스 상세"}
+              {mode === "create" ? t("Create AAS Instance") : mode === "edit" ? t("Edit AAS Instance") : t("AAS Instance Detail")}
             </h1>
             <nav className="text-xs text-muted-foreground flex gap-1">
-              <Link href="/" className="hover:text-foreground">홈</Link>
+              <Link href="/" className="hover:text-foreground">{t("Home")}</Link>
               <span>/</span>
-              <Link href="/instance" className="hover:text-foreground">인스턴스 목록</Link>
+              <Link href="/instance" className="hover:text-foreground">{t("Instance List")}</Link>
               <span>/</span>
-              <span>{mode === "create" ? "생성" : mode === "edit" ? "수정" : "상세"}</span>
+              <span>{mode === "create" ? t("Create") : mode === "edit" ? t("Edit") : t("Detail")}</span>
             </nav>
           </div>
           <div className="flex gap-2 items-center">
             <Link href="/instance">
-              <Button variant="outline"><List className="size-3.5 mr-1" />목록</Button>
+              <Button variant="outline"><List className="size-3.5 mr-1" />{t("List")}</Button>
             </Link>
             {mode === "create" && activeStep === 1 && (
               <Button onClick={() => { setModalOpen(true); setModelType("aasmodel"); }}>
-                <FilePlus className="size-3.5 mr-1" />AAS 템플릿 선택
+                <FilePlus className="size-3.5 mr-1" />{t("Select AAS Template")}
               </Button>
             )}
           </div>
@@ -1745,17 +1747,17 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             {/* foot buttons for view mode */}
             <div className="flex gap-2 mb-4">
               <Button variant="outline" onClick={() => { if (combinedAASTreeData) setCombinedModalOpen(true); }}>
-                통합 모델 보기
+                {t("View Combined Model")}
               </Button>
               {user?.user_seq === instance?.create_user_seq && (
                 <>
                   <Link href={ROUTES.INSTANCE.EDIT(instance?.instance_seq)}>
-                    <Button variant="outline"><Pencil className="size-3.5 mr-1.5" />수정</Button>
+                    <Button variant="outline"><Pencil className="size-3.5 mr-1.5" />{t("Edit")}</Button>
                   </Link>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline">
-                        <Download className="size-3.5 mr-1.5" />내보내기 <ChevronDown className="size-3 ml-1" />
+                        <Download className="size-3.5 mr-1.5" />{t("Export")} <ChevronDown className="size-3 ml-1" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
@@ -2119,7 +2121,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                     <div className="flex items-center gap-3 shrink-0">
                       {inputState.verification && verificationBadge(inputState.verification)}
                       <Button disabled={loading} onClick={verifyInstance}>
-                        <ShieldCheck className="size-4 mr-2" />검증 실행
+                        <ShieldCheck className="size-4 mr-2" />{t("Run Verification")}
                       </Button>
                     </div>
                   </div>
@@ -2194,23 +2196,23 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       </p>
                       <p className="text-xs text-zinc-400 mt-0.5">
                         {mode === "create"
-                          ? "저장하면 AAS 인스턴스가 생성되고 목록에 등록됩니다."
+                          ? "저장���면 AAS 인스턴스가 생성되고 목록에 등록됩니다."
                           : "저장하면 변경 사항이 즉시 반영됩니다."}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {mode === "edit" && (
                         <Button variant="destructive" disabled={loading} onClick={async () => {
-                          const isConfirm = await confirmSave("정말 삭제��시겠습니까?", { labels: { confirm: "삭제", cancel: "취소" }, confirmProps: { color: "red.8" } });
+                          const isConfirm = await confirmSave(t("Are you sure you want to delete?"), { labels: { confirm: t("Delete"), cancel: t("Cancel") }, confirmProps: { color: "red.8" } });
                           if (isConfirm) { await deleteModel({ modelType: "instance", modelSeq: instance?.instance_seq }); router.replace(ROUTES.INSTANCE.LIST); }
                         }}>
-                          <Trash2 className="size-3.5 mr-1" />삭제
+                          <Trash2 className="size-3.5 mr-1" />{t("Delete")}
                         </Button>
                       )}
                       {((mode === "create" && (user?.user_group_seq === UserRole.User || user?.user_group_seq === UserRole.Manager)) ||
                         (mode === "edit" && (user?.user_group_seq === UserRole.Manager || user?.user_seq === instance?.create_user_seq))) && (
                         <Button disabled={loading} onClick={() => handleSubmit()}>
-                          <Save className="size-3.5 mr-1" />{mode === "create" ? "저장하고 생성" : "저장"}
+                          <Save className="size-3.5 mr-1" />{mode === "create" ? t("Save and Create") : t("Save")}
                         </Button>
                       )}
                     </div>
@@ -2225,14 +2227,14 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                 {/* 왼쪽: 단계 표시 */}
                 <p className="text-xs text-zinc-400">
                   <span className="font-semibold text-zinc-700">{activeStep + 1} / {STEPS.length}</span>
-                  {" "}— {STEPS[activeStep]?.label}
+                  {" "}— {t(STEPS[activeStep]?.label)}
                 </p>
                 {/* 오��쪽: 버튼 */}
                 <div className="flex items-center gap-2">
                   <CancelButton />
                   {activeStep > 0 && (
                     <Button variant="outline" onClick={() => setActiveStep(activeStep - 1)}>
-                      이전
+                      {t("Previous")}
                     </Button>
                   )}
                   {activeStep < STEPS.length - 1 && (
@@ -2247,7 +2249,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                         setActiveStep(activeStep + 1);
                       }}
                     >
-                      다음 단계
+                      {t("Next Step")}
                     </Button>
                   )}
                 </div>

@@ -10,6 +10,7 @@ import {
   upsertPublishedModel,
 } from "@/api/index";
 import { ROUTES } from "@/constants/routes";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { confirmSave } from "@/utils/modal";
 import { showToast } from "@/utils/toast";
 import { StatusBadge } from "@/components/feature/shared/ResourceListShell";
@@ -134,6 +135,7 @@ export default function DistributeReviewForm({
   initialModel,
 }: DistributeReviewFormProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const isEdit = mode === "edit";
 
   const normalizedInitial = useMemo(
@@ -252,16 +254,15 @@ export default function DistributeReviewForm({
             className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors mb-2"
           >
             <ArrowLeft className="size-3.5" />
-            Publish List
+            {t("Publish List")}
           </Link>
           <div className="flex items-center justify-between gap-4">
             <div>
               <h1 className="text-xl font-bold text-foreground">
-                Publish {isEdit ? "Review · Edit" : "Review"}
+                {isEdit ? t("Publish Review · Edit") : t("Publish Review")}
               </h1>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                사용자가 등록한 AAS / Submodel 템플릿을 검토하고 성숙도를 부여하여
-                배포합니다.
+                {t("Review AAS / Submodel templates registered by users, assign maturity levels, and publish them.")}
               </p>
             </div>
           </div>
@@ -277,7 +278,7 @@ export default function DistributeReviewForm({
                 <div className="flex items-center gap-2">
                   <Inbox className="size-4 text-muted-foreground" />
                   <h2 className="text-sm font-semibold text-foreground">
-                    Pending Review
+                    {t("Pending Review")}
                   </h2>
                   <Badge variant="secondary" className="text-xs">
                     {drafts.length}
@@ -512,7 +513,7 @@ export default function DistributeReviewForm({
                     href={ROUTES.DISTRIBUTE.LIST}
                     className={buttonVariants({ variant: "outline", size: "sm" })}
                   >
-                    Cancel
+                    {t("Cancel")}
                   </Link>
                   <Button
                     size="sm"
@@ -522,12 +523,12 @@ export default function DistributeReviewForm({
                     {status === "published" ? (
                       <>
                         <CheckCircle2 data-icon="inline-start" />
-                        {isEdit ? "Save & Publish" : "Approve & Publish"}
+                        {isEdit ? t("Save & Publish") : t("Approve & Publish")}
                       </>
                     ) : (
                       <>
                         <Send data-icon="inline-start" />
-                        Update Status
+                        {t("Update Status")}
                       </>
                     )}
                   </Button>
