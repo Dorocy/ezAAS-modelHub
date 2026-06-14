@@ -52,27 +52,22 @@ export function buildCustomConceptSemanticId({
 }
 
 /** semanticId 의 출처 분류 결과 */
-export type ConceptSource = "ECLASS" | "IEC_CDD" | "IDTA" | "CUSTOM" | "OTHER";
+export type ConceptSource = "ECLASS" | "IEC_CDD" | "CUSTOM";
 
 /**
  * semanticId 문자열로부터 출처(사전)를 추론한다.
- *  - CUSTOM : `/ezAAS/cd/` 경로 (본 도구가 발급한 Custom Concept)
- *  - IDTA   : IDTA Submodel Template 은 `admin-shell.io` 도메인 IRI 사용
- *             (예: https://admin-shell.io/idta/nameplate/2/0/...)
+ * ECLASS / IEC CDD 표준 IRDI 가 아니면 모두 CUSTOM 으로 본다(미식별 분류 없음).
  *  - ECLASS : ECLASS IRDI 는 `0173` 으로 시작 (예: 0173-1#02-AAO677#002)
  *  - IEC_CDD: IEC CDD IRDI 는 `0112` 로 시작 (예: 0112/2///61360_4#AAA...)
- *  - OTHER  : 그 외(임의 IRI 등)
+ *  - CUSTOM : 그 외 전부 (/ezAAS/cd/, IDTA admin-shell.io, 임의 IRI 등)
  */
 export function classifyConceptSource(
   semanticId: string | null | undefined,
 ): ConceptSource {
   const id = (semanticId ?? "").trim();
-  if (!id) return "OTHER";
-  if (/\/ezAAS\/cd\//.test(id)) return "CUSTOM";
-  if (/admin-shell\.io/i.test(id)) return "IDTA";
   // 선행 공백/슬래시를 무시하고 ICD(국제 코드 지정자) prefix 확인
   const icd = id.replace(/^[\s/]+/, "").slice(0, 4);
   if (icd === "0173") return "ECLASS";
   if (icd === "0112") return "IEC_CDD";
-  return "OTHER";
+  return "CUSTOM";
 }

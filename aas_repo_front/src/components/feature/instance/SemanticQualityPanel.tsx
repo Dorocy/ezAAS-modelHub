@@ -3,10 +3,8 @@
 import React, { useMemo, useState } from "react";
 import {
   AlertCircle,
-  AlertTriangle,
   CheckCircle2,
   ChevronDown,
-  HelpCircle,
   PackageOpen,
   Sparkles,
   Trash2,
@@ -55,9 +53,7 @@ interface SemanticQualityPanelProps {
 const SOURCE_META: Array<{ key: ConceptSource; label: string; badge: string }> = [
   { key: "ECLASS", label: "ECLASS", badge: "border-sky-200 bg-sky-50 text-sky-700" },
   { key: "IEC_CDD", label: "IEC CDD", badge: "border-violet-200 bg-violet-50 text-violet-700" },
-  { key: "IDTA", label: "IDTA", badge: "border-teal-200 bg-teal-50 text-teal-700" },
   { key: "CUSTOM", label: "Custom", badge: "border-amber-200 bg-amber-50 text-amber-700" },
-  { key: "OTHER", label: "기타", badge: "border-zinc-200 bg-zinc-100 text-zinc-600" },
 ];
 
 export default function SemanticQualityPanel({
@@ -70,7 +66,6 @@ export default function SemanticQualityPanel({
   // 출처 그룹별 펼침 상태 (기본 접힘)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [showUnused, setShowUnused] = useState(false);
-  const [showMapping, setShowMapping] = useState(false);
 
   // 표시용 이름. SubmodelElementList(SML) 의 자식은 AAS 표준상 idShort 가 없어(위치 기반)
   // 비어 있을 수 있다. 이 경우 부모 경로 + 인덱스로 사람이 읽을 수 있는 이름을 만든다.
@@ -83,39 +78,32 @@ export default function SemanticQualityPanel({
     return idx ? `목록 항목 ${idx}` : "(이름 없음)";
   };
 
-  const { missing, completed, rate, sourceGroups, unusedConcepts, mappingCheck } =
-    useMemo(() => {
-      const missing = elements.filter((e) => !e.semanticIdValue);
-      const completed = elements.filter((e) => !!e.semanticIdValue);
-      const total = elements.length;
-      const rate = total === 0 ? 100 : Math.round((completed.length / total) * 100);
+  const { missing, completed, rate, sourceGroups, unusedConcepts } = useMemo(() => {
+    const missing = elements.filter((e) => !e.semanticIdValue);
+    const completed = elements.filter((e) => !!e.semanticIdValue);
+    const total = elements.length;
+    const rate = total === 0 ? 100 : Math.round((completed.length / total) * 100);
 
-      // 연결된 항목을 출처별로 분류
-      const sourceGroups: Record<ConceptSource, SemanticElementRow[]> = {
-        ECLASS: [],
-        IEC_CDD: [],
-        IDTA: [],
-        CUSTOM: [],
-        OTHER: [],
-      };
-      completed.forEach((row) => {
-        sourceGroups[classifyConceptSource(row.semanticIdValue)].push(row);
-      });
+    // 연결된 항목을 출처별로 분류 (ECLASS / IEC CDD / 그 외는 Custom)
+    const sourceGroups: Record<ConceptSource, SemanticElementRow[]> = {
+      ECLASS: [],
+      IEC_CDD: [],
+      CUSTOM: [],
+    };
+    completed.forEach((row) => {
+      sourceGroups[classifyConceptSource(row.semanticIdValue)].push(row);
+    });
 
-      // 미사용 개념: Concept Dictionary 에는 있으나 현재 어떤 element 의 semanticId 로도 쓰이지 않음
-      const usedIds = new Set(
-        completed.map((e) => (e.semanticIdValue ?? "").trim()).filter(Boolean),
-      );
-      const unusedConcepts = dictionaryConcepts.filter(
-        (c) => c.id && !usedIds.has(c.id.trim()),
-      );
+    // 미사용 개념: Concept Dictionary 에는 있으나 현재 어떤 element 의 semanticId 로도 쓰이지 않음
+    const usedIds = new Set(
+      completed.map((e) => (e.semanticIdValue ?? "").trim()).filter(Boolean),
+    );
+    const unusedConcepts = dictionaryConcepts.filter(
+      (c) => c.id && !usedIds.has(c.id.trim()),
+    );
 
-      // 매핑 확인 필요(기본 판별): semanticId 는 있으나 출처를 알 수 없는(OTHER) 항목.
-      // (정의/dataType/unit 정밀 검증은 추후 보강 — 지금은 출처 미상 기준)
-      const mappingCheck = sourceGroups.OTHER;
-
-      return { missing, completed, rate, sourceGroups, unusedConcepts, mappingCheck };
-    }, [elements, dictionaryConcepts]);
+    return { missing, completed, rate, sourceGroups, unusedConcepts };
+  }, [elements, dictionaryConcepts]);
 
   const rateTone =
     rate >= 80 ? "text-emerald-600" : rate >= 50 ? "text-amber-600" : "text-red-500";
@@ -374,68 +362,6 @@ export default function SemanticQualityPanel({
                     >
                       <Trash2 className="size-3.5" />
                       삭제
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ))}
-      </section>
-
-      {/* ── 섹션 4: 매핑 확인 필요 (semanticId 는 있으나 출처/정의 불명) ── */}
-      <section className="mt-6 pb-2">
-        <button
-          type="button"
-          onClick={() => setShowMapping((v) => !v)}
-          className="flex w-full items-center gap-2 text-left"
-        >
-          <HelpCircle className="size-4 text-orange-400" />
-          <h4 className="text-sm font-semibold text-zinc-700">매핑 확인 필요</h4>
-          <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700">
-            {mappingCheck.length}
-          </span>
-          <ChevronDown
-            className={cn(
-              "ml-auto size-4 text-zinc-400 transition-transform",
-              showMapping && "rotate-180",
-            )}
-          />
-        </button>
-        <p className="mt-1 text-xs text-zinc-400">
-          semanticId 는 연결되어 있으나 출처(사전)를 식별할 수 없는 항목입니다. 잘못 연결되었거나
-          비표준 개념일 수 있어 확인이 필요합니다.
-        </p>
-
-        {showMapping &&
-          (mappingCheck.length === 0 ? (
-            <div className="mt-2 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-700">
-              <CheckCircle2 className="size-4" />
-              확인이 필요한 매핑이 없습니다.
-            </div>
-          ) : (
-            <ul className="mt-2 space-y-1.5">
-              {mappingCheck.map((row) => (
-                <li
-                  key={row.valuePath}
-                  className="flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50/40 px-3 py-2"
-                >
-                  <AlertTriangle className="size-3.5 shrink-0 text-orange-400" />
-                  <div className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-zinc-800">
-                      {displayName(row)}
-                    </span>
-                    <span className="mt-0.5 block truncate font-mono text-[11px] text-zinc-400">
-                      {row.semanticIdValue}
-                    </span>
-                  </div>
-                  {editMode && (
-                    <button
-                      type="button"
-                      onClick={() => onRequestLink(row)}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100"
-                    >
-                      <Sparkles className="size-3.5" />
-                      다시 연결
                     </button>
                   )}
                 </li>
