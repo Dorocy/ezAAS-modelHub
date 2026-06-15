@@ -1369,7 +1369,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             <CardContent className="p-0">
               {Array.isArray(combinedAASTreeData) && (
                 <div className="px-4 py-4">
-                  <TemplateBlueprint treeData={combinedAASTreeData} showValues />
+                  <TemplateBlueprint treeData={combinedAASTreeData} showValues showProgress />
                 </div>
               )}
             </CardContent>
@@ -1379,7 +1379,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
               <CardHeader><CardTitle>Concept Descriptions</CardTitle></CardHeader>
               <CardContent className="p-0">
                 <div className="px-4 py-4">
-                  <TemplateBlueprint treeData={combinedAASConceptDescriptionTreeData} showValues />
+                  <TemplateBlueprint treeData={combinedAASConceptDescriptionTreeData} showValues showProgress />
                 </div>
               </CardContent>
             </Card>
@@ -2183,7 +2183,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       <ShieldCheck className="size-5 text-zinc-400 shrink-0 mt-0.5" />
                       <div>
                         <p className="text-sm font-semibold text-zinc-600">검증을 실행하지 않았습니다.</p>
-                        <p className="text-xs text-zinc-400 mt-0.5">검증 없이도 저장할 수 있습니다. 3단계로 돌아가 검증을 먼저 실행하는 것을 권장합니다.</p>
+                        <p className="text-xs text-zinc-400 mt-0.5">검증 없이도 저장할 수 있습니다. 3��계로 돌아가 검증을 먼저 실행하는 것을 권장합니다.</p>
                       </div>
                     </div>
                   )}

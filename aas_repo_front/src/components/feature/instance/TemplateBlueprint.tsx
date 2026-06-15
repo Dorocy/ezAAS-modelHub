@@ -415,10 +415,12 @@ function SubmodelSection({
   node,
   index,
   showValues,
+  showProgress,
 }: {
   node: any;
   index: number;
   showValues: boolean;
+  showProgress: boolean;
 }) {
   const [open, setOpen] = useState(true);
   const children: any[] = Array.isArray(node.children) ? node.children : [];
@@ -437,7 +439,7 @@ function SubmodelSection({
   };
 
   const total = children.reduce((s, c) => s + countLeaves(c), 0);
-  const filled = showValues ? children.reduce((s, c) => s + countFilled(c), 0) : 0;
+  const filled = showProgress ? children.reduce((s, c) => s + countFilled(c), 0) : 0;
   const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
 
   return (
@@ -467,7 +469,7 @@ function SubmodelSection({
 
         {/* stats */}
         <div className="flex items-center gap-2 shrink-0">
-          {showValues ? (
+          {showProgress ? (
             <span
               className={cn(
                 "text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums border",
@@ -513,11 +515,15 @@ function SubmodelSection({
 interface TemplateBlueprintProps {
   treeData: any[];
   showValues?: boolean;
+  /* 값 입력 완료도(filled/total) 뱃지를 표시할지 여부.
+     템플릿은 값이 있을 수도 없을 수도 있어 완료도가 의미 없으므로 기본 false.
+     My AAS Instance 처럼 "모든 값이 입력됐는지"가 중요한 화면에서만 true 로 켠다. */
+  showProgress?: boolean;
   /* 외부에서 전체 접기/펼치기를 트리거할 때 증가시키는 신호값(옵션). */
   collapseSignal?: number;
   }
 
-export default function TemplateBlueprint({ treeData, showValues = false }: TemplateBlueprintProps) {
+export default function TemplateBlueprint({ treeData, showValues = false, showProgress = false }: TemplateBlueprintProps) {
   if (!Array.isArray(treeData) || treeData.length === 0) {
     return (
       <p className="text-xs text-zinc-400 px-4 py-6 text-center">구조 데이터가 없습니다.</p>
@@ -545,7 +551,7 @@ export default function TemplateBlueprint({ treeData, showValues = false }: Temp
     }, 0);
 
   const totalFields = countAll(submodels);
-  const filledFields = showValues ? countFilled(submodels) : 0;
+  const filledFields = showProgress ? countFilled(submodels) : 0;
   const fillPct = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
 
   return (
@@ -574,7 +580,7 @@ export default function TemplateBlueprint({ treeData, showValues = false }: Temp
               <span className="font-semibold text-zinc-700">{submodels.length}</span> submodels
             </span>
             <span className="text-zinc-300">|</span>
-            {showValues ? (
+            {showProgress ? (
               <span className="flex items-center gap-1.5">
                 <span
                   className={cn(
@@ -608,6 +614,7 @@ export default function TemplateBlueprint({ treeData, showValues = false }: Temp
   node={sm}
   index={i}
   showValues={showValues}
+  showProgress={showProgress}
   />
   ))
       )}
