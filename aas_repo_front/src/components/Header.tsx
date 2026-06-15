@@ -24,11 +24,12 @@ import {
 } from "@/components/ui/sheet";
 import {
   Server,
-  ArrowLeftRight,
+  Maximize2,
   Minimize2,
   Globe,
   Menu,
   LogOut,
+  LogIn,
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -189,33 +190,50 @@ function Header() {
           </div>
 
           {/* Right: actions + user */}
-          <div className="flex items-center gap-0.5">
-            {isAuthenticated && (
-              <Button variant="ghost" size="icon" className="size-8" onClick={handlePortalClick} title="Portal">
-                <Server className="size-4" />
-              </Button>
-            )}
-
-            <Button variant="ghost" size="icon" className="size-8" onClick={toggleWidthMode} title="Toggle layout width">
-              {widthMode === "Normal"
-                ? <ArrowLeftRight className="size-4" />
-                : <Minimize2 className="size-4" />}
-            </Button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger render={
-                <Button variant="ghost" size="icon" className="size-8" title="Language">
-                  <Globe className="size-4" />
+          <div className="flex items-center gap-1.5">
+            {/* Utility icon cluster */}
+            <div className="flex items-center gap-0.5 rounded-lg bg-muted/60 p-0.5">
+              {isAuthenticated && (
+                <Button variant="ghost" size="icon" className="size-7 rounded-md text-muted-foreground hover:text-foreground" onClick={handlePortalClick} title={t("Portal")}>
+                  <Server className="size-4" />
                 </Button>
-              } />
-              <DropdownMenuContent align="end" className="min-w-[130px]">
-                <DropdownMenuItem onClick={() => changeLanguage("en")}>English</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => changeLanguage("ko")}>한국어</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              )}
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 rounded-md text-muted-foreground hover:text-foreground"
+                onClick={toggleWidthMode}
+                title={widthMode === "Normal" ? t("Expand to full width") : t("Back to default width")}
+                aria-pressed={widthMode === "Wide"}
+              >
+                {widthMode === "Normal"
+                  ? <Maximize2 className="size-4" />
+                  : <Minimize2 className="size-4" />}
+              </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger render={
+                  <Button variant="ghost" size="icon" className="size-7 rounded-md text-muted-foreground hover:text-foreground" title={t("Language")}>
+                    <Globe className="size-4" />
+                  </Button>
+                } />
+                <DropdownMenuContent align="end" className="min-w-[130px]">
+                  <DropdownMenuItem onClick={() => changeLanguage("en")}>English</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => changeLanguage("ko")}>한국어</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
             {!isAuthenticated ? (
-              <Link href={ROUTES.LOGIN} className={cn(buttonVariants({ size: "sm" }), "ml-2 h-8 text-xs")}>
+              <Link
+                href={ROUTES.LOGIN}
+                className={cn(
+                  buttonVariants({ size: "sm" }),
+                  "ml-1 h-9 gap-1.5 rounded-lg px-4 font-medium shadow-sm shadow-primary/20 transition-all hover:shadow-md hover:shadow-primary/30"
+                )}
+              >
+                <LogIn className="size-4" />
                 {t("Login")}
               </Link>
             ) : (

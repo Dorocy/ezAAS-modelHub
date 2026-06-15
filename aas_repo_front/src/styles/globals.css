@@ -96,6 +96,14 @@
     line-height: 1.5;
   }
 
+  /* ── Layout width toggle ──────────────────────────────────────
+     Header has a button that toggles `body.layout-wide`. In wide
+     mode, every centered `max-w-screen-2xl` container expands to
+     the full viewport width. */
+  body.layout-wide .max-w-screen-2xl {
+    max-width: 100%;
+  }
+
   /* Smooth focus rings */
   :focus-visible {
     outline: 2px solid hsl(var(--ring));

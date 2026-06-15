@@ -237,5 +237,9 @@
   "Approve & Publish": "승인 및 배포",
   "Update Status": "상태 변경",
   "Cancel": "취소",
-  "Publish List": "배포 목록"
+  "Publish List": "배포 목록",
+  "Portal": "포털",
+  "Expand to full width": "전체 폭으로 넓히기",
+  "Back to default width": "기본 폭으로 되돌리기",
+  "Language": "언어"
 }

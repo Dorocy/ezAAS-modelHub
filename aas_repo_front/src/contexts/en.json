@@ -237,5 +237,9 @@
   "Approve & Publish": "Approve & Publish",
   "Update Status": "Update Status",
   "Cancel": "Cancel",
-  "Publish List": "Publish List"
+  "Publish List": "Publish List",
+  "Portal": "Portal",
+  "Expand to full width": "Expand to full width",
+  "Back to default width": "Back to default width",
+  "Language": "Language"
 }

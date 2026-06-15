@@ -20,7 +20,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import SendResetLinkForm from "@/components/feature/login/SendResetLinkForm";
-import { LayoutTemplate } from "lucide-react";
 
 interface LoginContentProps {
   redirectUrl: string;
@@ -45,14 +44,18 @@ export default function LoginContent({ redirectUrl }: LoginContentProps) {
       <div className="flex flex-1 items-center justify-center px-4 py-12">
         <div className="w-full max-w-[400px]">
           {/* Logo */}
-          <div className="mb-8 flex flex-col items-center gap-3">
-            <Link href={ROUTES.HOME} className="flex items-center gap-2.5">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-primary">
-                <LayoutTemplate className="size-5 text-white" />
-              </div>
-              <span className="text-base font-semibold text-foreground tracking-tight">
-                ezAAS Model Hub
-              </span>
+          <div className="mb-8 flex flex-col items-center gap-5">
+            <Link href={ROUTES.HOME} className="flex flex-col items-center gap-3">
+              <img
+                src="/assets/media/logos/ezaas_badge.png"
+                alt="ezAAS"
+                className="h-9 w-auto"
+              />
+              <img
+                src="/assets/media/logos/keti_logo.png"
+                alt="KETI — Korea Electronics Technology Institute"
+                className="h-4 w-auto opacity-60"
+              />
             </Link>
             <div className="text-center">
               <h1 className="text-2xl font-semibold tracking-tight text-foreground">
