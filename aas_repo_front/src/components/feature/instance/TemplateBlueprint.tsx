@@ -3,13 +3,14 @@
 
 import React, { useState } from "react";
 import { cn } from "@/lib/utils";
-import { ChevronRight, Layers, Box, List, Tag, FileText, Link2, ToggleLeft, Hash, Info, Ruler } from "lucide-react";
+import { ChevronRight, Layers, Box, List, Tag, FileText, Link2, ToggleLeft, Hash, Info, Ruler, BookOpen } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 /* ─────────────────────────────────────────────
    Type icons & labels  (no per-type colors —
@@ -87,25 +88,47 @@ function getDataSpec(cd: any) {
   return specs[0]?.dataSpecificationContent ?? null;
 }
 
-/* 노드에서 사람이 읽을 수 있는 개념 정보를 모은다. */
+/* 노드에서 사람이 읽을 수 있는 개념 정보를 모은다.
+   우선순위: ConceptDescription(IEC61360) → 엘리먼트 자체 description → semanticId.
+   AAS 를 모르는 사용자가 "이 항목이 무슨 의미이고 무엇을 입력해야 하는지"를
+   이해할 수 있도록 의미/단위/허용 값 등을 최대한 끌어모은다. */
 function getConceptInfo(node: any) {
   const semanticId = getSemanticIdValue(node);
   const cd = node?.ConceptDescription;
   const ds = getDataSpec(cd);
 
   const preferredName = mlText(ds?.preferredName);
-  const definition = mlText(ds?.definition) || mlText(cd?.description);
+  const shortName = mlText(ds?.shortName);
+  // 정의: CD 정의 → CD 설명 → 엘리먼트 자체 설명 순으로 폴백
+  const definition =
+    mlText(ds?.definition) ||
+    mlText(cd?.description) ||
+    mlText(node?.description) ||
+    mlText(node?.Submodel?.description);
   const unit = ds?.unit ?? "";
-  const dataType = ds?.dataType ?? "";
+  const unitId = ds?.unitId?.keys?.[0]?.value ?? "";
+  const dataType = ds?.dataType ?? node?.valueType ?? "";
+  // 허용 값 목록 (enum 형태 속성)
+  const valueList: string[] = Array.isArray(ds?.valueList?.valueReferencePairs)
+    ? ds.valueList.valueReferencePairs
+        .map((vp: any) => vp?.value ?? vp?.valueId?.keys?.[0]?.value ?? "")
+        .filter(Boolean)
+    : [];
 
   return {
     semanticId,
-    // 사용자에게 보여줄 사람이 읽을 수 있는 이름 (없으면 빈 값)
     preferredName,
+    shortName,
     definition,
     unit,
+    unitId,
     dataType,
-    hasInfo: Boolean(semanticId || preferredName || definition || unit),
+    valueList,
+    // 인라인으로 보여줄 만한 "의미" 정보가 있는지
+    hasMeaning: Boolean(preferredName || definition || unit || valueList.length),
+    hasInfo: Boolean(
+      semanticId || preferredName || definition || unit || valueList.length,
+    ),
   };
 }
 
@@ -131,7 +154,12 @@ function ConceptHint({ node }: { node: any }) {
         />
         <TooltipContent side="top" className="max-w-sm flex-col items-start gap-2 py-2.5 px-3 text-left">
           {info.preferredName && (
-            <div className="font-semibold text-[13px] leading-snug">{info.preferredName}</div>
+            <div className="font-semibold text-[13px] leading-snug">
+              {info.preferredName}
+              {info.shortName && info.shortName !== info.preferredName && (
+                <span className="ml-1.5 font-normal opacity-60">({info.shortName})</span>
+              )}
+            </div>
           )}
           {info.definition && (
             <div className="text-xs leading-relaxed opacity-90">{info.definition}</div>
@@ -149,6 +177,21 @@ function ConceptHint({ node }: { node: any }) {
               </span>
             )}
           </div>
+          {info.valueList.length > 0 && (
+            <div className="flex flex-col gap-1 pt-0.5 w-full">
+              <span className="text-xs font-semibold opacity-70">Allowed values</span>
+              <div className="flex flex-wrap gap-1">
+                {info.valueList.slice(0, 8).map((v, i) => (
+                  <span key={i} className="text-xs font-mono bg-background/15 px-1.5 py-0.5 rounded">
+                    {v}
+                  </span>
+                ))}
+                {info.valueList.length > 8 && (
+                  <span className="text-xs opacity-60">+{info.valueList.length - 8}</span>
+                )}
+              </div>
+            </div>
+          )}
           {info.semanticId && (
             <div className="text-xs font-mono opacity-70 break-all border-t border-background/20 pt-1.5 mt-0.5 w-full">
               {info.semanticId}
@@ -166,10 +209,12 @@ function ConceptHint({ node }: { node: any }) {
 function PropertyRow({
   node,
   showValues,
+  showConcepts,
   isLast,
 }: {
   node: any;
   showValues: boolean;
+  showConcepts: boolean;
   isLast: boolean;
 }) {
   const meta = getMeta(node.modelType);
@@ -178,39 +223,73 @@ function PropertyRow({
   const value = showValues ? extractValue(node) : null;
   const hasValue = Boolean(value);
   const concept = getConceptInfo(node);
+  // 개념 이름이 idShort 와 다르면 보조 라벨로 노출
+  const altName =
+    concept.preferredName && concept.preferredName !== node.idShort
+      ? concept.preferredName
+      : "";
+  const showMeaning = showConcepts && concept.hasMeaning;
 
   return (
     <div
       className={cn(
-        "grid items-center gap-3 px-4 py-2 text-sm",
-        "grid-cols-[1fr_auto_minmax(160px,_40%)]",
+        "grid gap-3 px-4 py-2 text-sm",
+        showMeaning ? "items-start" : "items-center",
+        "grid-cols-[1fr_auto_minmax(140px,_36%)]",
         !isLast && "border-b border-zinc-100",
         showValues && hasValue && "hover:bg-zinc-50",
         !showValues && "hover:bg-zinc-50/60",
       )}
     >
-      {/* col 1: name + icon (+ 개념 이름) */}
-      <div className="flex items-center gap-2 min-w-0">
-        <Icon className="size-3.5 text-zinc-400 shrink-0" />
-        <div className="min-w-0 flex flex-col">
-          <span className="text-zinc-700 font-medium truncate leading-tight" title={node.idShort}>
-            {node.idShort}
-          </span>
-          {concept.preferredName && concept.preferredName !== node.idShort && (
-            <span
-              className="text-xs text-zinc-400 truncate leading-tight"
-              title={concept.preferredName}
-            >
-              {concept.preferredName}
+      {/* col 1: name + icon (+ 개념 이름/정의/단위) */}
+      <div className="flex items-start gap-2 min-w-0">
+        <Icon className="size-3.5 text-zinc-400 shrink-0 mt-0.5" />
+        <div className="min-w-0 flex flex-col gap-0.5">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-zinc-700 font-medium truncate leading-tight" title={node.idShort}>
+              {node.idShort}
+            </span>
+            {concept.unit && (
+              <span
+                className="shrink-0 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.5 rounded leading-none"
+                title={`단위: ${concept.unit}`}
+              >
+                {concept.unit}
+              </span>
+            )}
+            {typeLabel && (
+              <span className="text-xs font-mono text-zinc-400 shrink-0 hidden sm:block">
+                {typeLabel}
+              </span>
+            )}
+            <ConceptHint node={node} />
+          </div>
+          {altName && (
+            <span className="text-xs text-zinc-500 leading-tight truncate" title={altName}>
+              {altName}
+            </span>
+          )}
+          {showMeaning && concept.definition && (
+            <span className="text-xs text-zinc-400 leading-relaxed line-clamp-2">
+              {concept.definition}
+            </span>
+          )}
+          {showMeaning && concept.valueList.length > 0 && (
+            <span className="flex flex-wrap items-center gap-1 pt-0.5">
+              {concept.valueList.slice(0, 6).map((v, i) => (
+                <span
+                  key={i}
+                  className="text-xs font-mono text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded leading-none"
+                >
+                  {v}
+                </span>
+              ))}
+              {concept.valueList.length > 6 && (
+                <span className="text-xs text-zinc-400">+{concept.valueList.length - 6}</span>
+              )}
             </span>
           )}
         </div>
-        {typeLabel && (
-          <span className="text-xs font-mono text-zinc-400 shrink-0 hidden sm:block">
-            {typeLabel}
-          </span>
-        )}
-        <ConceptHint node={node} />
       </div>
 
       {/* col 2: type label chip */}
@@ -246,10 +325,12 @@ function GroupBlock({
   node,
   depth,
   showValues,
+  showConcepts,
 }: {
   node: any;
   depth: number;
   showValues: boolean;
+  showConcepts: boolean;
 }) {
   const [open, setOpen] = useState(true);
   const meta = getMeta(node.modelType);
@@ -286,7 +367,7 @@ function GroupBlock({
       {/* children */}
       {open && children.length > 0 && (
         <div className="mt-0.5">
-          <NodeList nodes={children} depth={depth + 1} showValues={showValues} />
+          <NodeList nodes={children} depth={depth + 1} showValues={showValues} showConcepts={showConcepts} />
         </div>
       )}
     </div>
@@ -300,10 +381,12 @@ function NodeList({
   nodes,
   depth,
   showValues,
+  showConcepts,
 }: {
   nodes: any[];
   depth: number;
   showValues: boolean;
+  showConcepts: boolean;
 }) {
   if (!nodes.length) return null;
 
@@ -337,6 +420,7 @@ function NodeList({
               key={leaf.value ?? leaf.idShort ?? i}
               node={leaf}
               showValues={showValues}
+              showConcepts={showConcepts}
               isLast={i === leaves.length - 1}
             />
           ))}
@@ -350,6 +434,7 @@ function NodeList({
           node={g}
           depth={depth}
           showValues={showValues}
+          showConcepts={showConcepts}
         />
       ))}
     </div>
@@ -363,10 +448,12 @@ function SubmodelSection({
   node,
   index,
   showValues,
+  showConcepts,
 }: {
   node: any;
   index: number;
   showValues: boolean;
+  showConcepts: boolean;
 }) {
   const [open, setOpen] = useState(true);
   const children: any[] = Array.isArray(node.children) ? node.children : [];
@@ -445,7 +532,7 @@ function SubmodelSection({
       {open && (
         <div className="px-3 py-3">
           {children.length > 0 ? (
-            <NodeList nodes={children} depth={0} showValues={showValues} />
+            <NodeList nodes={children} depth={0} showValues={showValues} showConcepts={showConcepts} />
           ) : (
             <p className="text-xs text-zinc-400 px-2 py-4 text-center italic">No elements defined.</p>
           )}
@@ -461,9 +548,16 @@ function SubmodelSection({
 interface TemplateBlueprintProps {
   treeData: any[];
   showValues?: boolean;
-}
+  /* 각 엘리먼트에 개념 설명(의미/단위/허용 값)을 인라인으로 보여줄지 여부.
+     기본값 true — 템플릿 상세에서 AAS 비전문가도 항목 의미를 알 수 있게 한다. */
+  defaultShowConcepts?: boolean;
+  /* 외부에서 전체 접기/펼치기를 트리거할 때 증가시키는 신호값(옵션). */
+  collapseSignal?: number;
+  }
 
-export default function TemplateBlueprint({ treeData, showValues = false }: TemplateBlueprintProps) {
+export default function TemplateBlueprint({ treeData, showValues = false, defaultShowConcepts = true }: TemplateBlueprintProps) {
+  const { t } = useLanguage();
+  const [showConcepts, setShowConcepts] = useState(defaultShowConcepts);
   if (!Array.isArray(treeData) || treeData.length === 0) {
     return (
       <p className="text-xs text-zinc-400 px-4 py-6 text-center">구조 데이터가 없습니다.</p>
@@ -495,9 +589,27 @@ export default function TemplateBlueprint({ treeData, showValues = false }: Temp
   const fillPct = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
 
   return (
-    <div className="space-y-3">
-      {/* AAS summary bar */}
-      {isAASRoot && (
+  <div className="space-y-3">
+  {/* Concept description toggle — AAS 비전문가를 위해 각 항목의 의미/단위를 표시 */}
+  <div className="flex items-center justify-end">
+  <button
+  type="button"
+  onClick={() => setShowConcepts((v) => !v)}
+  aria-pressed={showConcepts}
+  className={cn(
+  "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
+  showConcepts
+  ? "border-primary/30 bg-primary/10 text-primary"
+  : "border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50",
+  )}
+  title={t("Show the meaning, unit, and allowed values for each element")}
+  >
+  <BookOpen className="size-3.5" />
+  {showConcepts ? t("Hide descriptions") : t("Show descriptions")}
+  </button>
+  </div>
+  {/* AAS summary bar */}
+  {isAASRoot && (
         <div className="flex items-center justify-between bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-2.5">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-6 h-6 rounded bg-primary flex items-center justify-center shrink-0">
@@ -549,13 +661,14 @@ export default function TemplateBlueprint({ treeData, showValues = false }: Temp
         <p className="text-xs text-zinc-400 text-center py-8">Submodel이 없습니다.</p>
       ) : (
         submodels.map((sm, i) => (
-          <SubmodelSection
-            key={sm.value ?? sm.idShort ?? i}
-            node={sm}
-            index={i}
-            showValues={showValues}
-          />
-        ))
+  <SubmodelSection
+  key={sm.value ?? sm.idShort ?? i}
+  node={sm}
+  index={i}
+  showValues={showValues}
+  showConcepts={showConcepts}
+  />
+  ))
       )}
     </div>
   );

@@ -241,5 +241,8 @@
   "Portal": "포털",
   "Expand to full width": "전체 폭으로 넓히기",
   "Back to default width": "기본 폭으로 되돌리기",
-  "Language": "언어"
+  "Language": "언어",
+  "Show descriptions": "개념 설명 보기",
+  "Hide descriptions": "개념 설명 숨기기",
+  "Show the meaning, unit, and allowed values for each element": "각 항목의 의미·단위·허용 값을 표시합니다"
 }

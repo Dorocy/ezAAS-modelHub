@@ -241,5 +241,8 @@
   "Portal": "Portal",
   "Expand to full width": "Expand to full width",
   "Back to default width": "Back to default width",
-  "Language": "Language"
+  "Language": "Language",
+  "Show descriptions": "Show descriptions",
+  "Hide descriptions": "Hide descriptions",
+  "Show the meaning, unit, and allowed values for each element": "Show the meaning, unit, and allowed values for each element"
 }
