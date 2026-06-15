@@ -58,6 +58,40 @@ function extractValue(node: any): string | null {
   return null;
 }
 
+/* ── Template Cardinality (SMT qualifier) ──────────────────
+   IDTA SMT 템플릿은 Qualifier(type:"Cardinality")로 항목의 필수 여부를 정의한다.
+   value "One" / "OneToMany" → 최소 1개 입력 필요(required).
+   "ZeroToOne" / "ZeroToMany" → 선택(optional). */
+function getCardinality(node: any): string | null {
+  const quals = node?.Submodel?.qualifiers ?? node?.qualifiers;
+  if (!Array.isArray(quals)) return null;
+  for (const q of quals) {
+    const isCardinalityQ =
+      q?.type === "Cardinality" ||
+      String(q?.semanticId?.keys?.[0]?.value ?? "").includes("/Cardinality/");
+    if (isCardinalityQ && q?.value) return String(q.value);
+  }
+  return null;
+}
+
+/* Template Cardinality = "One"(또는 OneToMany)이면 필수 항목으로 간주. */
+function isRequiredNode(node: any): boolean {
+  const c = getCardinality(node);
+  return c === "One" || c === "OneToMany";
+}
+
+/* 노드(및 하위)에서 값이 비어 있는 필수 leaf 개수를 센다. */
+function countMissingRequired(node: any): number {
+  if (!node) return 0;
+  if (Array.isArray(node.children) && node.children.length) {
+    return node.children.reduce((s: number, c: any) => s + countMissingRequired(c), 0);
+  }
+  if (!isRequiredNode(node)) return 0;
+  const v = node.originalValue;
+  const hasValue = v !== undefined && v !== null && v !== "";
+  return hasValue ? 0 : 1;
+}
+
 /* ─────────────────────────────────────────────
    Semantic / ConceptDescription helpers
    - semanticId 와 (있다면) ConceptDescription 에서
@@ -208,10 +242,12 @@ function ConceptHint({ node }: { node: any }) {
 function PropertyRow({
   node,
   showValues,
+  validate,
   isLast,
 }: {
   node: any;
   showValues: boolean;
+  validate: boolean;
   isLast: boolean;
 }) {
   const meta = getMeta(node.modelType);
@@ -226,22 +262,38 @@ function PropertyRow({
       ? concept.preferredName
       : "";
 
+  // 필수(Template Cardinality = One) 인데 값이 비어 있으면 검증 실패로 강조한다.
+  const required = isRequiredNode(node);
+  const missingRequired = validate && required && !hasValue;
+
   return (
     <div
       className={cn(
         "grid items-center gap-3 px-4 py-2 text-sm",
         "grid-cols-[1fr_auto_minmax(140px,_36%)]",
         !isLast && "border-b border-zinc-100",
-        showValues && hasValue && "hover:bg-zinc-50",
-        !showValues && "hover:bg-zinc-50/60",
+        missingRequired
+          ? "bg-red-50 border-l-2 border-l-red-500 hover:bg-red-50"
+          : showValues && hasValue
+            ? "hover:bg-zinc-50"
+            : !showValues && "hover:bg-zinc-50/60",
       )}
     >
       {/* col 1: name + icon (+ 단위 칩, 의미 설명은 툴팁으로) */}
       <div className="flex items-center gap-2 min-w-0">
-        <Icon className="size-3.5 text-zinc-400 shrink-0" />
+        <Icon className={cn("size-3.5 shrink-0", missingRequired ? "text-red-500" : "text-zinc-400")} />
         <div className="min-w-0 flex flex-col">
-          <span className="text-zinc-700 font-medium truncate leading-tight" title={node.idShort}>
+          <span
+            className={cn(
+              "font-medium truncate leading-tight",
+              missingRequired ? "text-red-700" : "text-zinc-700",
+            )}
+            title={node.idShort}
+          >
             {node.idShort}
+            {validate && required && (
+              <span className="ml-0.5 text-red-500" title="필수 항목 (Cardinality: One)">*</span>
+            )}
           </span>
           {altName && (
             <span className="text-xs text-zinc-400 truncate leading-tight" title={altName}>
@@ -280,6 +332,10 @@ function PropertyRow({
             >
               {value}
             </span>
+          ) : missingRequired ? (
+            <span className="text-xs font-semibold text-red-600 bg-red-100 px-2 py-0.5 rounded inline-block">
+              값 입력 필요
+            </span>
           ) : (
             <span className="text-xs text-zinc-300 italic">—</span>
           )
@@ -298,15 +354,19 @@ function GroupBlock({
   node,
   depth,
   showValues,
+  validate,
 }: {
   node: any;
   depth: number;
   showValues: boolean;
+  validate: boolean;
 }) {
   const [open, setOpen] = useState(true);
   const meta = getMeta(node.modelType);
   const Icon = meta.icon;
   const children: any[] = Array.isArray(node.children) ? node.children : [];
+  // 하위에 값이 비어 있는 필수 항목이 몇 개인지 (접혀 있어도 보이도록 헤더에 표시)
+  const missingCount = validate ? countMissingRequired(node) : 0;
 
   return (
     <div className={cn("mt-1", depth > 0 && "ml-4 border-l border-zinc-100 pl-3")}>
@@ -327,6 +387,14 @@ function GroupBlock({
           {node.idShort}
         </span>
         <ConceptHint node={node} />
+        {missingCount > 0 && (
+          <span
+            className="text-xs font-semibold text-red-600 bg-red-100 border border-red-200 px-1.5 py-0.5 rounded shrink-0 tabular-nums"
+            title={`값이 비어 있는 필수 항목 ${missingCount}개`}
+          >
+            {missingCount} 필수 누락
+          </span>
+        )}
         <span className="text-xs font-medium text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded shrink-0">
           {meta.label}
         </span>
@@ -338,7 +406,7 @@ function GroupBlock({
       {/* children */}
       {open && children.length > 0 && (
         <div className="mt-0.5">
-          <NodeList nodes={children} depth={depth + 1} showValues={showValues} />
+          <NodeList nodes={children} depth={depth + 1} showValues={showValues} validate={validate} />
         </div>
       )}
     </div>
@@ -352,10 +420,12 @@ function NodeList({
   nodes,
   depth,
   showValues,
+  validate,
 }: {
   nodes: any[];
   depth: number;
   showValues: boolean;
+  validate: boolean;
 }) {
   if (!nodes.length) return null;
 
@@ -389,6 +459,7 @@ function NodeList({
               key={leaf.value ?? leaf.idShort ?? i}
               node={leaf}
               showValues={showValues}
+              validate={validate}
               isLast={i === leaves.length - 1}
             />
           ))}
@@ -402,6 +473,7 @@ function NodeList({
           node={g}
           depth={depth}
           showValues={showValues}
+          validate={validate}
         />
       ))}
     </div>
@@ -441,6 +513,10 @@ function SubmodelSection({
   const total = children.reduce((s, c) => s + countLeaves(c), 0);
   const filled = showProgress ? children.reduce((s, c) => s + countFilled(c), 0) : 0;
   const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+  // 값이 비어 있는 필수(Cardinality: One) 항목 개수 — 검증은 인스턴스 모드(showProgress)에서만.
+  const missingRequired = showProgress
+    ? children.reduce((s, c) => s + countMissingRequired(c), 0)
+    : 0;
 
   return (
     <div className="rounded-lg border border-zinc-200 overflow-hidden bg-white shadow-xs">
@@ -469,6 +545,14 @@ function SubmodelSection({
 
         {/* stats */}
         <div className="flex items-center gap-2 shrink-0">
+          {missingRequired > 0 && (
+            <span
+              className="text-xs font-semibold text-red-600 bg-red-100 border border-red-200 px-2 py-0.5 rounded-full tabular-nums"
+              title={`값이 비어 있는 필수 항목 ${missingRequired}개`}
+            >
+              {missingRequired} 필수 누락
+            </span>
+          )}
           {showProgress ? (
             <span
               className={cn(
@@ -499,7 +583,7 @@ function SubmodelSection({
       {open && (
         <div className="px-3 py-3">
           {children.length > 0 ? (
-            <NodeList nodes={children} depth={0} showValues={showValues} />
+            <NodeList nodes={children} depth={0} showValues={showValues} validate={showProgress} />
           ) : (
             <p className="text-xs text-zinc-400 px-2 py-4 text-center italic">No elements defined.</p>
           )}
@@ -553,9 +637,28 @@ export default function TemplateBlueprint({ treeData, showValues = false, showPr
   const totalFields = countAll(submodels);
   const filledFields = showProgress ? countFilled(submodels) : 0;
   const fillPct = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
+  // 전체에서 값이 비어 있는 필수(Cardinality: One) 항목 수 — 인스턴스 모드에서만 검증.
+  const totalMissingRequired = showProgress
+    ? submodels.reduce((s, sm) => s + countMissingRequired(sm), 0)
+    : 0;
 
   return (
   <div className="space-y-3">
+  {/* 필수 항목 검증 배너 — 비어 있는 필수 항목이 있으면 안내 */}
+  {showProgress && totalMissingRequired > 0 && (
+    <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+      <Info className="size-4 shrink-0 text-red-500" />
+      <span>
+        필수 항목 <span className="font-semibold tabular-nums">{totalMissingRequired}</span>개에 값이 입력되지 않았습니다. 아래 빨간색으로 표시된 항목을 입력해 주세요.
+      </span>
+    </div>
+  )}
+  {showProgress && totalMissingRequired === 0 && (
+    <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
+      <Info className="size-4 shrink-0 text-emerald-500" />
+      <span>모든 필수 항목에 값이 입력되었습니다.</span>
+    </div>
+  )}
   {/* AAS summary bar */}
   {isAASRoot && (
         <div className="flex items-center justify-between bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-2.5">
