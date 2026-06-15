@@ -252,5 +252,7 @@
   "Understand the structure of each AAS Template, its submodels, and how to apply it to your assets.": "Understand the structure of each AAS Template, its submodels, and how to apply it to your assets.",
   "Submodel Template Guide": "Submodel Template Guide",
   "Learn what each Submodel Template captures — its elements, semantics, and the values you need to provide.": "Learn what each Submodel Template captures — its elements, semantics, and the values you need to provide.",
-  "Open guide": "Open guide"
+  "Open guide": "Open guide",
+  "Template Documentation": "Template Documentation",
+  "Browse the guide documents for our AAS Templates and Submodel Templates — their structure, elements, and how to use them.": "Browse the guide documents for our AAS Templates and Submodel Templates — their structure, elements, and how to use them."
 }

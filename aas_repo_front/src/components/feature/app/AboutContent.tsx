@@ -220,57 +220,45 @@ export default function AboutContent() {
           </p>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          {[
-            {
-              icon: Boxes,
-              kind: t("AAS Template"),
-              title: t("AAS Template Guide"),
-              desc: t(
-                "Understand the structure of each AAS Template, its submodels, and how to apply it to your assets.",
-              ),
-              href: "https://keti-1.gitbook.io/keti-docs/",
-            },
-            {
-              icon: Layers,
-              kind: t("Submodel Template"),
-              title: t("Submodel Template Guide"),
-              desc: t(
-                "Learn what each Submodel Template captures — its elements, semantics, and the values you need to provide.",
-              ),
-              href: "https://keti-1.gitbook.io/keti-docs/",
-            },
-          ].map(({ icon: Icon, kind, title, desc, href }) => (
-            <a
-              key={title}
-              href={href}
-              target="_blank"
-              rel="noreferrer"
-              className="group flex flex-col rounded-2xl border border-zinc-200 bg-white p-6 transition-colors hover:border-blue-300 hover:bg-blue-50/30"
-            >
-              <div className="flex items-center justify-between">
-                <span className="inline-flex size-11 items-center justify-center rounded-xl bg-zinc-900 text-white transition-colors group-hover:bg-blue-600">
-                  <Icon className="size-5" />
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs font-medium text-zinc-500">
-                  <BookOpen className="size-3" />
-                  GitBook
-                </span>
-              </div>
-              <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-blue-600">
-                {kind}
-              </p>
-              <h4 className="mt-1 text-lg font-semibold text-zinc-900">{title}</h4>
-              <p className="mt-1.5 flex-1 text-sm leading-relaxed text-zinc-600">
-                {desc}
-              </p>
-              <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-zinc-900 group-hover:text-blue-600">
-                {t("Open guide")}
-                <ArrowUpRight className="size-4" />
+        <a
+          href="https://keti-1.gitbook.io/keti-docs/"
+          target="_blank"
+          rel="noreferrer"
+          className="group flex flex-col gap-5 rounded-2xl border border-zinc-200 bg-white p-6 transition-colors hover:border-blue-300 hover:bg-blue-50/30 sm:flex-row sm:items-center sm:gap-6"
+        >
+          <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-white transition-colors group-hover:bg-blue-600">
+            <BookOpen className="size-6" />
+          </span>
+          <div className="flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 className="text-lg font-semibold text-zinc-900">
+                {t("Template Documentation")}
+              </h4>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs font-medium text-zinc-500">
+                GitBook
               </span>
-            </a>
-          ))}
-        </div>
+            </div>
+            <p className="mt-1.5 text-sm leading-relaxed text-zinc-600 text-pretty">
+              {t(
+                "Browse the guide documents for our AAS Templates and Submodel Templates — their structure, elements, and how to use them.",
+              )}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600">
+                <Boxes className="size-3.5" />
+                {t("AAS Template")}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600">
+                <Layers className="size-3.5" />
+                {t("Submodel Template")}
+              </span>
+            </div>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-1.5 self-start text-sm font-semibold text-zinc-900 group-hover:text-blue-600 sm:self-center">
+            {t("Open guide")}
+            <ArrowUpRight className="size-4" />
+          </span>
+        </a>
       </section>
 
       {/* ── Intro video: framed standalone block with side caption ── */}

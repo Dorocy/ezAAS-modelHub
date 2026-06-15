@@ -252,5 +252,7 @@
   "Understand the structure of each AAS Template, its submodels, and how to apply it to your assets.": "각 AAS 템플릿의 구조와 포함된 서브모델, 자산에 적용하는 방법을 이해할 수 있습니다.",
   "Submodel Template Guide": "Submodel 템플릿 가이드",
   "Learn what each Submodel Template captures — its elements, semantics, and the values you need to provide.": "각 Submodel 템플릿이 담는 엘리먼트와 의미, 입력해야 하는 값을 알아볼 수 있습니다.",
-  "Open guide": "가이드 열기"
+  "Open guide": "가이드 열기",
+  "Template Documentation": "템플릿 문서",
+  "Browse the guide documents for our AAS Templates and Submodel Templates — their structure, elements, and how to use them.": "AAS 템플릿과 Submodel 템플릿의 가이드 문서를 확인하세요. 구조와 엘리먼트, 사용 방법을 안내합니다."
 }
