@@ -3,7 +3,13 @@
 
 import React, { useState } from "react";
 import { cn } from "@/lib/utils";
-import { ChevronRight, Layers, Box, List, Tag, FileText, Link2, ToggleLeft, Hash } from "lucide-react";
+  import { ChevronRight, Layers, Box, List, Tag, FileText, Link2, ToggleLeft, Hash, Info, Ruler } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /* ─────────────────────────────────────────────
    Type icons & labels  (no per-type colors —
@@ -52,16 +58,196 @@ function extractValue(node: any): string | null {
   return null;
 }
 
+/* ── Template Cardinality (SMT qualifier) ──────────────────
+   IDTA SMT 템플릿은 Qualifier(type:"Cardinality")로 항목의 필수 여부를 정의한다.
+   value "One" / "OneToMany" → 최소 1개 입력 필요(required).
+   "ZeroToOne" / "ZeroToMany" → 선택(optional). */
+function getCardinality(node: any): string | null {
+  const quals = node?.Submodel?.qualifiers ?? node?.qualifiers;
+  if (!Array.isArray(quals)) return null;
+  for (const q of quals) {
+    const isCardinalityQ =
+      q?.type === "Cardinality" ||
+      String(q?.semanticId?.keys?.[0]?.value ?? "").includes("/Cardinality/");
+    if (isCardinalityQ && q?.value) return String(q.value);
+  }
+  return null;
+}
+
+/* Template Cardinality = "One"(또는 OneToMany)이면 필수 항목으로 간주. */
+function isRequiredNode(node: any): boolean {
+  const c = getCardinality(node);
+  return c === "One" || c === "OneToMany";
+}
+
+/* 노드(및 하위)에서 값이 비어 있는 필수 leaf 개수를 센다. */
+function countMissingRequired(node: any): number {
+  if (!node) return 0;
+  if (Array.isArray(node.children) && node.children.length) {
+    return node.children.reduce((s: number, c: any) => s + countMissingRequired(c), 0);
+  }
+  if (!isRequiredNode(node)) return 0;
+  const v = node.originalValue;
+  const hasValue = v !== undefined && v !== null && v !== "";
+  return hasValue ? 0 : 1;
+}
+
+/* ─────────────────────────────────────────────
+   Semantic / ConceptDescription helpers
+   - semanticId 와 (있다면) ConceptDescription 에서
+     사람이 읽을 수 있는 개념 정보를 추출한다.
+───────────────────────────────────────────── */
+function mlText(arr: any): string {
+  if (!arr) return "";
+  if (typeof arr === "string") return arr;
+  if (Array.isArray(arr)) {
+    const en = arr.find((d: any) => d.language === "en");
+    const ko = arr.find((d: any) => d.language === "ko");
+    return (ko || en || arr[0])?.text ?? "";
+  }
+  return "";
+}
+
+function getSemanticIdValue(node: any): string {
+  const keys = node?.semanticId?.keys;
+  if (Array.isArray(keys) && keys.length > 0) return keys[0]?.value ?? "";
+  return "";
+}
+
+/* ConceptDescription 의 dataSpecificationContent 추출 */
+function getDataSpec(cd: any) {
+  const specs = cd?.embeddedDataSpecifications;
+  if (!Array.isArray(specs) || specs.length === 0) return null;
+  return specs[0]?.dataSpecificationContent ?? null;
+}
+
+/* 노드에서 사람이 읽을 수 있는 개념 정보를 모은다.
+   우선순위: ConceptDescription(IEC61360) → 엘리먼트 자체 description → semanticId.
+   AAS 를 모르는 사용자가 "이 항목이 무슨 의미이고 무엇을 입력해야 하는지"를
+   이해할 수 있도록 의미/단위/허용 값 등을 최대한 끌어모은다. */
+function getConceptInfo(node: any) {
+  const semanticId = getSemanticIdValue(node);
+  const cd = node?.ConceptDescription;
+  const ds = getDataSpec(cd);
+
+  const preferredName = mlText(ds?.preferredName);
+  const shortName = mlText(ds?.shortName);
+  // 정의: CD 정의 → CD 설명 → 엘리먼트 자체 설명 순으로 폴백
+  const definition =
+    mlText(ds?.definition) ||
+    mlText(cd?.description) ||
+    mlText(node?.description) ||
+    mlText(node?.Submodel?.description);
+  const unit = ds?.unit ?? "";
+  const unitId = ds?.unitId?.keys?.[0]?.value ?? "";
+  const dataType = ds?.dataType ?? node?.valueType ?? "";
+  // 허용 값 목록 (enum 형태 속성)
+  const valueList: string[] = Array.isArray(ds?.valueList?.valueReferencePairs)
+    ? ds.valueList.valueReferencePairs
+        .map((vp: any) => vp?.value ?? vp?.valueId?.keys?.[0]?.value ?? "")
+        .filter(Boolean)
+    : [];
+
+  return {
+    semanticId,
+    preferredName,
+    shortName,
+    definition,
+    unit,
+    unitId,
+    dataType,
+    valueList,
+    // 인라인으로 보여줄 만한 "의미" 정보가 있는지
+    hasMeaning: Boolean(preferredName || definition || unit || valueList.length),
+    hasInfo: Boolean(
+      semanticId || preferredName || definition || unit || valueList.length,
+    ),
+  };
+}
+
+/* idShort 옆에 표시할 개념 정보 툴팁 */
+function ConceptHint({ node }: { node: any }) {
+  const info = getConceptInfo(node);
+  if (!info.hasInfo) return null;
+
+  return (
+    <TooltipProvider delay={150}>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <span
+              role="button"
+              tabIndex={0}
+              className="inline-flex text-zinc-300 hover:text-primary transition-colors shrink-0 cursor-help"
+              aria-label="개념 정보 보기"
+            >
+              <Info className="size-3.5" />
+            </span>
+          }
+        />
+        <TooltipContent side="top" className="max-w-sm flex-col items-start gap-2 py-2.5 px-3 text-left">
+          {info.preferredName && (
+            <div className="font-semibold text-[13px] leading-snug">
+              {info.preferredName}
+              {info.shortName && info.shortName !== info.preferredName && (
+                <span className="ml-1.5 font-normal opacity-60">({info.shortName})</span>
+              )}
+            </div>
+          )}
+          {info.definition && (
+            <div className="text-xs leading-relaxed opacity-90">{info.definition}</div>
+          )}
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            {info.unit && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium bg-background/15 px-1.5 py-0.5 rounded">
+                <Ruler className="size-3" />
+                {info.unit}
+              </span>
+            )}
+            {info.dataType && (
+              <span className="text-xs font-mono bg-background/15 px-1.5 py-0.5 rounded">
+                {info.dataType}
+              </span>
+            )}
+          </div>
+          {info.valueList.length > 0 && (
+            <div className="flex flex-col gap-1 pt-0.5 w-full">
+              <span className="text-xs font-semibold opacity-70">Allowed values</span>
+              <div className="flex flex-wrap gap-1">
+                {info.valueList.slice(0, 8).map((v, i) => (
+                  <span key={i} className="text-xs font-mono bg-background/15 px-1.5 py-0.5 rounded">
+                    {v}
+                  </span>
+                ))}
+                {info.valueList.length > 8 && (
+                  <span className="text-xs opacity-60">+{info.valueList.length - 8}</span>
+                )}
+              </div>
+            </div>
+          )}
+          {info.semanticId && (
+            <div className="text-xs font-mono opacity-70 break-all border-t border-background/20 pt-1.5 mt-0.5 w-full">
+              {info.semanticId}
+            </div>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 /* ─────────────────────────────────────────────
    Property row  — key : value table row
 ───────────────────────────────────────────── */
 function PropertyRow({
   node,
   showValues,
+  validate,
   isLast,
 }: {
   node: any;
   showValues: boolean;
+  validate: boolean;
   isLast: boolean;
 }) {
   const meta = getMeta(node.modelType);
@@ -69,32 +255,70 @@ function PropertyRow({
   const typeLabel = vt(node.valueType);
   const value = showValues ? extractValue(node) : null;
   const hasValue = Boolean(value);
+  const concept = getConceptInfo(node);
+  // 개념 이름이 idShort 와 다르면 보조 라벨로 노출
+  const altName =
+    concept.preferredName && concept.preferredName !== node.idShort
+      ? concept.preferredName
+      : "";
+
+  // 필수(Template Cardinality = One) 인데 값이 비어 있으면 검증 실패로 강조한다.
+  const required = isRequiredNode(node);
+  const missingRequired = validate && required && !hasValue;
 
   return (
     <div
       className={cn(
         "grid items-center gap-3 px-4 py-2 text-sm",
-        "grid-cols-[1fr_auto_minmax(160px,_40%)]",
+        "grid-cols-[1fr_auto_minmax(140px,_36%)]",
         !isLast && "border-b border-zinc-100",
-        showValues && hasValue && "hover:bg-zinc-50",
-        !showValues && "hover:bg-zinc-50/60",
+        missingRequired
+          ? "bg-red-50 border-l-2 border-l-red-500 hover:bg-red-50"
+          : showValues && hasValue
+            ? "hover:bg-zinc-50"
+            : !showValues && "hover:bg-zinc-50/60",
       )}
     >
-      {/* col 1: name + icon */}
+      {/* col 1: name + icon (+ 단위 칩, 의미 설명은 툴팁으로) */}
       <div className="flex items-center gap-2 min-w-0">
-        <Icon className="size-3.5 text-zinc-400 shrink-0" />
-        <span className="text-zinc-700 font-medium truncate" title={node.idShort}>
-          {node.idShort}
-        </span>
+        <Icon className={cn("size-3.5 shrink-0", missingRequired ? "text-red-500" : "text-zinc-400")} />
+        <div className="min-w-0 flex flex-col">
+          <span
+            className={cn(
+              "font-medium truncate leading-tight",
+              missingRequired ? "text-red-700" : "text-zinc-700",
+            )}
+            title={node.idShort}
+          >
+            {node.idShort}
+            {validate && required && (
+              <span className="ml-0.5 text-red-500" title="필수 항목 (Cardinality: One)">*</span>
+            )}
+          </span>
+          {altName && (
+            <span className="text-xs text-zinc-400 truncate leading-tight" title={altName}>
+              {altName}
+            </span>
+          )}
+        </div>
+        {concept.unit && (
+          <span
+            className="shrink-0 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.5 rounded leading-none"
+            title={`단위: ${concept.unit}`}
+          >
+            {concept.unit}
+          </span>
+        )}
         {typeLabel && (
-          <span className="text-[10px] font-mono text-zinc-400 shrink-0 hidden sm:block">
+          <span className="text-xs font-mono text-zinc-400 shrink-0 hidden sm:block">
             {typeLabel}
           </span>
         )}
+        <ConceptHint node={node} />
       </div>
 
       {/* col 2: type label chip */}
-      <span className="text-[10px] font-medium text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded shrink-0">
+      <span className="text-xs font-medium text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded shrink-0">
         {meta.label}
       </span>
 
@@ -107,6 +331,10 @@ function PropertyRow({
               title={value!}
             >
               {value}
+            </span>
+          ) : missingRequired ? (
+            <span className="text-xs font-semibold text-red-600 bg-red-100 px-2 py-0.5 rounded inline-block">
+              값 입력 필요
             </span>
           ) : (
             <span className="text-xs text-zinc-300 italic">—</span>
@@ -126,15 +354,19 @@ function GroupBlock({
   node,
   depth,
   showValues,
+  validate,
 }: {
   node: any;
   depth: number;
   showValues: boolean;
+  validate: boolean;
 }) {
   const [open, setOpen] = useState(true);
   const meta = getMeta(node.modelType);
   const Icon = meta.icon;
   const children: any[] = Array.isArray(node.children) ? node.children : [];
+  // 하위에 값이 비어 있는 필수 항목이 몇 개인지 (접혀 있어도 보이도록 헤더에 표시)
+  const missingCount = validate ? countMissingRequired(node) : 0;
 
   return (
     <div className={cn("mt-1", depth > 0 && "ml-4 border-l border-zinc-100 pl-3")}>
@@ -154,10 +386,19 @@ function GroupBlock({
         <span className="text-sm font-semibold text-zinc-800 truncate flex-1 min-w-0">
           {node.idShort}
         </span>
-        <span className="text-[10px] font-medium text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded shrink-0">
+        <ConceptHint node={node} />
+        {missingCount > 0 && (
+          <span
+            className="text-xs font-semibold text-red-600 bg-red-100 border border-red-200 px-1.5 py-0.5 rounded shrink-0 tabular-nums"
+            title={`값이 비어 있는 필수 항목 ${missingCount}개`}
+          >
+            {missingCount} 필수 누락
+          </span>
+        )}
+        <span className="text-xs font-medium text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded shrink-0">
           {meta.label}
         </span>
-        <span className="text-[10px] text-zinc-400 shrink-0 tabular-nums mr-1">
+        <span className="text-xs text-zinc-400 shrink-0 tabular-nums mr-1">
           {children.length}
         </span>
       </button>
@@ -165,7 +406,7 @@ function GroupBlock({
       {/* children */}
       {open && children.length > 0 && (
         <div className="mt-0.5">
-          <NodeList nodes={children} depth={depth + 1} showValues={showValues} />
+          <NodeList nodes={children} depth={depth + 1} showValues={showValues} validate={validate} />
         </div>
       )}
     </div>
@@ -179,10 +420,12 @@ function NodeList({
   nodes,
   depth,
   showValues,
+  validate,
 }: {
   nodes: any[];
   depth: number;
   showValues: boolean;
+  validate: boolean;
 }) {
   if (!nodes.length) return null;
 
@@ -216,6 +459,7 @@ function NodeList({
               key={leaf.value ?? leaf.idShort ?? i}
               node={leaf}
               showValues={showValues}
+              validate={validate}
               isLast={i === leaves.length - 1}
             />
           ))}
@@ -229,6 +473,7 @@ function NodeList({
           node={g}
           depth={depth}
           showValues={showValues}
+          validate={validate}
         />
       ))}
     </div>
@@ -242,10 +487,12 @@ function SubmodelSection({
   node,
   index,
   showValues,
+  showProgress,
 }: {
   node: any;
   index: number;
   showValues: boolean;
+  showProgress: boolean;
 }) {
   const [open, setOpen] = useState(true);
   const children: any[] = Array.isArray(node.children) ? node.children : [];
@@ -264,8 +511,12 @@ function SubmodelSection({
   };
 
   const total = children.reduce((s, c) => s + countLeaves(c), 0);
-  const filled = showValues ? children.reduce((s, c) => s + countFilled(c), 0) : 0;
+  const filled = showProgress ? children.reduce((s, c) => s + countFilled(c), 0) : 0;
   const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+  // 값이 비어 있는 필수(Cardinality: One) 항목 개수 — 검증은 인스턴스 모드(showProgress)에서만.
+  const missingRequired = showProgress
+    ? children.reduce((s, c) => s + countMissingRequired(c), 0)
+    : 0;
 
   return (
     <div className="rounded-lg border border-zinc-200 overflow-hidden bg-white shadow-xs">
@@ -276,7 +527,7 @@ function SubmodelSection({
         className="w-full flex items-center gap-3 px-4 py-3 bg-zinc-50 hover:bg-zinc-100/70 transition-colors text-left border-b border-zinc-200"
       >
         {/* index */}
-        <span className="w-5 h-5 rounded bg-zinc-200 text-zinc-600 text-[10px] font-bold flex items-center justify-center shrink-0 tabular-nums">
+        <span className="w-5 h-5 rounded bg-zinc-200 text-zinc-600 text-xs font-bold flex items-center justify-center shrink-0 tabular-nums">
           {index + 1}
         </span>
 
@@ -285,7 +536,7 @@ function SubmodelSection({
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-zinc-900 truncate">{node.idShort}</span>
             {node.id && (
-              <span className="text-[10px] font-mono text-zinc-400 truncate hidden md:block max-w-[220px]">
+              <span className="text-xs font-mono text-zinc-400 truncate hidden md:block max-w-[220px]">
                 {node.id}
               </span>
             )}
@@ -294,10 +545,18 @@ function SubmodelSection({
 
         {/* stats */}
         <div className="flex items-center gap-2 shrink-0">
-          {showValues ? (
+          {missingRequired > 0 && (
+            <span
+              className="text-xs font-semibold text-red-600 bg-red-100 border border-red-200 px-2 py-0.5 rounded-full tabular-nums"
+              title={`값이 비어 있는 필수 항목 ${missingRequired}개`}
+            >
+              {missingRequired} 필수 누락
+            </span>
+          )}
+          {showProgress ? (
             <span
               className={cn(
-                "text-[10px] font-semibold px-2 py-0.5 rounded-full tabular-nums border",
+                "text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums border",
                 pct === 100
                   ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                   : pct > 0
@@ -308,9 +567,9 @@ function SubmodelSection({
               {filled}/{total}
             </span>
           ) : (
-            <span className="text-[10px] text-zinc-400 tabular-nums">{total} fields</span>
+            <span className="text-xs text-zinc-400 tabular-nums">{total} fields</span>
           )}
-          <span className="text-[10px] font-medium text-zinc-400 bg-zinc-200 px-1.5 py-0.5 rounded">SM</span>
+          <span className="text-xs font-medium text-zinc-400 bg-zinc-200 px-1.5 py-0.5 rounded">SM</span>
           <ChevronRight
             className={cn(
               "size-3.5 text-zinc-400 transition-transform duration-150",
@@ -324,7 +583,7 @@ function SubmodelSection({
       {open && (
         <div className="px-3 py-3">
           {children.length > 0 ? (
-            <NodeList nodes={children} depth={0} showValues={showValues} />
+            <NodeList nodes={children} depth={0} showValues={showValues} validate={showProgress} />
           ) : (
             <p className="text-xs text-zinc-400 px-2 py-4 text-center italic">No elements defined.</p>
           )}
@@ -340,9 +599,15 @@ function SubmodelSection({
 interface TemplateBlueprintProps {
   treeData: any[];
   showValues?: boolean;
-}
+  /* 값 입력 완료도(filled/total) 뱃지를 표시할지 여부.
+     템플릿은 값이 있을 수도 없을 수도 있어 완료도가 의미 없으므로 기본 false.
+     My AAS Instance 처럼 "모든 값이 입력됐는지"가 중요한 화면에서만 true 로 켠다. */
+  showProgress?: boolean;
+  /* 외부에서 전체 접기/펼치기를 트리거할 때 증가시키는 신호값(옵션). */
+  collapseSignal?: number;
+  }
 
-export default function TemplateBlueprint({ treeData, showValues = false }: TemplateBlueprintProps) {
+export default function TemplateBlueprint({ treeData, showValues = false, showProgress = false }: TemplateBlueprintProps) {
   if (!Array.isArray(treeData) || treeData.length === 0) {
     return (
       <p className="text-xs text-zinc-400 px-4 py-6 text-center">구조 데이터가 없습니다.</p>
@@ -370,13 +635,32 @@ export default function TemplateBlueprint({ treeData, showValues = false }: Temp
     }, 0);
 
   const totalFields = countAll(submodels);
-  const filledFields = showValues ? countFilled(submodels) : 0;
+  const filledFields = showProgress ? countFilled(submodels) : 0;
   const fillPct = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
+  // 전체에서 값이 비어 있는 필수(Cardinality: One) 항목 수 — 인스턴스 모드에서만 검증.
+  const totalMissingRequired = showProgress
+    ? submodels.reduce((s, sm) => s + countMissingRequired(sm), 0)
+    : 0;
 
   return (
-    <div className="space-y-3">
-      {/* AAS summary bar */}
-      {isAASRoot && (
+  <div className="space-y-3">
+  {/* 필수 항목 검증 배너 — 비어 있는 필수 항목이 있으면 안내 */}
+  {showProgress && totalMissingRequired > 0 && (
+    <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+      <Info className="size-4 shrink-0 text-red-500" />
+      <span>
+        필수 항목 <span className="font-semibold tabular-nums">{totalMissingRequired}</span>개에 값이 입력되지 않았습니다. 아래 빨간색으로 표시된 항목을 입력해 주세요.
+      </span>
+    </div>
+  )}
+  {showProgress && totalMissingRequired === 0 && (
+    <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
+      <Info className="size-4 shrink-0 text-emerald-500" />
+      <span>모든 필수 항목에 값이 입력되었습니다.</span>
+    </div>
+  )}
+  {/* AAS summary bar */}
+  {isAASRoot && (
         <div className="flex items-center justify-between bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-2.5">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-6 h-6 rounded bg-primary flex items-center justify-center shrink-0">
@@ -387,7 +671,7 @@ export default function TemplateBlueprint({ treeData, showValues = false }: Temp
                 {root.idShort}
               </p>
               {root.id && (
-                <p className="text-[10px] font-mono text-zinc-400 mt-0.5 truncate max-w-[300px]">
+                <p className="text-xs font-mono text-zinc-400 mt-0.5 truncate max-w-[300px]">
                   {root.id}
                 </p>
               )}
@@ -399,7 +683,7 @@ export default function TemplateBlueprint({ treeData, showValues = false }: Temp
               <span className="font-semibold text-zinc-700">{submodels.length}</span> submodels
             </span>
             <span className="text-zinc-300">|</span>
-            {showValues ? (
+            {showProgress ? (
               <span className="flex items-center gap-1.5">
                 <span
                   className={cn(
@@ -428,13 +712,14 @@ export default function TemplateBlueprint({ treeData, showValues = false }: Temp
         <p className="text-xs text-zinc-400 text-center py-8">Submodel이 없습니다.</p>
       ) : (
         submodels.map((sm, i) => (
-          <SubmodelSection
-            key={sm.value ?? sm.idShort ?? i}
-            node={sm}
-            index={i}
-            showValues={showValues}
-          />
-        ))
+  <SubmodelSection
+  key={sm.value ?? sm.idShort ?? i}
+  node={sm}
+  index={i}
+  showValues={showValues}
+  showProgress={showProgress}
+  />
+  ))
       )}
     </div>
   );

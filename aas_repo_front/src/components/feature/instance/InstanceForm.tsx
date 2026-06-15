@@ -20,6 +20,9 @@ import AASTree, { RenderObject } from "@/components/feature/model/AASTree";
 import TemplateBlueprint from "@/components/feature/instance/TemplateBlueprint";
 import SubmodelFormEditor from "@/components/feature/instance/SubmodelFormEditor";
 import ConceptDescriptionPanel from "@/components/feature/instance/ConceptDescriptionPanel";
+import SemanticQualityPanel, { type SemanticElementRow } from "@/components/feature/instance/SemanticQualityPanel";
+import ConceptSearchDialog, { type ConceptSearchResult } from "@/components/feature/instance/ConceptSearchDialog";
+import { buildTreePath, buildCustomConceptSemanticId, normalizeCompanyUrl } from "@/lib/aas";
 import { InstanceSavePayload } from "@/types/api";
 import { confirmSave } from "@/utils/modal";
 import type { AASInstance, VerifyInstanceParams } from "@/types/api";
@@ -32,6 +35,7 @@ import { showToast } from "@/utils/toast";
 import VerifyDetailView from "@/components/VerifyDetailView";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { UserRole } from "@/constants/roles";
 
 import {
@@ -114,6 +118,9 @@ const normalizeMetadataPaths = (obj: any) => {
 };
 
 const initialState = { aasmodel: { aasmodel: "", aasmodel_metadata: {} } };
+
+// 사용자가 장비 이미지를 업로드하지 않았을 때 Asset defaultThumbnail 로 쓰는 기본 경로
+const DEFAULT_THUMBNAIL_PATH = "/assets/media/thumbnail_placeholder.svg";
 
 /* ─────────────────────── Stepper component ─────────────────────── */
 const STEPS = [
@@ -201,7 +208,7 @@ function StepIndicator({
       {/* 현재 스텝 안내 — 구분선 + 한 줄 */}
       {currentStep && (
         <div className="border-t border-zinc-100 pt-3 flex items-center gap-2">
-          <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">Step {active + 1}</span>
+          <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Step {active + 1}</span>
           <span className="text-zinc-200">·</span>
           <span className="text-xs text-zinc-500">{currentStep.hint}</span>
         </div>
@@ -230,6 +237,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
   };
 
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const [activeStep, setActiveStep] = useState(0);
   const [activeTab, setActiveTab] = useState("templateInfo");
@@ -246,6 +254,10 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
   const [modelSeq, setModelSeq] = useState("");
   const [aasmodel, setAasmodel] = useState(initialState.aasmodel);
   const [treeData, setTreeData] = useState<any[] | undefined>(undefined);
+  // 의미 정의 현황: valuePath -> 방금 연결한 개념. treeDataRef 는 ref 라 렌더를 못 깨우므로 별도 reactive state 로 관리.
+  const [semanticOverrides, setSemanticOverrides] = useState<Record<string, ConceptSearchResult>>({});
+  // 개념 검색 다이얼로그 연결 대상 element (null 이면 닫힘)
+  const [linkDialogTarget, setLinkDialogTarget] = useState<SemanticElementRow | null>(null);
   const [previewModel, setPreviewModel] = useState<any | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
@@ -401,6 +413,124 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     ];
   }, [aasmodel.aasmodel_metadata]);
 
+  // 의미 정의 현황용 element 목록.
+  // parsingAAS 출력(treeData)을 순회해 valuePath/idShort/modelType/semanticId 를 수집하고,
+  // semanticOverrides(방금 ��결한 개념)를 병합해 현재 연결 상태를 만든다.
+  // valuePath 계산은 기존 parsingAAS/addValuePaths 결과를 그대로 재사용한다(리팩터링 없음).
+  const semanticElementRows = useMemo<SemanticElementRow[]>(() => {
+    const rows: SemanticElementRow[] = [];
+    const SOURCE_LABELS: Record<ConceptSearchResult["source"], string> = {
+      ECLASS: "ECLASS",
+      IEC_CDD: "IEC CDD",
+      IDTA: "IDTA Template",
+      CUSTOM: "Custom",
+    };
+    // LangString 배열/문자열에서 사람이 읽을 텍스트를 뽑는다 (ko → en → 첫번째 순).
+    const pickText = (src: any): string => {
+      if (!src) return "";
+      if (typeof src === "string") return src;
+      if (Array.isArray(src)) {
+        return (
+          src.find((d: any) => d?.language === "ko")?.text ||
+          src.find((d: any) => d?.language === "en")?.text ||
+          src[0]?.text ||
+          ""
+        );
+      }
+      return "";
+    };
+    // semanticId → conceptDescription.description 매핑 (의미설명 표시용)
+    const cdDefById = new Map<string, string>();
+    (((aasmodel.aasmodel_metadata as any)?.conceptDescriptions ?? []) as any[]).forEach(
+      (cd: any) => {
+        if (!cd?.id) return;
+        const fromSpec =
+          cd.embeddedDataSpecifications?.[0]?.dataSpecificationContent?.definition;
+        const def = pickText(cd.description) || pickText(fromSpec);
+        if (def) cdDefById.set(cd.id, def);
+      },
+    );
+    // ancestorIdShorts: 현재 노드의 조상 idShort 체인 (submodel → ... → 부모)
+    const walk = (node: any, ancestorIdShorts: string[]) => {
+      if (!node || typeof node !== "object") return;
+      // AAS 루트 노드는 valuePath 가 없으므로 자연히 건너뛴다. semanticId 를 가질 수 있는 요소만 수집.
+      const nextAncestors = node.idShort
+        ? [...ancestorIdShorts, node.idShort]
+        : ancestorIdShorts;
+      if (node.valuePath && node.modelType) {
+        const override = semanticOverrides[node.valuePath];
+        const baseSemanticId: string | null =
+          node.semanticId?.keys?.[0]?.value ?? null;
+        const semanticIdValue = override ? override.id : baseSemanticId;
+        // 의미설명: 방금 연결한 개념의 definition → CD 매핑 → element 자체 description 순
+        const definition =
+          (override ? pickText(override.definition) : "") ||
+          (semanticIdValue ? cdDefById.get(semanticIdValue) ?? "" : "") ||
+          pickText(node.description);
+        rows.push({
+          valuePath: node.valuePath,
+          treePath: buildTreePath(...nextAncestors),
+          idShort: node.idShort ?? "",
+          modelType: node.modelType,
+          semanticIdValue,
+          linkedSourceLabel: override ? SOURCE_LABELS[override.source] : undefined,
+          dataType: node.valueType ?? undefined,
+          unit: node.unit ?? undefined,
+          definition: definition || undefined,
+        });
+      }
+      if (Array.isArray(node.children))
+        node.children.forEach((c: any) => walk(c, nextAncestors));
+    };
+    (treeData ?? []).forEach((root: any) => {
+      if (Array.isArray(root?.children))
+        root.children.forEach((c: any) => walk(c, []));
+    });
+    return rows;
+  }, [treeData, semanticOverrides]);
+
+  // Concept Dictionary 전체 개념 목록 (미사용 개념 판별용).
+  // metadata.conceptDescriptions 를 {id, idShort} 로 평탄화한다.
+  const dictionaryConcepts = useMemo(() => {
+    const cds = ((aasmodel.aasmodel_metadata as any)?.conceptDescriptions ?? []) as any[];
+    const map = new Map<string, { id: string; idShort: string }>();
+    cds.forEach((cd) => {
+      if (cd?.id) map.set(cd.id, { id: cd.id, idShort: cd.idShort ?? "" });
+    });
+    return Array.from(map.values());
+  }, [aasmodel.aasmodel_metadata]);
+
+  // 미사용 개념(conceptDescription) 삭제. id 로 conceptDescriptions 에서 제거한다.
+  // element 의 semanticId 는 건드리지 않으므로(미사용 = 어떤 element 와도 미연결) 안전하다.
+  const handleDeleteConcept = (conceptId: string) => {
+    setAasmodel((prev) => {
+      const newMetadata = _.cloneDeep((prev as any).aasmodel_metadata);
+      if (Array.isArray(newMetadata.conceptDescriptions)) {
+        newMetadata.conceptDescriptions = newMetadata.conceptDescriptions.filter(
+          (cd: any) => cd?.id !== conceptId,
+        );
+      }
+      return { ...prev, aasmodel_metadata: newMetadata };
+    });
+    showToast.success("미사용 개념을 삭제했습니다.");
+  };
+
+  // 누락 element 에 표준 개념을 연결한다.
+  // 1) treeDataRef 에 `${valuePath}.semanticId` 로 주입 → 저장 시 applyMetadata 의 _.set 으로 metadata 에 머지됨.
+  // 2) semanticOverrides state 갱신 → 완료율/목록 즉시 리렌더.
+  const handleLinkConcept = (row: SemanticElementRow, concept: ConceptSearchResult) => {
+    const rootId = treeData?.[0]?.id;
+    if (rootId) {
+      if (!treeDataRef.current[rootId]) treeDataRef.current[rootId] = {};
+      treeDataRef.current[rootId][`${row.valuePath}.semanticId`] = {
+        type: "ExternalReference",
+        keys: [{ type: "GlobalReference", value: concept.id }],
+      };
+    }
+    setSemanticOverrides((prev) => ({ ...prev, [row.valuePath]: concept }));
+    setLinkDialogTarget(null);
+  };
+
   useEffect(() => {
     if (!getModelId("aasmodel", aasmodel.aasmodel_metadata)) {
       setTreeData(undefined);
@@ -454,6 +584,29 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     const payloadMetadata = Array.isArray(metadata) ? [...metadata] : { ...metadata };
     const refObj = treeDataRef.current[getModelId(mt as any, payloadMetadata)];
     for (const key in refObj) _.set(payloadMetadata, key, refObj[key]);
+    // 장비 이미지를 AAS Asset 의 defaultThumbnail 로 반영한다.
+    // 위치: assetAdministrationShells[0].assetInformation.defaultThumbnail = { path, contentType }
+    // 사용자가 업로드하지 않으면 기본 썸네일 경로를 사용한다. (import/export 구조 변경 없음)
+    if (mt === "aasmodel") {
+      const assetInfo = (payloadMetadata as any)?.assetAdministrationShells?.[0]?.assetInformation;
+      if (assetInfo) {
+        const userThumb = inputState.thumbnail;
+        if (userThumb) {
+          // data URL(base64) → contentType 추출 (예: data:image/png;base64,....)
+          const m = userThumb.match(/^data:([^;]+);/);
+          assetInfo.defaultThumbnail = {
+            path: userThumb,
+            contentType: m?.[1] ?? "image/png",
+          };
+        } else if (!assetInfo.defaultThumbnail?.path) {
+          // 업로드 이미지가 없고 기존 썸네일도 없으면 기본 썸네일 적용
+          assetInfo.defaultThumbnail = {
+            path: DEFAULT_THUMBNAIL_PATH,
+            contentType: "image/svg+xml",
+          };
+        }
+      }
+    }
     return payloadMetadata;
   };
 
@@ -524,7 +677,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     }
 
     // body 생성부터 API 호출까지 모두 try로 감싼다.
-    // (이전에는 body 생성이 try 밖에 있어, 여기서 에러가 나면 토스트도 없고
+    // (이전에는 body 생성��� try 밖에 있어, 여기서 에러가 나면 토스트도 없고
     //  API도 호출되지 않은 채 조용히 중단됐다 — "API가 아예 안 나간다"의 원인)
     try {
       setLoading(true);
@@ -577,13 +730,13 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
       router.push(ROUTES.INSTANCE.LIST);
     } catch (e) {
       console.error("instance upsert failed:", e);
-      showToast.error("저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      showToast.error("저장 중 오���가 발생했습니다. 잠시 후 다시 시도해주세요.");
     }
     finally { setLoading(false); }
   };
 
   const handleExport = (format: string, inst: AASInstance) => {
-    exportModel({ modelType: "instance", format, modelSeq: inst.instance_seq, filename: inst.instance_name, source: "db", withToast: true });
+    exportModel({ modelType: "environment", apiModelType: "instance", format: format as "json" | "xml" | "aasx", modelSeq: inst.instance_seq, filename: inst.instance_name, withToast: true });
   };
 
   const combinedAASTreeData = useMemo(() => {
@@ -686,10 +839,53 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
     showToast.success("Changes saved.");
   };
 
-  const handleAddElement = (parentNode: any, elementType: string, idShort: string) => {
-    const newElement: any = { idShort, modelType: elementType, description: [{ language: "en", text: "" }], semanticId: { type: "ModelReference", keys: [{ type: "GlobalReference", value: "" }] } };
+  const handleAddElement = (parentNode: any, elementType: string, idShort: string, concept?: any) => {
+    const companyUrl = inputState.company_url ?? "";
+
+    // 부모 valuePath(예: submodels[0].submodelElements[3])를 metadata 에서 idShort 체인으로 해석.
+    // valuePath 의 각 `[n]` 경계마다 해당 노드의 idShort 를 모아 tree path 를 만든다(valuePath 구조 변경 없음).
+    const resolveAncestorIdShorts = (vp: string | undefined): string[] => {
+      if (!vp) return [];
+      const ids: string[] = [];
+      const regex = /\[\d+\]/g;
+      let m: RegExpExecArray | null;
+      while ((m = regex.exec(vp)) !== null) {
+        const prefix = vp.slice(0, m.index + m[0].length);
+        const n = _.get((aasmodel as any).aasmodel_metadata, prefix);
+        if (n && n.idShort) ids.push(n.idShort);
+      }
+      return ids;
+    };
+    const elementTreePath = buildTreePath(...resolveAncestorIdShorts(parentNode.valuePath), idShort);
+
+    // 새 개념 정의(mode "new")는 Custom Concept → companyUrl 없으면 semanticId 생성 불가하므로 차단.
+    if (concept?.mode === "new" && !normalizeCompanyUrl(companyUrl)) {
+      showToast.error("Custom 개념을 만들려면 기본 정보에 회사 URL을 먼저 입력해주세요.");
+      return;
+    }
+
+    // semanticId 결정:
+    //  · mode "new"      → Custom Concept: /ezAAS/cd/ 규칙으로 생성 (companyUrl 기반)
+    //  · mode "existing" → 표준 개념: 기존 semanticId 그대로 사용 (재생성 금지)
+    //  · mode "none"     → 연결 없음
+    const customSemanticId =
+      concept?.mode === "new"
+        ? buildCustomConceptSemanticId({ companyUrl, conceptTreePath: elementTreePath })
+        : undefined;
+    const conceptId: string | undefined =
+      concept?.mode === "new"
+        ? customSemanticId
+        : concept && concept.mode !== "none"
+          ? concept.id
+          : undefined;
+    const semanticId = conceptId
+      ? { type: "ExternalReference", keys: [{ type: "GlobalReference", value: conceptId }] }
+      : { type: "ModelReference", keys: [{ type: "GlobalReference", value: "" }] };
+
+    // SubmodelElement 는 AAS 표준상 id 필드가 없으므로 element.id 는 부여하지 않는다(비표준 → export 시 유실).
+    const newElement: any = { idShort, modelType: elementType, description: [{ language: "en", text: "" }], semanticId };
     switch (elementType) {
-      case "Property": newElement.valueType = "xs:string"; newElement.value = ""; newElement.category = "PARAMETER"; newElement.semanticId = { keys: [] }; break;
+      case "Property": newElement.valueType = "xs:string"; newElement.value = ""; newElement.category = "PARAMETER"; break;
       case "MultiLanguageProperty": newElement.valueType = "xs:string"; newElement.value = [{ language: "en-US", text: "" }]; break;
       case "Range": newElement.valueType = "xs:integer"; newElement.min = 0; newElement.max = 0; break;
       case "File": newElement.contentType = ""; newElement.value = ""; break;
@@ -699,6 +895,55 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
       case "Entity": newElement.entityType = "SelfManagedEntity"; newElement.statements = []; newElement.globalAssetId = ""; newElement.specificAssetId = []; break;
       case "RelationshipElement": newElement.first = { type: "ModelReference", keys: [] }; newElement.second = { type: "ModelReference", keys: [] }; break;
     }
+
+    // 새 개념을 정의한 경우 ConceptDescription 도 함께 생성 (IEC61360 데이터스펙)
+    // preferredName/shortName/definition 은 { en, ko } 형태이며, 값이 있는 언어만 LangString 배열로 변환한다.
+    const toLangStrings = (t: any): { language: string; text: string }[] => {
+      const arr: { language: string; text: string }[] = [];
+      if (t && typeof t === "object") {
+        if (t.en?.trim()) arr.push({ language: "en", text: t.en.trim() });
+        if (t.ko?.trim()) arr.push({ language: "ko", text: t.ko.trim() });
+      } else if (typeof t === "string" && t.trim()) {
+        arr.push({ language: "en", text: t.trim() });
+      }
+      return arr;
+    };
+
+    const newCD =
+      concept?.mode === "new"
+        ? (() => {
+            const definitionStrings = toLangStrings(concept.definition);
+            const shortNameStrings = toLangStrings(concept.shortName);
+            const content: any = {
+              modelType: "DataSpecificationIec61360",
+              preferredName: toLangStrings(concept.preferredName),
+              definition: definitionStrings,
+            };
+            if (shortNameStrings.length) content.shortName = shortNameStrings;
+            if (concept.dataType) content.dataType = concept.dataType;
+            if (concept.unit) content.unit = concept.unit;
+
+            return {
+              idShort,
+              modelType: "ConceptDescription",
+              // Custom Concept 의 id 는 element 와 동일한 tree path 의 /ezAAS/cd/ semanticId 를 사용한다.
+              id: conceptId,
+              description: definitionStrings.length
+                ? definitionStrings
+                : [{ language: "en", text: "" }],
+              embeddedDataSpecifications: [
+                {
+                  dataSpecification: {
+                    type: "ExternalReference",
+                    keys: [{ type: "GlobalReference", value: "https://admin-shell.io/DataSpecificationTemplates/DataSpecificationIEC61360/3/0" }],
+                  },
+                  dataSpecificationContent: content,
+                },
+              ],
+            };
+          })()
+        : null;
+
     setAasmodel((prev) => {
       const newMetadata = _.cloneDeep((prev as any).aasmodel_metadata);
       const parentPath = parentNode.valuePath;
@@ -710,6 +955,13 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         const children = _.get(newMetadata, childrenPath, []);
         if (Array.isArray(children) && !children.find((c: any) => c.idShort === idShort)) { children.push(newElement); _.set(newMetadata, childrenPath, children); }
         else if (!children) _.set(newMetadata, childrenPath, [newElement]);
+      }
+      // 새 개념 등록 (중복 id 방지)
+      if (newCD) {
+        if (!newMetadata.conceptDescriptions) newMetadata.conceptDescriptions = [];
+        if (!newMetadata.conceptDescriptions.find((cd: any) => cd.id === newCD.id)) {
+          newMetadata.conceptDescriptions.push(newCD);
+        }
       }
       return { ...prev, aasmodel_metadata: newMetadata };
     });
@@ -981,14 +1233,14 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-sm font-bold text-zinc-900">{instanceName || "—"}</h2>
-                {categoryName && <span className="text-[11px] bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">{categoryName}</span>}
-                {version      && <span className="text-[11px] bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">v{version}</span>}
-                {assetKind    && <span className="text-[11px] bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">{assetKind}</span>}
+                {categoryName && <span className="text-xs bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">{categoryName}</span>}
+                {version      && <span className="text-xs bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">v{version}</span>}
+                {assetKind    && <span className="text-xs bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">{assetKind}</span>}
                 {verificationBadge(mode === "view" ? instance?.verification : inputState.verification)}
               </div>
               {description && <p className="text-xs text-zinc-400 mt-1 max-w-lg leading-relaxed">{description}</p>}
               {thumbnailPath && (
-                <p className="text-[11px] text-zinc-300 mt-1 font-mono truncate max-w-xs">{thumbnailPath}</p>
+                <p className="text-xs text-zinc-300 mt-1 font-mono truncate max-w-xs">{thumbnailPath}</p>
               )}
             </div>
           </div>
@@ -1005,7 +1257,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                 </DropdownMenuContent>
               </DropdownMenu>
               <Link href={ROUTES.INSTANCE.EDIT(instance?.instance_seq)}>
-                <Button><Pencil className="size-3.5 mr-1.5" />수정</Button>
+                <Button><Pencil className="size-3.5 mr-1.5" />{t("Edit")}</Button>
               </Link>
             </div>
           )}
@@ -1039,13 +1291,13 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                   <div className="flex items-center justify-between gap-3 w-full pr-2">
                     <div className="min-w-0 text-left">
                       <p className="text-sm font-semibold text-zinc-800 leading-none">{sm.idShort}</p>
-                      {smDesc && <p className="text-[11px] text-zinc-400 mt-1 leading-snug line-clamp-1">{smDesc}</p>}
+                      {smDesc && <p className="text-xs text-zinc-400 mt-1 leading-snug line-clamp-1">{smDesc}</p>}
                     </div>
                     {/* 입력 현황 */}
                     <div className="shrink-0 flex items-center gap-2">
-                      <span className="text-[11px] text-zinc-400">{filled}/{props.length}</span>
+                      <span className="text-xs text-zinc-400">{filled}/{props.length}</span>
                       {isComplete && props.length > 0 && (
-                        <span className="text-[11px] font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full px-2.5 py-0.5">
+                        <span className="text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full px-2.5 py-0.5">
                           완료
                         </span>
                       )}
@@ -1059,7 +1311,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       {/* 그룹 레이블 */}
                       {group.label && (
                         <div className="px-4 py-2 bg-zinc-50 border-t border-zinc-100">
-                          <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">{group.label}</span>
+                          <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{group.label}</span>
                         </div>
                       )}
                       {/* key-value 2열 그리드 */}
@@ -1073,7 +1325,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                               key={pi}
                               className="flex items-start gap-3 px-4 py-2.5 border-b border-r border-zinc-100 last:border-r-0"
                             >
-                              <span className="text-[11px] text-zinc-400 w-28 shrink-0 pt-0.5 leading-tight truncate">{prop.idShort}</span>
+                              <span className="text-xs text-zinc-400 w-28 shrink-0 pt-0.5 leading-tight truncate">{prop.idShort}</span>
                               {val ? (
                                 isImg ? (
                                   <div className="flex-1 min-w-0">
@@ -1083,13 +1335,13 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                                       className="h-16 w-auto max-w-full rounded border border-zinc-200 object-contain"
                                       onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                                     />
-                                    <span className="text-[10px] text-zinc-300 font-mono mt-1 block truncate">{val}</span>
+                                    <span className="text-xs text-zinc-300 font-mono mt-1 block truncate">{val}</span>
                                   </div>
                                 ) : (
                                   <span className="text-xs font-medium text-zinc-900 flex-1 min-w-0 leading-snug break-words">{val}</span>
                                 )
                               ) : (
-                                <span className="text-[11px] text-amber-400 italic flex-1 pt-0.5">미입력</span>
+                                <span className="text-xs text-amber-400 italic flex-1 pt-0.5">미입력</span>
                               )}
                             </div>
                           );
@@ -1117,7 +1369,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             <CardContent className="p-0">
               {Array.isArray(combinedAASTreeData) && (
                 <div className="px-4 py-4">
-                  <TemplateBlueprint treeData={combinedAASTreeData} showValues />
+                  <TemplateBlueprint treeData={combinedAASTreeData} showValues showProgress />
                 </div>
               )}
             </CardContent>
@@ -1127,7 +1379,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
               <CardHeader><CardTitle>Concept Descriptions</CardTitle></CardHeader>
               <CardContent className="p-0">
                 <div className="px-4 py-4">
-                  <TemplateBlueprint treeData={combinedAASConceptDescriptionTreeData} showValues />
+                  <TemplateBlueprint treeData={combinedAASConceptDescriptionTreeData} showValues showProgress />
                 </div>
               </CardContent>
             </Card>
@@ -1238,17 +1490,17 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-6 py-3.5 border-b shrink-0">
           <DialogTitle className="text-base font-semibold">
-            {modelType === "aasmodel" ? "AAS" : "Submodel"} Template 선택
+            {modelType === "aasmodel" ? t("Select AAS Template") : t("Select Submodel Template")}
           </DialogTitle>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               onClick={() => { setModalOpen(false); setModelSeq(""); setPreviewModel(null); }}
             >
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button disabled={!modelSeq} onClick={handleTemplateConfirm}>
-              선택 완료
+              {t("Confirm Selection")}
             </Button>
           </div>
         </div>
@@ -1262,7 +1514,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             {/* 카테고리 버튼 목록 */}
             <div className="shrink-0 border-b">
               <div className="px-3 pt-3 pb-1">
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                   Category
                 </p>
               </div>
@@ -1309,11 +1561,11 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             {/* ���플릿 목록 */}
             <div className="flex flex-col flex-1 min-h-0">
               <div className="px-3 py-2 shrink-0 flex items-center justify-between border-b bg-muted/10">
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Templates
                 </p>
                 {!isFetchingModels && (
-                  <span className="text-[11px] text-muted-foreground">{templateListItems.length}개</span>
+                  <span className="text-xs text-muted-foreground">{templateListItems.length}개</span>
                 )}
               </div>
 
@@ -1343,12 +1595,12 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       <div className="font-medium leading-snug line-clamp-2 text-[13px]">{item.label}</div>
                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         {item.category_name && (
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
+                          <Badge variant="secondary" className="text-xs px-1.5 py-0 h-4 font-normal">
                             {item.category_name}
                           </Badge>
                         )}
                         {item.version && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal">
+                          <Badge variant="outline" className="text-xs px-1.5 py-0 h-4 font-normal">
                             v{item.version}
                           </Badge>
                         )}
@@ -1365,7 +1617,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
 
             {/* 패널 헤더 */}
             <div className="shrink-0 border-b bg-muted/5 px-5 py-2.5 flex items-center gap-2">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Structure Preview</span>
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Structure Preview</span>
               {previewModel && (
                 <>
                   <span className="text-muted-foreground/30 text-xs">—</span>
@@ -1373,7 +1625,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                     {previewModel[`${modelType}_name`] ?? previewModel.aasmodel_name ?? previewModel.submodel_name}
                   </span>
                   {modelSeq && (
-                    <span className="ml-auto shrink-0 flex items-center gap-1 text-[11px] text-emerald-600 font-medium bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                    <span className="ml-auto shrink-0 flex items-center gap-1 text-xs text-emerald-600 font-medium bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
                       <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                         <circle cx="5" cy="5" r="4.5" fill="#059669" opacity="0.15"/>
                         <path d="M2.5 5l1.8 1.8L7.5 3.5" stroke="#059669" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1408,7 +1660,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       왼쪽 목록에서 템플릿을 클릭하면 Submodel 구조와 입력 항목이 여기에 표시됩니다.
                     </p>
                   </div>
-                  <div className="flex items-center gap-6 text-[11px] text-muted-foreground/40 mt-2">
+                  <div className="flex items-center gap-6 text-xs text-muted-foreground/40 mt-2">
                     <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 opacity-60" />Submodel</span>
                     <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-violet-400 opacity-60" />Collection</span>
                     <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400 opacity-60" />Property</span>
@@ -1430,13 +1682,13 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       )}
                       <div className="flex gap-1.5 mt-2 flex-wrap">
                         {previewModel.category_name && (
-                          <Badge variant="secondary" className="text-[11px] h-5 px-2">{previewModel.category_name}</Badge>
+                          <Badge variant="secondary" className="text-xs h-5 px-2">{previewModel.category_name}</Badge>
                         )}
                         {previewModel.version && (
-                          <Badge variant="outline" className="text-[11px] h-5 px-2 font-mono">v{previewModel.version}</Badge>
+                          <Badge variant="outline" className="text-xs h-5 px-2 font-mono">v{previewModel.version}</Badge>
                         )}
                         {previewModel.status_nm && (
-                          <Badge variant="outline" className="text-[11px] h-5 px-2">{previewModel.status_nm}</Badge>
+                          <Badge variant="outline" className="text-xs h-5 px-2">{previewModel.status_nm}</Badge>
                         )}
                       </div>
                     </div>
@@ -1465,23 +1717,23 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         <div className="mx-auto max-w-screen-2xl px-6 flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-lg font-bold text-foreground">
-              {mode === "create" ? "AAS 인스턴스 생성" : mode === "edit" ? "AAS 인스턴스 수정" : "AAS 인스턴스 상세"}
+              {mode === "create" ? t("Create AAS Instance") : mode === "edit" ? t("Edit AAS Instance") : t("AAS Instance Detail")}
             </h1>
             <nav className="text-xs text-muted-foreground flex gap-1">
-              <Link href="/" className="hover:text-foreground">홈</Link>
+              <Link href="/" className="hover:text-foreground">{t("Home")}</Link>
               <span>/</span>
-              <Link href="/instance" className="hover:text-foreground">인스턴스 목록</Link>
+              <Link href="/instance" className="hover:text-foreground">{t("Instance List")}</Link>
               <span>/</span>
-              <span>{mode === "create" ? "생성" : mode === "edit" ? "수정" : "상세"}</span>
+              <span>{mode === "create" ? t("Create") : mode === "edit" ? t("Edit") : t("Detail")}</span>
             </nav>
           </div>
           <div className="flex gap-2 items-center">
             <Link href="/instance">
-              <Button variant="outline"><List className="size-3.5 mr-1" />목록</Button>
+              <Button variant="outline"><List className="size-3.5 mr-1" />{t("List")}</Button>
             </Link>
             {mode === "create" && activeStep === 1 && (
               <Button onClick={() => { setModalOpen(true); setModelType("aasmodel"); }}>
-                <FilePlus className="size-3.5 mr-1" />AAS 템플릿 선택
+                <FilePlus className="size-3.5 mr-1" />{t("Select AAS Template")}
               </Button>
             )}
           </div>
@@ -1495,17 +1747,17 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
             {/* foot buttons for view mode */}
             <div className="flex gap-2 mb-4">
               <Button variant="outline" onClick={() => { if (combinedAASTreeData) setCombinedModalOpen(true); }}>
-                통합 모델 보기
+                {t("View Combined Model")}
               </Button>
               {user?.user_seq === instance?.create_user_seq && (
                 <>
                   <Link href={ROUTES.INSTANCE.EDIT(instance?.instance_seq)}>
-                    <Button variant="outline"><Pencil className="size-3.5 mr-1.5" />수정</Button>
+                    <Button variant="outline"><Pencil className="size-3.5 mr-1.5" />{t("Edit")}</Button>
                   </Link>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline">
-                        <Download className="size-3.5 mr-1.5" />내보내기 <ChevronDown className="size-3 ml-1" />
+                        <Download className="size-3.5 mr-1.5" />{t("Export")} <ChevronDown className="size-3 ml-1" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
@@ -1522,6 +1774,16 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
         ) : (
           <>
             {templateSelectDialog}
+            <ConceptSearchDialog
+              open={linkDialogTarget !== null}
+              targetIdShort={linkDialogTarget?.idShort}
+              companyUrl={inputState.company_url ?? ""}
+              conceptTreePath={linkDialogTarget?.treePath ?? ""}
+              onClose={() => setLinkDialogTarget(null)}
+              onSelect={(concept) => {
+                if (linkDialogTarget) handleLinkConcept(linkDialogTarget, concept);
+              }}
+            />
             {/* Stepper */}
             <div className="mb-4 rounded-xl border border-zinc-200 bg-white px-5 py-4">
               <StepIndicator active={activeStep} onStepClick={setActiveStep} />
@@ -1545,16 +1807,20 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                           placeholder="예: 로봇암_라인A_001"
                           onChange={(e) => setInputState((prev) => ({ ...prev, instance_name: e.target.value }))}
                         />
-                        <p className="text-[11px] text-zinc-400">이 AAS 인스턴스를 구분할 고유한 이름</p>
+                        <p className="text-xs text-zinc-400">이 AAS 인스턴스를 구분할 고유한 이름</p>
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-zinc-800">회사 URL</label>
+                        <label className="text-sm font-semibold text-zinc-800">
+                          회사 URL <span className="text-red-500">*</span>
+                        </label>
                         <Input
                           value={inputState.company_url ?? ""}
                           placeholder="https://company.com"
                           onChange={(e) => setInputState((prev) => ({ ...prev, company_url: e.target.value }))}
                         />
-                        <p className="text-[11px] text-zinc-400">제조사 또는 운영사 웹사이트 주소</p>
+                        <p className="text-xs text-zinc-400">
+                          Custom Concept ID(semanticId) 생성에 사용됩니다. (필수)
+                        </p>
                       </div>
                     </div>
 
@@ -1568,7 +1834,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                         style={{ minHeight: "130px" }}
                         onChange={(e) => setInputState((prev) => ({ ...prev, description: e.target.value }))}
                       />
-                      <p className="text-[11px] text-zinc-400">AAS 인스턴스에 대한 설명을 상세하게 입력해주세요.</p>
+                      <p className="text-xs text-zinc-400">AAS 인스턴스에 대한 설명을 상세하게 입력해주세요.</p>
                     </div>
 
                     {/* ── 열 3: 썸네일 ── */}
@@ -1604,7 +1870,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                               </div>
                               <div className="text-center">
                                 <p className="text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 transition-colors">이미지 업로드</p>
-                                <p className="text-[11px] text-zinc-400 mt-0.5">JPG, PNG, WEBP</p>
+                                <p className="text-xs text-zinc-400 mt-0.5">JPG, PNG, WEBP</p>
                               </div>
                             </>
                           )}
@@ -1621,7 +1887,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       </label>
                       {inputState.thumbnail && (
                         <button type="button"
-                          className="text-[11px] text-zinc-400 hover:text-red-500 transition-colors text-center"
+                          className="text-xs text-zinc-400 hover:text-red-500 transition-colors text-center"
                           onClick={() => setInputState((prev) => ({ ...prev, thumbnail: undefined }))}
                         >
                           이미지 삭제
@@ -1667,7 +1933,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                               </span>
                             </div>
                             <Separator orientation="vertical" className="h-4" />
-                            <Badge variant="secondary" className="font-mono text-[10px]">{treeData[0].id}</Badge>
+                            <Badge variant="secondary" className="font-mono text-xs">{treeData[0].id}</Badge>
                             {(aasmodel as any).version && <Badge variant="outline">v{mode === "create" ? (aasmodel as any).version : instance?.aasmodel_version}</Badge>}
                             {(aasmodel as any).status && <Badge variant="outline">{mode === "create" ? (aasmodel as any).status : instance?.status}</Badge>}
                           </div>
@@ -1702,7 +1968,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                               value="cdTree"
                               className="h-10 rounded-none px-5 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                             >
-                              개념 사전
+                              의미 정의 현황
                             </TabsTrigger>
                           </TabsList>
                         </div>
@@ -1782,7 +2048,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                                         />
                                       ) : (
                                         <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
-                                          <p className="text-sm font-medium">항목을 선택하세요</p>
+                                          <p className="text-sm font-medium">항목�� 선택하세요</p>
                                         </div>
                                       )}
                                     </CardContent>
@@ -1814,19 +2080,23 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                                 onSave={handleFormEditorSave}
                                 onToggleAdvanced={() => setShowAdvancedTree(true)}
                                 showAdvanced={showAdvancedTree}
+                                onAddSubmodel={() => { setModalOpen(true); setModelType("submodel"); }}
+                                onAddElement={handleAddElement}
+                                onDeleteElement={handleDeleteElement}
                               />
                             )}
                           </div>
                         </TabsContent>
 
-                        {/* CD Tree 탭 */}
+                        {/* 의미 정의 현황 탭 */}
                         <TabsContent value="cdTree" className="mt-0">
                           <div className="h-[calc(100vh-320px)] min-h-[600px] border border-zinc-200 rounded-xl overflow-hidden bg-white">
-                            <ConceptDescriptionPanel
-                              conceptDescriptionTreeData={conceptDescriptionTreeData}
+                            <SemanticQualityPanel
+                              elements={semanticElementRows}
                               editMode={mode !== "view"}
-                              onAdd={() => handleAddConceptDescription(null, "ConceptDescription", "NewConceptDescription")}
-                              onDelete={handleDeleteConceptDescription}
+                              onRequestLink={(row) => setLinkDialogTarget(row)}
+                              dictionaryConcepts={dictionaryConcepts}
+                              onDeleteConcept={handleDeleteConcept}
                             />
                           </div>
                         </TabsContent>
@@ -1851,7 +2121,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                     <div className="flex items-center gap-3 shrink-0">
                       {inputState.verification && verificationBadge(inputState.verification)}
                       <Button disabled={loading} onClick={verifyInstance}>
-                        <ShieldCheck className="size-4 mr-2" />검증 실행
+                        <ShieldCheck className="size-4 mr-2" />{t("Run Verification")}
                       </Button>
                     </div>
                   </div>
@@ -1913,7 +2183,7 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       <ShieldCheck className="size-5 text-zinc-400 shrink-0 mt-0.5" />
                       <div>
                         <p className="text-sm font-semibold text-zinc-600">검증을 실행하지 않았습니다.</p>
-                        <p className="text-xs text-zinc-400 mt-0.5">검증 없이도 저장할 수 있습니다. 3단계로 돌아가 검증을 먼저 실행하는 것을 권장합니다.</p>
+                        <p className="text-xs text-zinc-400 mt-0.5">검증 없이도 저장할 수 있습니다. 3��계로 돌아가 검증을 먼저 실행하는 것을 권장합니다.</p>
                       </div>
                     </div>
                   )}
@@ -1926,23 +2196,23 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                       </p>
                       <p className="text-xs text-zinc-400 mt-0.5">
                         {mode === "create"
-                          ? "저장하면 AAS 인스턴스가 생성되고 목록에 등록됩니다."
+                          ? "저장���면 AAS 인스턴스가 생성되고 목록에 등록됩니다."
                           : "저장하면 변경 사항이 즉시 반영됩니다."}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {mode === "edit" && (
                         <Button variant="destructive" disabled={loading} onClick={async () => {
-                          const isConfirm = await confirmSave("정말 삭제��시겠습니까?", { labels: { confirm: "삭제", cancel: "취소" }, confirmProps: { color: "red.8" } });
+                          const isConfirm = await confirmSave(t("Are you sure you want to delete?"), { labels: { confirm: t("Delete"), cancel: t("Cancel") }, confirmProps: { color: "red.8" } });
                           if (isConfirm) { await deleteModel({ modelType: "instance", modelSeq: instance?.instance_seq }); router.replace(ROUTES.INSTANCE.LIST); }
                         }}>
-                          <Trash2 className="size-3.5 mr-1" />삭제
+                          <Trash2 className="size-3.5 mr-1" />{t("Delete")}
                         </Button>
                       )}
                       {((mode === "create" && (user?.user_group_seq === UserRole.User || user?.user_group_seq === UserRole.Manager)) ||
                         (mode === "edit" && (user?.user_group_seq === UserRole.Manager || user?.user_seq === instance?.create_user_seq))) && (
                         <Button disabled={loading} onClick={() => handleSubmit()}>
-                          <Save className="size-3.5 mr-1" />{mode === "create" ? "저장하고 생성" : "저장"}
+                          <Save className="size-3.5 mr-1" />{mode === "create" ? t("Save and Create") : t("Save")}
                         </Button>
                       )}
                     </div>
@@ -1957,25 +2227,29 @@ export default function InstanceForm({ mode, instance, combinedAAS }: AASInstanc
                 {/* 왼쪽: 단계 표시 */}
                 <p className="text-xs text-zinc-400">
                   <span className="font-semibold text-zinc-700">{activeStep + 1} / {STEPS.length}</span>
-                  {" "}— {STEPS[activeStep]?.label}
+                  {" "}— {t(STEPS[activeStep]?.label)}
                 </p>
-                {/* 오른쪽: 버튼 */}
+                {/* 오��쪽: 버튼 */}
                 <div className="flex items-center gap-2">
                   <CancelButton />
                   {activeStep > 0 && (
                     <Button variant="outline" onClick={() => setActiveStep(activeStep - 1)}>
-                      이전
+                      {t("Previous")}
                     </Button>
                   )}
                   {activeStep < STEPS.length - 1 && (
                     <Button
                       onClick={() => {
                         if (activeStep === 0 && !inputState.instance_name) return showToast.error("인스턴스 이름을 입력해주세요.");
+                        // companyUrl 은 Custom Concept ID(/ezAAS/cd/) 생성에 필요하므로 필수.
+                        if (activeStep === 0 && !normalizeCompanyUrl(inputState.company_url)) {
+                          return showToast.error("회사 URL은 Custom Concept ID 생성을 위해 필요합니다.");
+                        }
                         if (activeStep === 1 && !Array.isArray(treeData)) return showToast.error("AAS 템플릿을 선택해주세요.");
                         setActiveStep(activeStep + 1);
                       }}
                     >
-                      다음 단계
+                      {t("Next Step")}
                     </Button>
                   )}
                 </div>

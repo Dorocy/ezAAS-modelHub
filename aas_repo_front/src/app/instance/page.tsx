@@ -4,8 +4,10 @@ import React, { useState, useCallback } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { getInstanceList, getCodeList, exportModel } from "@/api/index";
+import { rankByQuery } from "@/utils/search";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { UserRole } from "@/constants/roles";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +37,7 @@ function VerificationBadge({ value }: { value: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border",
+        "inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border",
         ok
           ? "bg-emerald-50 border-emerald-200 text-emerald-700"
           : "bg-red-50 border-red-200 text-red-600"
@@ -49,6 +51,7 @@ function VerificationBadge({ value }: { value: string }) {
 
 export default function InstancePage() {
   const { user, isAuthenticated } = useAuth();
+  const { t } = useLanguage();
 
   const [inputValue, setInputValue] = useState("");
   const [searchKey, setSearchKey] = useState("");
@@ -80,15 +83,21 @@ export default function InstancePage() {
   // 응답 구조: { result, msg, data: { recordsTotal, recordsFiltered, data: [...instances] } }
   // 다양한 형태를 방어적으로 처리한다.
   const payload = instanceData?.data ?? instanceData;
-  const instances: any[] = Array.isArray(payload?.data)
+  const rawInstances: any[] = Array.isArray(payload?.data)
     ? payload.data
     : Array.isArray(payload)
       ? payload
       : Array.isArray(instanceData)
         ? instanceData
         : [];
-  const totalCount: number = payload?.recordsTotal ?? payload?.recordsFiltered ?? instances.length;
+  const totalCount: number = payload?.recordsTotal ?? payload?.recordsFiltered ?? rawInstances.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+  // 이름 일치를 최우선으로, 그다음 설명/카테고리 키워드 순으로 재정렬
+  const instances = rankByQuery(rawInstances, searchKey, {
+    getName: (i) => i.instance_name,
+    getKeywords: (i) => [i.description, i.category_name],
+  });
 
   const handleSearch = useCallback(() => {
     setSearchKey(inputValue);
@@ -102,7 +111,8 @@ export default function InstancePage() {
 
   const handleExport = async (instance: any, format: "json" | "xml" | "aasx") => {
     await exportModel({
-      modelType: "aasmodel",
+      modelType: "environment",
+      apiModelType: "aasmodel",
       modelSeq: instance.instance_seq,
       format,
       filename: instance.instance_name,
@@ -121,15 +131,15 @@ export default function InstancePage() {
       <div className="bg-white border-b border-zinc-200 px-6 py-5">
         <div className="mx-auto max-w-screen-xl flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-bold text-zinc-900">My AAS Instance</h1>
+            <h1 className="text-lg font-bold text-zinc-900">{t("My AAS Instance")}</h1>
             <p className="text-sm text-zinc-500 mt-0.5">
-              {isLoading ? "Loading..." : `${totalCount} instances`}
+              {isLoading ? t("Loading...") : `${totalCount} ${t("instances")}`}
             </p>
           </div>
           {canCreate && (
             <Link href="/instance/ins" className={cn(buttonVariants({ size: "sm" }))}>
               <Plus className="w-3.5 h-3.5 mr-1.5" />
-              Create AAS
+              {t("Create AAS")}
             </Link>
           )}
         </div>
@@ -140,22 +150,28 @@ export default function InstancePage() {
         <aside className="w-52 shrink-0">
           <div className="sticky top-6 space-y-1">
             {/* Search */}
-            <div className="relative mb-4">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-              <Input
-                className="h-8 pl-8 text-sm bg-white border-zinc-200 rounded-lg"
-                placeholder="Search..."
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              />
+            <div className="mb-4 space-y-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+                <Input
+                  className="h-8 pl-8 text-sm bg-white border-zinc-200 rounded-lg"
+                  placeholder={t("Search by name...")}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                />
+              </div>
+              <Button size="sm" className="w-full h-8" onClick={handleSearch}>
+                <Search className="w-3.5 h-3.5 mr-1.5" />
+                {t("Search")}
+              </Button>
             </div>
 
             {/* Scope toggle */}
             {user && user.user_group_seq !== UserRole.User && (
               <>
-                <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
-                  Scope
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
+                  {t("Scope")}
                 </p>
                 <div className="flex rounded-lg border border-zinc-200 bg-white overflow-hidden mb-4 text-sm">
                   {(["my", "all"] as const).map((mode) => (
@@ -169,7 +185,7 @@ export default function InstancePage() {
                           : "text-zinc-600 hover:bg-zinc-100"
                       )}
                     >
-                      {mode === "my" ? "Mine" : "All"}
+                      {mode === "my" ? t("Mine") : t("All")}
                     </button>
                   ))}
                 </div>
@@ -177,8 +193,8 @@ export default function InstancePage() {
             )}
 
             {/* Category label */}
-            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
-              Category
+            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
+              {t("Category")}
             </p>
 
             {/* All */}
@@ -191,8 +207,8 @@ export default function InstancePage() {
                   : "text-zinc-600 hover:bg-zinc-100"
               )}
             >
-              <span>All</span>
-              <span className={cn("text-[11px] tabular-nums", categoryFilter === "all" ? "text-zinc-300" : "text-zinc-400")}>
+              <span>{t("All")}</span>
+              <span className={cn("text-xs tabular-nums", categoryFilter === "all" ? "text-zinc-300" : "text-zinc-400")}>
                 {totalCount}
               </span>
             </button>
@@ -224,14 +240,14 @@ export default function InstancePage() {
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-zinc-500">
               {searchKey && <span className="text-zinc-900 font-medium">&quot;{searchKey}&quot; · </span>}
-              {isLoading ? "Loading..." : `${instances.length} of ${totalCount}`}
+              {isLoading ? t("Loading...") : `${instances.length} ${t("of")} ${totalCount}`}
             </p>
           </div>
 
           {/* error */}
           {error && (
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 mb-4">
-              Failed to load data. Please check your connection or try again.
+              {t("Failed to load data. Please check your connection or try again.")}
             </div>
           )}
 
@@ -244,17 +260,17 @@ export default function InstancePage() {
             </div>
           ) : (
             <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
-              <table className="w-full text-sm">
+              <table className="w-full table-auto text-sm">
                 <thead>
                   <tr className="border-b border-zinc-200 bg-zinc-50/60 text-left">
-                    <th className="px-4 py-3 w-36 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Category</th>
-                    <th className="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Instance</th>
-                    <th className="px-4 py-3 w-28 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Verification</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider whitespace-nowrap">{t("Category")}</th>
+                    <th className="px-4 py-3 w-full text-xs font-semibold text-zinc-400 uppercase tracking-wider">{t("Instance")}</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider whitespace-nowrap">{t("Verification")}</th>
                     {showUser && (
-                      <th className="px-4 py-3 w-44 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider hidden md:table-cell">User</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider whitespace-nowrap hidden md:table-cell">{t("User")}</th>
                     )}
                     {canCreate && (
-                      <th className="px-4 py-3 w-44 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider text-right">Actions</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider text-right whitespace-nowrap">{t("Actions")}</th>
                     )}
                   </tr>
                 </thead>
@@ -270,37 +286,37 @@ export default function InstancePage() {
                         key={instance.instance_seq}
                         className="border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50 transition-colors"
                       >
-                        <td className="px-4 py-3 text-zinc-500 align-middle">{instance.category_name}</td>
-                        <td className="px-4 py-3 align-middle">
+                        <td className="px-4 py-3 text-zinc-500 align-middle whitespace-nowrap">{instance.category_name}</td>
+                        <td className="px-4 py-3 align-middle max-w-0">
                           <Link
                             href={ROUTES.INSTANCE.VIEW(instance.instance_seq)}
-                            className="block group"
+                            className="block group min-w-0"
                           >
-                            <span className="block text-sm font-medium text-zinc-900 group-hover:text-blue-600 transition-colors truncate max-w-[320px]">
+                            <span className="block text-sm font-medium text-zinc-900 group-hover:text-blue-600 transition-colors truncate">
                               {instance.instance_name}
                             </span>
-                            <span className="block text-xs text-zinc-400 truncate mt-0.5 max-w-[320px]">
+                            <span className="block text-xs text-zinc-400 truncate mt-0.5">
                               {instance.description || "—"}
                             </span>
                           </Link>
                         </td>
-                        <td className="px-4 py-3 align-middle">
+                        <td className="px-4 py-3 align-middle whitespace-nowrap">
                           <VerificationBadge value={instance.verification} />
                         </td>
                         {showUser && (
-                          <td className="px-4 py-3 align-middle text-zinc-500 hidden md:table-cell">
-                            <span className="block max-w-[160px] truncate">{instance.user_id}</span>
+                          <td className="px-4 py-3 align-middle text-zinc-500 whitespace-nowrap hidden md:table-cell">
+                            <span className="block max-w-[200px] truncate">{instance.user_id}</span>
                           </td>
                         )}
                         {canCreate && (
-                          <td className="px-4 py-3 align-middle text-right">
+                          <td className="px-4 py-3 align-middle text-right whitespace-nowrap">
                             {hasPermission && (
                               <div className="flex items-center justify-end gap-1.5">
                                 <DropdownMenu>
                                   <DropdownMenuTrigger render={
                                     <Button variant="outline" size="sm">
                                       <Download className="size-3.5 mr-1.5" />
-                                      내보내기
+                                      {t("Export")}
                                       <ChevronDown className="size-3 ml-1" />
                                     </Button>
                                   } />
@@ -321,7 +337,7 @@ export default function InstancePage() {
                                   className={buttonVariants({ variant: "outline", size: "sm" })}
                                 >
                                   <Pencil className="size-3.5 mr-1.5" />
-                                  수정
+                                  {t("Edit")}
                                 </Link>
                               </div>
                             )}
@@ -335,7 +351,7 @@ export default function InstancePage() {
                       <td colSpan={3 + (showUser ? 1 : 0) + (canCreate ? 1 : 0)} className="h-40">
                         <div className="flex flex-col items-center justify-center gap-2 text-zinc-400">
                           <Layers className="size-8 opacity-30" />
-                          <p className="text-sm">No instances found.</p>
+                          <p className="text-sm">{t("No instances found.")}</p>
                         </div>
                       </td>
                     </tr>

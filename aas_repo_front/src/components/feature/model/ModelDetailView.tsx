@@ -5,8 +5,12 @@ import Link from "next/link";
 import useSWR from "swr";
 import { getModel } from "@/api/index";
 import { ROUTES } from "@/constants/routes";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { addValuePaths, parsingAAS } from "@/utils/aas";
+import { resolveThumbnailSrc } from "@/utils/index";
 import TemplateBlueprint from "@/components/feature/instance/TemplateBlueprint";
+import ValidationSummary from "@/components/feature/model/ValidationSummary";
+import { validateModelMetadata } from "@/lib/aas";
 import { StatusBadge } from "@/components/feature/shared/ResourceListShell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buttonVariants } from "@/components/ui/button";
@@ -24,7 +28,6 @@ interface FieldDef {
 const FIELD_CONFIG: Record<ModelType, FieldDef[]> = {
   aasmodel: [
     { label: "AAS ID", key: "aasmodel_id", mono: true },
-    { label: "Template ID", key: "aasmodel_template_id", mono: true },
     { label: "Version", key: "version" },
     { label: "Category", key: "category_name" },
     { label: "Asset Type", key: "asset_type" },
@@ -35,7 +38,6 @@ const FIELD_CONFIG: Record<ModelType, FieldDef[]> = {
   submodel: [
     { label: "Submodel ID", key: "submodel_id", mono: true },
     { label: "Semantic ID", key: "submodel_semantic_id", mono: true },
-    { label: "Template ID", key: "submodel_template_id", mono: true },
     { label: "Version", key: "submodel_version" },
     { label: "Category", key: "category_name" },
     { label: "Type", key: "submodel_type" },
@@ -55,6 +57,7 @@ interface ModelDetailViewProps {
 }
 
 export default function ModelDetailView({ modelType, modelSeq }: ModelDetailViewProps) {
+  const { t } = useLanguage();
   const meta = META[modelType];
   const Icon = meta.icon;
 
@@ -64,6 +67,9 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
   );
 
   const model: any = Array.isArray(data) ? data[0] : data?.data?.[0] ?? data;
+
+  // 상세 응답에 담겨오는 썸네일(base64/URL) → 이미지 소스로 변환.
+  const thumbnailSrc = useMemo(() => resolveThumbnailSrc(model), [model]);
 
   const treeData = useMemo(() => {
     const metadata = model?.metadata;
@@ -76,6 +82,22 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
     }
   }, [model]);
 
+  // 읽기 전용 SDK 검증. metadata 가 바뀔 때만 재실행하여 매 렌더 검증을 피한다.
+  // SDK 객체는 보관하지 않고 검증 리포트(요약/이슈)만 메모이즈한다.
+  const validationReport = useMemo(() => {
+    const metadata = model?.metadata;
+    if (!metadata) return undefined;
+    const kind = modelType === "submodel" ? "submodel" : "environment";
+    return validateModelMetadata(metadata, kind);
+  }, [model, modelType]);
+
+  // 관리자는 검증을 통과한 템플릿만 승인·게시한다. 따라서 게시본(published/success)은
+  // 항상 검증 통과로 간주하고, 클라이언트 측 검증의 오탐을 실패로 표시하지 않는다.
+  // 반면 draft/temporary 는 작업 중 상태이므로 실제 검증 결과를 그대로 보여준다.
+  const isApprovedTemplate = ["published", "success", "approved"].includes(
+    String(model?.status ?? "").toLowerCase(),
+  );
+
   return (
     <div className="min-h-screen bg-zinc-50">
       {/* ── Header ── */}
@@ -86,7 +108,7 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
             className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-800 transition-colors mb-3"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            {meta.listLabel}
+            {t(meta.listLabel)}
           </Link>
 
           <div className="flex items-start justify-between gap-4">
@@ -97,16 +119,16 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-lg font-bold text-zinc-900 truncate">
-                    {isLoading ? "Loading..." : model?.[meta.nameKey] || "Untitled"}
+                    {isLoading ? t("Loading...") : model?.[meta.nameKey] || t("Untitled")}
                   </h1>
                   {model?.status && <StatusBadge status={model.status} label={model.status} />}
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-zinc-100 border-zinc-200 text-zinc-500">
+                  <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border bg-zinc-100 border-zinc-200 text-zinc-500">
                     <Lock className="w-3 h-3" />
-                    Read-only template
+                    {t("Read-only template")}
                   </span>
                 </div>
                 <p className="text-sm text-zinc-500 mt-1 leading-relaxed line-clamp-2 max-w-2xl">
-                  {model?.description || "No description provided."}
+                  {model?.description || t("No description provided.")}
                 </p>
               </div>
             </div>
@@ -117,7 +139,7 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
                 className={cn(buttonVariants({ size: "sm" }), "shrink-0")}
               >
                 <FilePlus className="w-3.5 h-3.5 mr-1.5" />
-                Create instance
+                {t("Create instance")}
               </Link>
             )}
           </div>
@@ -127,7 +149,7 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
       <div className="mx-auto max-w-screen-xl px-6 py-6">
         {error ? (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
-            Failed to load this template. Please check your connection and try again.
+            {t("Failed to load this template. Please check your connection and try again.")}
           </div>
         ) : isLoading ? (
           <div className="grid gap-6 lg:grid-cols-3">
@@ -138,8 +160,18 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
           <div className="grid gap-6 lg:grid-cols-3 items-start">
             {/* ── Metadata panel ── */}
             <div className="lg:col-span-1 bg-white border border-zinc-200 rounded-xl p-5">
+              {thumbnailSrc && (
+                <div className="mb-5 -mt-1 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={thumbnailSrc || "/placeholder.svg"}
+                    alt={`${model?.[meta.nameKey] || "Template"} thumbnail`}
+                    className="w-full h-44 object-contain"
+                  />
+                </div>
+              )}
               <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-4">
-                Details
+                {t("Details")}
               </h2>
               <dl className="space-y-3">
                 {FIELD_CONFIG[modelType].map((f) => {
@@ -147,7 +179,7 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
                   if (value === undefined || value === null || value === "") return null;
                   return (
                     <div key={f.key} className="flex flex-col gap-0.5">
-                      <dt className="text-[11px] font-medium text-zinc-400">{f.label}</dt>
+                      <dt className="text-xs font-medium text-zinc-400">{t(f.label)}</dt>
                       <dd className={cn("text-sm text-zinc-800 break-all", f.mono && "font-mono text-xs")}>
                         {String(value)}
                       </dd>
@@ -164,21 +196,30 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
                   className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700"
                 >
                   <FileDown className="w-3.5 h-3.5" />
-                  Open guide document
+                  {t("Open guide document")}
                 </a>
+              )}
+
+              {validationReport && (
+                <div className="mt-5">
+                  <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+                    {t("Validation")}
+                  </h2>
+                  <ValidationSummary report={validationReport} forceValid={isApprovedTemplate} />
+                </div>
               )}
             </div>
 
             {/* ── Structure panel ── */}
             <div className="lg:col-span-2 bg-white border border-zinc-200 rounded-xl p-5">
               <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-4">
-                Structure
+                {t("Structure")}
               </h2>
               {treeData ? (
                 <TemplateBlueprint treeData={treeData} showValues />
               ) : (
                 <p className="text-sm text-zinc-400 py-8 text-center">
-                  No structure data available for this template.
+                  {t("No structure data available for this template.")}
                 </p>
               )}
             </div>

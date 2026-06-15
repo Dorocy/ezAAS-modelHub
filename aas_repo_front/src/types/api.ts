@@ -1,6 +1,14 @@
 export type ModelType = "aasmodel" | "submodel" | "instance";
 export type StatusType = "temporary" | "draft" | "published" | "deprecated";
 
+/**
+ * Export 의 클라이언트 내부 canonical type.
+ * - "environment": AAS Environment(shells/submodels 컨테이너). aasmodel·instance 가 여기에 해당.
+ * - "submodel": 단일 Submodel.
+ * SDK 직렬화 분기(Environment vs Submodel)는 이 canonical type 기준으로만 결정한다.
+ */
+export type ExportModelType = "environment" | "submodel";
+
 export interface GetModelListParams {
   modelType: ModelType;
   pageNumber: number;
@@ -41,7 +49,14 @@ export interface UpsertModelParams {
 }
 
 export interface ExportModelParams {
-  modelType: ModelType;
+  /** 클라이언트 내부 canonical type. SDK 직렬화 분기를 결정한다. */
+  modelType: ExportModelType;
+  /**
+   * 백엔드 download 경로(`basyx/{apiModelType}/download`)와 payload 에 쓰는 API 문자열.
+   * 같은 canonical type 이라도 호출부에 따라 백엔드 라우트가 다를 수 있어
+   * (예: AAS 템플릿은 "aasmodel", 인스턴스는 "instance") 명시적으로 지정한다.
+   */
+  apiModelType: ModelType;
   format?: "json" | "xml" | "aasx";
   modelSeq: string;
   filename?: string;

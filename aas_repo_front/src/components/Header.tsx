@@ -24,11 +24,12 @@ import {
 } from "@/components/ui/sheet";
 import {
   Server,
-  ArrowLeftRight,
+  Maximize2,
   Minimize2,
   Globe,
   Menu,
   LogOut,
+  LogIn,
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,7 @@ import { cn } from "@/lib/utils";
 function Header() {
   const [widthMode, setWidthMode] = useState<"Normal" | "Wide">("Normal");
   const [mounted, setMounted] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -47,6 +49,11 @@ function Header() {
     const saved = (localStorage.getItem("data-layout-width") || "Normal") as "Normal" | "Wide";
     setWidthMode(saved);
     if (saved === "Wide") document.body.classList.add("layout-wide");
+
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   const toggleWidthMode = () => {
@@ -71,19 +78,24 @@ function Header() {
   const isManager = profile?.user_group_seq === 1 || profile?.user_group_seq === 2;
 
   const navLinks = [
-    { href: ROUTES.AASMODEL.LIST,  label: t("AAS Template") },
-    { href: ROUTES.SUBMODEL.LIST,  label: t("Submodel Template") },
-    ...(profile ? [{ href: ROUTES.INSTANCE.LIST, label: t("My AAS Instance") }] : []),
-    { href: ROUTES.ABOUT,          label: t("About") },
-    ...(isManager ? [{ href: ROUTES.DISTRIBUTE.LIST, label: t("Publish") }]   : []),
-    ...(isAdmin   ? [{ href: ROUTES.USER.LIST,       label: t("Authority") }] : []),
+    { href: ROUTES.AASMODEL.LIST,  label: t("AAS Template"),      desc: t("AAS Template desc") },
+    { href: ROUTES.SUBMODEL.LIST,  label: t("Submodel Template"), desc: t("Submodel Template desc") },
+    ...(profile ? [{ href: ROUTES.INSTANCE.LIST, label: t("My AAS Instance"), desc: t("My AAS Instance desc") }] : []),
+    { href: ROUTES.ABOUT,          label: t("About"),             desc: t("About desc") },
+    ...(isManager ? [{ href: ROUTES.DISTRIBUTE.LIST, label: t("Publish"),   desc: t("Publish desc") }]   : []),
+    ...(isAdmin   ? [{ href: ROUTES.USER.LIST,       label: t("Authority"), desc: t("Authority desc") }] : []),
   ];
 
   const isNavActive = (href: string) =>
     pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-card">
+    <header
+      className={cn(
+        "sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 transition-shadow duration-200",
+        scrolled ? "border-border shadow-sm" : "border-border/60"
+      )}
+    >
       {/* ── Top bar ──────────────────────────────────────────────── */}
       <div className="mx-auto max-w-screen-2xl px-4 lg:px-8">
         <div className="flex h-14 items-center justify-between gap-4">
@@ -100,8 +112,9 @@ function Header() {
               <SheetContent side="left" className="w-72 p-0">
                 <SheetHeader className="border-b border-border px-5 py-4">
                   <SheetTitle>
-                    <Link href={ROUTES.HOME}>
-                      <img src="/assets/media/logos/keti_logo.png" alt="KETI ezAAS" className="h-8" />
+                    <Link href={ROUTES.HOME} className="flex flex-col gap-2">
+                      <img src="/assets/media/logos/ezaas_badge.png" alt="ezAAS" className="h-7 w-auto self-start" />
+                      <img src="/assets/media/logos/keti_logo.png" alt="KETI — Korea Electronics Technology Institute" className="h-4 w-auto self-start opacity-65" />
                     </Link>
                   </SheetTitle>
                 </SheetHeader>
@@ -111,14 +124,17 @@ function Header() {
                       key={link.href}
                       href={link.href}
                       className={cn(
-                        "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                        "flex items-start gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                         isNavActive(link.href)
                           ? "bg-primary/8 text-primary"
                           : "text-muted-foreground hover:bg-accent hover:text-foreground"
                       )}
                     >
-                      <ChevronRight className={cn("size-3.5 shrink-0", isNavActive(link.href) ? "text-primary" : "text-muted-foreground/50")} />
-                      {link.label}
+                      <ChevronRight className={cn("mt-0.5 size-3.5 shrink-0", isNavActive(link.href) ? "text-primary" : "text-muted-foreground/50")} />
+                      <span className="flex flex-col">
+                        <span>{link.label}</span>
+                        <span className="text-xs font-normal text-muted-foreground/70">{link.desc}</span>
+                      </span>
                     </Link>
                   ))}
                   {!isAuthenticated && (
@@ -133,39 +149,91 @@ function Header() {
               </SheetContent>
             </Sheet>
 
-            <Link href={ROUTES.HOME} className="flex items-center shrink-0">
-              <img src="/assets/media/logos/keti_logo.png" alt="KETI ezAAS" className="h-8 lg:h-8" />
+            <Link href={ROUTES.HOME} className="flex items-center gap-2.5 shrink-0" title="ezAAS — The All-in-one AAS Solution">
+              <img
+                src="/assets/media/logos/ezaas_badge.png"
+                alt="ezAAS"
+                className="h-7 w-auto"
+              />
+              <span className="hidden h-6 w-px bg-border sm:block" aria-hidden="true" />
+              <img
+                src="/assets/media/logos/keti_logo.png"
+                alt="KETI — Korea Electronics Technology Institute"
+                className="hidden h-5 w-auto opacity-70 sm:block"
+              />
             </Link>
+
+            {/* Inline nav (desktop) */}
+            <nav className="ml-2 hidden h-14 items-center gap-0.5 lg:flex">
+              {navLinks.map((link) => {
+                const active = isNavActive(link.href);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    title={link.desc}
+                    className={cn(
+                      "relative flex h-full items-center px-3 text-sm transition-colors",
+                      active
+                        ? "font-medium text-foreground"
+                        : "font-normal text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {link.label}
+                    {active && (
+                      <span className="absolute bottom-0 left-2 right-2 h-[2px] rounded-t-full bg-primary" />
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
           </div>
 
           {/* Right: actions + user */}
-          <div className="flex items-center gap-0.5">
-            {isAuthenticated && (
-              <Button variant="ghost" size="icon" className="size-8" onClick={handlePortalClick} title="Portal">
-                <Server className="size-4" />
-              </Button>
-            )}
-
-            <Button variant="ghost" size="icon" className="size-8" onClick={toggleWidthMode} title="Toggle layout width">
-              {widthMode === "Normal"
-                ? <ArrowLeftRight className="size-4" />
-                : <Minimize2 className="size-4" />}
-            </Button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger render={
-                <Button variant="ghost" size="icon" className="size-8" title="Language">
-                  <Globe className="size-4" />
+          <div className="flex items-center gap-1.5">
+            {/* Utility icon cluster */}
+            <div className="flex items-center gap-0.5 rounded-lg bg-muted/60 p-0.5">
+              {isAuthenticated && (
+                <Button variant="ghost" size="icon" className="size-7 rounded-md text-muted-foreground hover:text-foreground" onClick={handlePortalClick} title={t("Portal")}>
+                  <Server className="size-4" />
                 </Button>
-              } />
-              <DropdownMenuContent align="end" className="min-w-[130px]">
-                <DropdownMenuItem onClick={() => changeLanguage("en")}>English</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => changeLanguage("ko")}>한국어</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              )}
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 rounded-md text-muted-foreground hover:text-foreground"
+                onClick={toggleWidthMode}
+                title={widthMode === "Normal" ? t("Expand to full width") : t("Back to default width")}
+                aria-pressed={widthMode === "Wide"}
+              >
+                {widthMode === "Normal"
+                  ? <Maximize2 className="size-4" />
+                  : <Minimize2 className="size-4" />}
+              </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger render={
+                  <Button variant="ghost" size="icon" className="size-7 rounded-md text-muted-foreground hover:text-foreground" title={t("Language")}>
+                    <Globe className="size-4" />
+                  </Button>
+                } />
+                <DropdownMenuContent align="end" className="min-w-[130px]">
+                  <DropdownMenuItem onClick={() => changeLanguage("en")}>English</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => changeLanguage("ko")}>한국어</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
             {!isAuthenticated ? (
-              <Link href={ROUTES.LOGIN} className={cn(buttonVariants({ size: "sm" }), "ml-2 h-8 text-xs")}>
+              <Link
+                href={ROUTES.LOGIN}
+                className={cn(
+                  buttonVariants({ size: "sm" }),
+                  "ml-1 h-9 gap-1.5 rounded-lg px-4 font-medium shadow-sm shadow-primary/20 transition-all hover:shadow-md hover:shadow-primary/30"
+                )}
+              >
+                <LogIn className="size-4" />
                 {t("Login")}
               </Link>
             ) : (
@@ -187,7 +255,7 @@ function Header() {
                     <div className="flex flex-col gap-0.5 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm font-semibold truncate">{profile?.user_name}</span>
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">{profile?.user_group_name}</Badge>
+                        <Badge variant="secondary" className="text-xs px-1.5 py-0 h-4">{profile?.user_group_name}</Badge>
                       </div>
                       <span className="text-xs text-muted-foreground truncate">{profile?.user_id}</span>
                     </div>
@@ -218,35 +286,6 @@ function Header() {
               </DropdownMenu>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* ── Bottom nav (desktop) ─────────────────────────────────── */}
-      <div className="hidden border-t border-border/60 bg-card lg:block">
-        <div className="mx-auto max-w-screen-2xl px-4 lg:px-8">
-          <nav className="flex h-10 items-center gap-0">
-            {navLinks.map((link) => {
-              const active = isNavActive(link.href);
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    "relative flex h-full items-center px-3.5 text-sm transition-colors",
-                    active
-                      ? "font-medium text-foreground"
-                      : "font-normal text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {link.label}
-                  {/* Active underline indicator */}
-                  {active && (
-                    <span className="absolute bottom-0 left-0 right-0 h-[2px] rounded-t-full bg-primary" />
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
         </div>
       </div>
     </header>

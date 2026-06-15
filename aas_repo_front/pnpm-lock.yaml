@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@aas-core-works/aas-core3.1-typescript':
+        specifier: ^1.0.1
+        version: 1.0.1
       '@base-ui/react':
         specifier: ^1.4.1
         version: 1.4.1(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -326,6 +329,9 @@ importers:
         version: 8.59.2(eslint@9.39.4(jiti@1.21.7))(typescript@5.7.3)
 
 packages:
+
+  '@aas-core-works/aas-core3.1-typescript@1.0.1':
+    resolution: {integrity: sha512-77GX4Y8pFP+Rv9o3ZDECDBm4HDHdZOhw0AhNTfzSlm3fWIOIb4KNh7Bt5s9UsqDADPPAi4EF7/nT3JDVtl6SaQ==}
 
   '@alloc/quick-lru@5.2.0':
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
@@ -7578,6 +7584,10 @@ packages:
     resolution: {integrity: sha512-WCSfbfZnQDdLQLiMdGUQpMxxckeQ4oZNMNhLVkcekTu7xhD4tuUDyAPoY8CwXvBYE6LwBHd6QW2WZXlOWr1vCw==}
     engines: {node: '>=12.0'}
 
+  xmlsax-typescript@1.0.0-rc.2:
+    resolution: {integrity: sha512-6eoT6BVhCsX7F3KI3FFyr0C5aDwSMfyUsw4g5yUIsf4zp7yRZ5kTDWrM+QHRzQkjNUoJpGEGnUbUT/UcKsorXQ==}
+    engines: {node: '>=20'}
+
   y18n@5.0.8:
     resolution: {integrity: sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==}
     engines: {node: '>=10'}
@@ -7658,6 +7668,10 @@ packages:
         optional: true
 
 snapshots:
+
+  '@aas-core-works/aas-core3.1-typescript@1.0.1':
+    dependencies:
+      xmlsax-typescript: 1.0.0-rc.2
 
   '@alloc/quick-lru@5.2.0': {}
 
@@ -15718,6 +15732,8 @@ snapshots:
       '@oozcitak/infra': 1.0.8
       '@oozcitak/util': 8.3.8
       js-yaml: 3.14.1
+
+  xmlsax-typescript@1.0.0-rc.2: {}
 
   y18n@5.0.8: {}
 

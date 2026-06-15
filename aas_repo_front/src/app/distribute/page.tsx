@@ -1,276 +1,448 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { getPublishedList } from "@/api/index";
+import { rankByQuery } from "@/utils/search";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/contexts/AuthContext";
-import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
-import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { Plus, Search, Pencil, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Pencil,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
+  Boxes,
+  Package,
+  Hash,
+} from "lucide-react";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 15;
 
-const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  published: "default",
-  draft: "secondary",
-  temporary: "outline",
-  deprecated: "destructive",
-};
+type ModelKind = "aasmodel" | "submodel";
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
+interface PublishedRow {
+  raw: any;
+  type: ModelKind;
+  seq: any;
+  name: string;
+  description: string;
+  version?: string;
+  templateId?: string;
+  semanticId?: string;
+  categoryName: string;
 }
 
 export default function DistributePage() {
   const { isAuthenticated } = useAuth();
+  const { t } = useLanguage();
+
   const [inputValue, setInputValue] = useState("");
   const [searchKey, setSearchKey] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"published" | "deprecated">("published");
-  const [typeFilter, setTypeFilter] = useState<"all" | "aasmodel" | "submodel">("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | ModelKind>("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [page, setPage] = useState(1);
 
-  const searchParams: Record<string, string> = {};
-  if (searchKey) searchParams.searchKey = searchKey;
-
+  // status는 published 고정 (배포 관리 화면)
   const { data: publishedData, isLoading, error } = useSWR(
-    isAuthenticated ? ["published-list", page, statusFilter, typeFilter, searchKey] : null,
+    isAuthenticated ? ["published-list"] : null,
     () =>
       getPublishedList({
-        status: statusFilter,
-        type: typeFilter,
-        pageNumber: page,
-        pageSize: PAGE_SIZE,
-        searchParams,
+        status: "published",
+        type: "all",
+        pageNumber: 1,
+        pageSize: 1000,
+        searchParams: {},
       })
   );
 
-  const models: any[] = Array.isArray(publishedData) ? publishedData : (Array.isArray(publishedData?.list) ? publishedData.list : []);
-  const totalCount: number = publishedData?.totalCount ?? publishedData?.total ?? models.length;
+  // 응답 구조 방어: 배열 / { data: [...] } / { data: { data: [...] } } 모두 처리
+  const payload: any = publishedData?.data ?? publishedData;
+  const rawModels: any[] = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : Array.isArray(payload?.list)
+        ? payload.list
+        : [];
+
+  // submodel_* / aas_* 필드를 공통 형태로 정규화
+  const allModels: PublishedRow[] = useMemo(
+    () =>
+      rawModels.map((m: any) => {
+        const isAas = m.aas_seq != null || m.aas_name != null || m.aas_id != null;
+        return {
+          raw: m,
+          type: (isAas ? "aasmodel" : "submodel") as ModelKind,
+          seq: m.submodel_seq ?? m.aas_seq ?? m.target_seq,
+          name: m.submodel_name ?? m.aas_name ?? m.target_name ?? "(이름 없음)",
+          description: m.description ?? "",
+          version: m.version ?? m.target_version,
+          templateId: m.submodel_id ?? m.aas_id ?? m.tmp_seman_id,
+          semanticId: m.submodel_semantic_id ?? m.aas_semantic_id,
+          categoryName: m.category_name ?? "Uncategorized",
+        };
+      }),
+    [rawModels]
+  );
+
+  // 모델 타입별 개수
+  const typeCounts = useMemo(() => {
+    let aas = 0;
+    let submodel = 0;
+    for (const m of allModels) {
+      if (m.type === "aasmodel") aas++;
+      else submodel++;
+    }
+    return { all: allModels.length, aasmodel: aas, submodel };
+  }, [allModels]);
+
+  // 현재 타입 필터 기준 카테고리 목록 + 개수
+  const categories = useMemo(() => {
+    const base = allModels.filter(
+      (m) => typeFilter === "all" || m.type === typeFilter
+    );
+    const map = new Map<string, number>();
+    for (const m of base) map.set(m.categoryName, (map.get(m.categoryName) ?? 0) + 1);
+    return Array.from(map.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }, [allModels, typeFilter]);
+
+  // 필터 적용: 타입/카테고리로 먼저 거른 뒤, 검색어 기준으로 이름 우선 재정렬
+  const filtered = useMemo(() => {
+    const base = allModels.filter((m) => {
+      if (typeFilter !== "all" && m.type !== typeFilter) return false;
+      if (categoryFilter !== "all" && m.categoryName !== categoryFilter) return false;
+      return true;
+    });
+    // 이름 일치를 최우선으로, 그다음 ID/시맨틱ID/설명 키워드 순. 매칭 없으면 제외.
+    return rankByQuery(
+      base,
+      searchKey,
+      {
+        getName: (m) => m.name,
+        getKeywords: (m) => [m.templateId, m.semanticId, m.description],
+      },
+      true,
+    );
+  }, [allModels, typeFilter, categoryFilter, searchKey]);
+
+  const totalCount = filtered.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleSearch = useCallback(() => {
     setSearchKey(inputValue);
     setPage(1);
   }, [inputValue]);
 
+  const handleType = (val: "all" | ModelKind) => {
+    setTypeFilter(val);
+    setCategoryFilter("all");
+    setPage(1);
+  };
+
+  const handleCategory = (val: string) => {
+    setCategoryFilter(val);
+    setPage(1);
+  };
+
   return (
-    <div className="flex flex-col">
-      {/* Page header */}
-      <div className="border-b border-border bg-background px-6 py-4">
-        <div className="mx-auto max-w-screen-2xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-foreground">Publish</h1>
-              <nav className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Link href="/" className="hover:text-foreground">Home</Link>
-                <span>/</span>
-                <span>Publish</span>
-              </nav>
-            </div>
-            <Link href="/distribute/ins" className={cn(buttonVariants({ size: "sm" }))}>
-              <Plus data-icon="inline-start" />
-              Register
-            </Link>
+    <div className="min-h-screen bg-zinc-50">
+      {/* ── Page header ── */}
+      <div className="bg-white border-b border-zinc-200 px-6 py-5">
+        <div className="mx-auto max-w-screen-xl flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold text-zinc-900">{t("Publish")}</h1>
+            <p className="text-sm text-zinc-500 mt-0.5">
+              {isLoading
+                ? t("Loading...")
+                : `${typeCounts.all} ${t("published templates")} · AAS ${typeCounts.aasmodel} · Submodel ${typeCounts.submodel}`}
+            </p>
           </div>
+          <Link href="/distribute/ins" className={cn(buttonVariants({ size: "sm" }))}>
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            {t("Register")}
+          </Link>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="border-b border-border bg-muted/30 px-6 py-3">
-        <div className="mx-auto max-w-screen-2xl flex flex-wrap items-center gap-3">
-          <Select
-            value={statusFilter}
-            onValueChange={(val) => {
-              setStatusFilter((val ?? "published") as "published" | "deprecated");
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="h-8 w-36 text-sm">
-              <SelectValue placeholder="Published" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="published">Published</SelectItem>
-              <SelectItem value="deprecated">Deprecated</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={typeFilter}
-            onValueChange={(val) => {
-              setTypeFilter((val ?? "all") as "all" | "aasmodel" | "submodel");
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="h-8 w-36 text-sm">
-              <SelectValue placeholder="Model All" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Model All</SelectItem>
-              <SelectItem value="aasmodel">AAS</SelectItem>
-              <SelectItem value="submodel">Submodel</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <div className="relative flex-1 min-w-[200px] max-w-sm flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-              <Input
-                className="h-8 pl-8 text-sm"
-                placeholder="Please enter a search term"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              />
+      <div className="mx-auto max-w-screen-xl px-6 py-6 flex gap-6">
+        {/* ── Left sidebar ── */}
+        <aside className="w-56 shrink-0">
+          <div className="sticky top-6 space-y-1">
+            {/* Search */}
+            <div className="mb-4 space-y-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+                <Input
+                  className="h-8 pl-8 text-sm bg-white border-zinc-200 rounded-lg"
+                  placeholder={t("Search by name / ID...")}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                />
+              </div>
+              <Button size="sm" className="w-full h-8" onClick={handleSearch}>
+                <Search className="w-3.5 h-3.5 mr-1.5" />
+                {t("Search")}
+              </Button>
             </div>
-            <Button onClick={handleSearch}>
-              <Search className="size-3.5 mr-1.5" />검색
-            </Button>
-          </div>
-        </div>
-      </div>
 
-      {/* Table */}
-      <div className="mx-auto max-w-screen-2xl w-full px-6 py-6">
-        <p className="mb-4 text-sm text-muted-foreground">
-          {isLoading ? "Loading..." : `${totalCount} results found`}
-        </p>
+            {/* Model type toggle */}
+            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
+              {t("Model Type")}
+            </p>
+            <div className="space-y-1 mb-4">
+              {([
+                { key: "all", label: t("All"), icon: Layers, count: typeCounts.all },
+                { key: "aasmodel", label: "AAS", icon: Boxes, count: typeCounts.aasmodel },
+                { key: "submodel", label: "Submodel", icon: Package, count: typeCounts.submodel },
+              ] as const).map(({ key, label, icon: Icon, count }) => {
+                const active = typeFilter === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => handleType(key)}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm transition-colors text-left",
+                      active
+                        ? "bg-zinc-900 text-white font-medium"
+                        : "text-zinc-600 hover:bg-zinc-100"
+                    )}
+                  >
+                    <Icon className="w-3.5 h-3.5 shrink-0" />
+                    <span className="flex-1">{label}</span>
+                    <span
+                      className={cn(
+                        "text-xs tabular-nums",
+                        active ? "text-zinc-300" : "text-zinc-400"
+                      )}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
 
-        {error && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive mb-4">
-            Failed to load data. Please check your connection or try again.
-          </div>
-        )}
-
-        {isLoading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full rounded" />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-lg border border-border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-24">Model Type</TableHead>
-                  <TableHead>Template Name</TableHead>
-                  <TableHead className="w-20">Version</TableHead>
-                  <TableHead className="w-28">Status</TableHead>
-                  <TableHead>Template ID</TableHead>
-                  <TableHead className="w-28">Published Date</TableHead>
-                  <TableHead className="w-16"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {models.map((model: any) => (
-                  <TableRow key={`${model.target_seq}-${model.ty}`}>
-                    <TableCell>
-                      <Badge
-                        variant={model.ty === "aasmodel" ? "default" : "secondary"}
-                        className="text-xs"
-                      >
-                        {model.ty === "aasmodel" ? "AAS" : "Submodel"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Link
-                        href={ROUTES.DISTRIBUTE.VIEW({
-                          modelType: model.ty as "aasmodel" | "submodel",
-                          targetSeq: model.target_seq,
-                        })}
-                        className="font-medium text-foreground hover:text-primary hover:underline"
-                      >
-                        {model.target_name}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {model.target_version && `v${model.target_version}`}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={STATUS_VARIANT[model.status] ?? "outline"}>
-                        {model.status_nm}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground truncate max-w-[200px]">
-                      {model.tmp_seman_id}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {model.create_date ? formatDate(model.create_date) : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Link
-                        href={ROUTES.DISTRIBUTE.EDIT({
-                          modelType: model.ty as "aasmodel" | "submodel",
-                          targetSeq: model.target_seq,
-                        })}
-                        className={buttonVariants({ variant: "outline", size: "sm" })}
-                      >
-                        <Pencil className="size-3.5 mr-1.5" />
-                        수정
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {models.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                      No published templates found.
-                    </TableCell>
-                  </TableRow>
+            {/* Category */}
+            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-2 pb-1">
+              {t("Category")}
+            </p>
+            <button
+              onClick={() => handleCategory("all")}
+              className={cn(
+                "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm transition-colors",
+                categoryFilter === "all"
+                  ? "bg-zinc-900 text-white font-medium"
+                  : "text-zinc-600 hover:bg-zinc-100"
+              )}
+            >
+              <span>{t("All")}</span>
+              <span
+                className={cn(
+                  "text-xs tabular-nums",
+                  categoryFilter === "all" ? "text-zinc-300" : "text-zinc-400"
                 )}
-              </TableBody>
-            </Table>
+              >
+                {categories.reduce((s, c) => s + c.count, 0)}
+              </span>
+            </button>
+            {categories.map((c) => {
+              const active = categoryFilter === c.name;
+              return (
+                <button
+                  key={c.name}
+                  onClick={() => handleCategory(c.name)}
+                  className={cn(
+                    "w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg text-sm transition-colors text-left",
+                    active
+                      ? "bg-zinc-900 text-white font-medium"
+                      : "text-zinc-600 hover:bg-zinc-100"
+                  )}
+                >
+                  <span className="truncate">{c.name === "Uncategorized" ? t("Uncategorized") : c.name}</span>
+                  <span
+                    className={cn(
+                      "text-xs tabular-nums shrink-0",
+                      active ? "text-zinc-300" : "text-zinc-400"
+                    )}
+                  >
+                    {c.count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
-        )}
+        </aside>
 
-        {totalPages > 1 && (
-          <div className="mt-6 flex items-center justify-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              {page} / {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-            >
-              <ChevronRight className="size-4" />
-            </Button>
+        {/* ── Main content ── */}
+        <div className="flex-1 min-w-0">
+          {/* toolbar */}
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-zinc-500">
+              {searchKey && (
+                <span className="text-zinc-900 font-medium">&quot;{searchKey}&quot; · </span>
+              )}
+              {isLoading ? t("Loading...") : `${totalCount} ${t("templates")}`}
+            </p>
           </div>
-        )}
+
+          {/* error */}
+          {error && (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 mb-4">
+              {t("Failed to load data. Please check your connection or try again.")}
+            </div>
+          )}
+
+          {/* loading */}
+          {isLoading ? (
+            <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton
+                  key={i}
+                  className="h-16 rounded-none border-b border-zinc-100 last:border-b-0"
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
+              <table className="w-full text-sm table-fixed">
+                <thead>
+                  <tr className="border-b border-zinc-200 bg-zinc-50/60 text-left">
+                    <th className="px-4 py-3 w-20 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                      {t("Type")}
+                    </th>
+                    <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                      {t("Template")}
+                    </th>
+                    <th className="px-4 py-3 w-32 text-xs font-semibold text-zinc-400 uppercase tracking-wider hidden md:table-cell">
+                      {t("Category")}
+                    </th>
+                    <th className="px-4 py-3 w-16 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                      {t("Ver.")}
+                    </th>
+                    <th className="px-4 py-3 w-24 text-xs font-semibold text-zinc-400 uppercase tracking-wider text-right">
+                      {t("Actions")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageItems.map((model) => (
+                    <tr
+                      key={`${model.type}-${model.seq}`}
+                      className="border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50 transition-colors"
+                    >
+                      <td className="px-4 py-3 align-top">
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border",
+                            model.type === "aasmodel"
+                              ? "bg-blue-50 border-blue-200 text-blue-700"
+                              : "bg-violet-50 border-violet-200 text-violet-700"
+                          )}
+                        >
+                          {model.type === "aasmodel" ? (
+                            <Boxes className="w-3 h-3" />
+                          ) : (
+                            <Package className="w-3 h-3" />
+                          )}
+                          {model.type === "aasmodel" ? "AAS" : "SM"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <Link
+                          href={ROUTES.DISTRIBUTE.VIEW({
+                            modelType: model.type,
+                            targetSeq: model.seq,
+                          })}
+                          className="block group min-w-0"
+                        >
+                          <span className="block truncate text-sm font-medium text-zinc-900 group-hover:text-blue-600 transition-colors">
+                            {model.name}
+                          </span>
+                          {model.templateId && (
+                            <span className="mt-0.5 flex items-center gap-1 text-xs text-zinc-400 font-mono min-w-0">
+                              <Hash className="w-2.5 h-2.5 shrink-0" />
+                              <span className="truncate">{model.templateId}</span>
+                            </span>
+                          )}
+                          {model.description && (
+                            <span className="mt-1 block truncate text-xs text-zinc-500">
+                              {model.description}
+                            </span>
+                          )}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 align-top text-zinc-500 hidden md:table-cell">
+                        <span className="block truncate">{model.categoryName === "Uncategorized" ? t("Uncategorized") : model.categoryName}</span>
+                      </td>
+                      <td className="px-4 py-3 align-top text-zinc-500 tabular-nums">
+                        {model.version ? `v${model.version}` : "—"}
+                      </td>
+                      <td className="px-4 py-3 align-top text-right">
+                        <Link
+                          href={ROUTES.DISTRIBUTE.EDIT({
+                            modelType: model.type,
+                            targetSeq: model.seq,
+                          })}
+                          className={buttonVariants({ variant: "outline", size: "sm" })}
+                        >
+                          <Pencil className="size-3.5 mr-1.5" />
+                          {t("Edit")}
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                  {pageItems.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="h-40">
+                        <div className="flex flex-col items-center justify-center gap-2 text-zinc-400">
+                          <Layers className="size-8 opacity-30" />
+                          <p className="text-sm">{t("No published templates found.")}</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* pagination */}
+          {totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <span className="text-sm text-zinc-500 tabular-nums">
+                {page} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

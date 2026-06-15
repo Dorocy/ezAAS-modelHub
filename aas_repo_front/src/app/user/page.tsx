@@ -5,18 +5,12 @@ import Link from "next/link";
 import useSWR from "swr";
 import { getUserList } from "@/api/index";
 import { ROUTES } from "@/constants/routes";
+import { UserRole } from "@/constants/roles";
 import { useAuth } from "@/contexts/AuthContext";
-import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { buttonVariants } from "@/components/ui/button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -27,8 +21,18 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { rankByQuery } from "@/utils/search";
 import { cn } from "@/lib/utils";
-import { Search, Pencil, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Settings2,
+  ShieldAlert,
+  UserCog,
+  User as UserIcon,
+} from "lucide-react";
 
 const PAGE_SIZE = 20;
 
@@ -52,18 +56,44 @@ export interface User {
   user_photo_url: string;
 }
 
-const GROUP_OPTIONS = [
-  { id: "1", text: "System Manager" },
-  { id: "2", text: "Template Manager" },
-  { id: "3", text: "User" },
-];
+// 권한(그룹) 정의 — 필터 칩 + 배지 색상에 함께 사용
+const ROLES = [
+  {
+    id: "1",
+    label: "System Manager",
+    icon: ShieldAlert,
+    badge: "border-rose-200 bg-rose-50 text-rose-700",
+    dot: "bg-rose-500",
+  },
+  {
+    id: "2",
+    label: "Template Manager",
+    icon: UserCog,
+    badge: "border-blue-200 bg-blue-50 text-blue-700",
+    dot: "bg-blue-500",
+  },
+  {
+    id: "3",
+    label: "User",
+    icon: UserIcon,
+    badge: "border-zinc-200 bg-zinc-100 text-zinc-600",
+    dot: "bg-zinc-400",
+  },
+] as const;
+
+function roleMeta(groupSeq: number | string) {
+  return ROLES.find((r) => r.id === String(groupSeq)) ?? ROLES[2];
+}
 
 export default function UserPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const { t } = useLanguage();
   const [inputValue, setInputValue] = useState("");
   const [searchKey, setSearchKey] = useState("");
   const [groupFilter, setGroupFilter] = useState("all");
   const [page, setPage] = useState(1);
+
+  const isAdmin = user?.user_group_seq === UserRole.Manager;
 
   const searchParams: Record<string, string> = {};
   if (searchKey) searchParams.searchKey = searchKey;
@@ -79,150 +109,242 @@ export default function UserPage() {
       })
   );
 
-  // user/info/list 는 DataTables 형식: { draw, recordsTotal, recordsFiltered, data }
-  // apiRequest 가 result.data 를 반환하므로 userData 는 이미 data 필드 값
-  const users: User[] = Array.isArray(userData) ? userData : (Array.isArray(userData?.list) ? userData.list : []);
-  const totalCount: number = userData?.recordsTotal ? Number(userData.recordsTotal) : (userData?.totalCount ?? users.length);
+  // user/list/{page}/{size} 응답: DataTables 형식 { recordsTotal, data: [...] } 또는 배열.
+  const payload: any = userData?.data ?? userData;
+  const rawUsers: User[] = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : Array.isArray(payload?.list)
+        ? payload.list
+        : Array.isArray(userData?.list)
+          ? userData.list
+          : [];
+  const totalCount: number =
+    payload?.recordsTotal != null
+      ? Number(payload.recordsTotal)
+      : userData?.recordsTotal != null
+        ? Number(userData.recordsTotal)
+        : userData?.totalCount ?? rawUsers.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+  // 이름(user_name) 일치를 최우선으로, 그다음 아이디/전화번호 키워드 순으로 재정렬
+  const users = rankByQuery(rawUsers, searchKey, {
+    getName: (u) => u.user_name,
+    getKeywords: (u) => [u.user_id, u.user_phonenumber],
+  });
 
   const handleSearch = useCallback(() => {
     setSearchKey(inputValue);
     setPage(1);
   }, [inputValue]);
 
+  const handleRole = (id: string) => {
+    setGroupFilter(id);
+    setPage(1);
+  };
+
   return (
-    <div className="flex flex-col">
-      {/* Page header */}
-      <div className="border-b border-border bg-background px-6 py-4">
-        <div className="mx-auto max-w-screen-2xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-foreground">Authority</h1>
-              <nav className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Link href={ROUTES.HOME} className="hover:text-foreground">Home</Link>
-                <span>/</span>
-                <span>Authority</span>
-              </nav>
-            </div>
+    <div className="min-h-screen bg-zinc-50">
+      {/* ── Page header ── */}
+      <div className="bg-white border-b border-zinc-200 px-6 py-5">
+        <div className="mx-auto max-w-screen-xl flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-lg font-bold text-zinc-900">{t("User Management")}</h1>
+            <p className="mt-0.5 text-sm text-zinc-500">
+              {t("Review members and assign access permissions")}
+            </p>
           </div>
+          {isAdmin && (
+            <Link
+              href={ROUTES.USER.CREATE}
+              className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}
+            >
+              <Plus className="size-3.5" />
+              {t("New User")}
+            </Link>
+          )}
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="border-b border-border bg-muted/30 px-6 py-3">
-        <div className="mx-auto max-w-screen-2xl flex flex-wrap items-center gap-3">
-          <Select
-            value={groupFilter}
-            onValueChange={(val) => { setGroupFilter(val ?? "all"); setPage(1); }}
-          >
-            <SelectTrigger className="h-8 w-44 text-sm">
-              <SelectValue placeholder="Group All" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Group All</SelectItem>
-              {GROUP_OPTIONS.map((g) => (
-                <SelectItem key={g.id} value={g.id}>{g.text}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <div className="mx-auto max-w-screen-xl px-6 py-6 space-y-5">
+        {/* ── Role filter chips + search ── */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              onClick={() => handleRole("all")}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                groupFilter === "all"
+                  ? "border-zinc-900 bg-zinc-900 text-white"
+                  : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100",
+              )}
+            >
+              {t("All Roles")}
+            </button>
+            {ROLES.map((r) => {
+              const Icon = r.icon;
+              const active = groupFilter === r.id;
+              return (
+                <button
+                  key={r.id}
+                  onClick={() => handleRole(r.id)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                    active
+                      ? "border-zinc-900 bg-zinc-900 text-white"
+                      : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100",
+                  )}
+                >
+                  <Icon className="size-3.5" />
+                  {t(r.label)}
+                </button>
+              );
+            })}
+          </div>
 
-          <div className="relative flex-1 min-w-[200px] max-w-sm flex gap-2">
+          <div className="flex w-full max-w-xs items-center gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+              <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-zinc-400" />
               <Input
-                className="h-8 pl-8 text-sm"
-                placeholder="Please enter a search term"
+                className="h-9 bg-white pl-8 text-sm"
+                placeholder={t("Search name, ID, or phone")}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               />
             </div>
-            <Button onClick={handleSearch}>
-              검색
+            <Button size="sm" className="h-9" onClick={handleSearch}>
+              {t("Search")}
             </Button>
           </div>
         </div>
-      </div>
 
-      {/* Table */}
-      <div className="mx-auto max-w-screen-2xl w-full px-6 py-6">
-        <p className="mb-4 text-sm text-muted-foreground">
-          {isLoading ? "Loading..." : `${totalCount} results found`}
+        <p className="text-sm text-zinc-500">
+          {searchKey && (
+            <span className="font-medium text-zinc-900">&quot;{searchKey}&quot; · </span>
+          )}
+          {isLoading ? t("Loading...") : `${totalCount} ${t("users")}`}
         </p>
 
         {error && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive mb-4">
-            Failed to load data. Please check your connection or try again.
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+            {t("Failed to load data. Please check your connection or try again.")}
           </div>
         )}
 
+        {/* ── Table ── */}
         {isLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full rounded" />
+              <Skeleton key={i} className="h-14 w-full rounded-xl" />
             ))}
           </div>
         ) : (
-          <div className="rounded-lg border border-border overflow-hidden">
+          <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Name / ID</TableHead>
-                  <TableHead className="w-28">Social</TableHead>
-                  <TableHead className="w-32">Create Date</TableHead>
-                  <TableHead className="w-36">Role</TableHead>
-                  <TableHead className="w-24">Status</TableHead>
-                  <TableHead className="w-16">Edit</TableHead>
+                <TableRow className="bg-zinc-50/60 hover:bg-zinc-50/60">
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                    {t("Member")}
+                  </TableHead>
+                  <TableHead className="w-28 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                    {t("Social")}
+                  </TableHead>
+                  <TableHead className="w-32 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                    {t("Joined")}
+                  </TableHead>
+                  <TableHead className="w-44 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                    {t("Role")}
+                  </TableHead>
+                  <TableHead className="w-24 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                    {t("Status")}
+                  </TableHead>
+                  <TableHead className="w-28 text-right text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                    {t("Permission")}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((u) => (
-                  <TableRow key={u.user_seq}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="size-8">
-                          <AvatarFallback className="text-xs">
-                            {u.user_name.slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                          <Link
-                            href={ROUTES.USER.VIEW(String(u.user_seq))}
-                            className="text-sm font-medium text-foreground hover:text-primary hover:underline"
-                          >
-                            {u.user_name}
-                          </Link>
-                          <span className="text-xs text-muted-foreground">{u.user_id}</span>
+                {users.map((u) => {
+                  const meta = roleMeta(u.user_group_seq);
+                  return (
+                    <TableRow key={u.user_seq} className="group">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="size-9 border border-zinc-200">
+                            <AvatarFallback className="bg-zinc-100 text-xs font-medium text-zinc-600">
+                              {u.user_name.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex min-w-0 flex-col">
+                            <Link
+                              href={ROUTES.USER.VIEW(String(u.user_seq))}
+                              className="truncate text-sm font-medium text-zinc-900 hover:text-blue-600 hover:underline"
+                            >
+                              {u.user_name}
+                            </Link>
+                            <span className="truncate text-xs text-zinc-400">
+                              {u.user_id}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {u.socialprovider_name ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {new Date(u.start_timestamp).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-sm">{u.user_group_name}</TableCell>
-                    <TableCell>
-                      <Badge variant={u.status === "Y" ? "default" : "destructive"}>
-                        {u.status_nm}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Link
-                        href={ROUTES.USER.EDIT(String(u.user_seq))}
-                        className={buttonVariants({ variant: "outline" })}
-                      >
-                        <Pencil className="size-3.5 mr-1.5" />
-                        수정
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell className="text-sm text-zinc-500">
+                        {u.socialprovider_name ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-sm text-zinc-500">
+                        {new Date(u.start_timestamp).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium",
+                            meta.badge,
+                          )}
+                        >
+                          <meta.icon className="size-3" />
+                          {u.user_group_name || t(meta.label)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1.5 text-xs font-medium",
+                            u.status === "Y" ? "text-emerald-600" : "text-zinc-400",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "size-1.5 rounded-full",
+                              u.status === "Y" ? "bg-emerald-500" : "bg-zinc-300",
+                            )}
+                          />
+                          {u.status_nm}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Link
+                          href={ROUTES.USER.EDIT(String(u.user_seq))}
+                          className={cn(
+                            buttonVariants({ variant: "outline", size: "sm" }),
+                            "h-8 gap-1.5",
+                          )}
+                        >
+                          <Settings2 className="size-3.5" />
+                          {t("Manage")}
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
                 {users.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                      No users found.
+                    <TableCell
+                      colSpan={6}
+                      className="h-32 text-center text-sm text-zinc-400"
+                    >
+                      {t("No users found.")}
                     </TableCell>
                   </TableRow>
                 )}
@@ -232,21 +354,23 @@ export default function UserPage() {
         )}
 
         {totalPages > 1 && (
-          <div className="mt-6 flex items-center justify-center gap-2">
+          <div className="flex items-center justify-center gap-2 pt-2">
             <Button
               variant="outline"
               size="icon"
+              className="size-8"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
             >
               <ChevronLeft className="size-4" />
             </Button>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm tabular-nums text-zinc-500">
               {page} / {totalPages}
             </span>
             <Button
               variant="outline"
               size="icon"
+              className="size-8"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
             >

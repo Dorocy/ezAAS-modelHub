@@ -88,3 +88,33 @@ export function getCodeTree(data) {
 
   return tree;
 }
+
+/**
+ * 모델(템플릿) 객체에서 썸네일 이미지 소스를 추출한다.
+ * - 백엔드 필드명이 환경마다 다를 수 있어 여러 후보를 순서대로 확인한다.
+ * - base64 문자열이면 data URL 로 변환하고, 이미 data:/http// URL 이면 그대로 사용한다.
+ * - 적절한 값이 없으면 undefined 를 반환한다(호출부에서 아이콘 등으로 폴백).
+ * 목록 API 에 썸네일 필드가 추가되면 별도 수정 없이 자동으로 동작한다.
+ */
+export function resolveThumbnailSrc(model): string | undefined {
+  if (!model) return undefined;
+  const raw =
+    model.aasmodel_img ??
+    model.submodel_img ??
+    model.thumbnail ??
+    model.thumbnail_img ??
+    model.image ??
+    model.img;
+  if (!raw || typeof raw !== "string") return undefined;
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  if (
+    trimmed.startsWith("data:") ||
+    trimmed.startsWith("http") ||
+    trimmed.startsWith("/")
+  ) {
+    return trimmed;
+  }
+  const mime = model.mime_type || model.mimeType || "image/png";
+  return `data:${mime};base64,${trimmed}`;
+}

@@ -19,6 +19,12 @@ import type {
   VerifyInstanceParams,
 } from "@/types/api";
 import type { AuthTokenData } from "@/types/auth";
+import {
+  environmentFromJson,
+  submodelFromJson,
+  toJsonString,
+  validate,
+} from "@/lib/aas";
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -79,7 +85,8 @@ export async function getModelList(params: GetModelListParams) {
   const searchKey = (params.searchParams as any)?.searchKey;
   const query = searchKey ? `?search=${encodeURIComponent(searchKey)}` : "";
   const url = `instance/list/${params.modelType}/${categorySeq}${query}`;
-  return apiRequest({ url, withToast: params.withToast });
+  // 비로그인 사용자도 템플릿 목록을 조회할 수 있도록 401 시 강제 리다이렉트하지 않는다.
+  return apiRequest({ url, withToast: params.withToast, silent401: true });
 }
 
 export async function getModel(params: GetModelParams) {
@@ -138,15 +145,15 @@ export async function deleteModel(params: DeleteModelParams) {
 
 export async function exportModel(params: ExportModelParams): Promise<void> {
   const format = params.format ?? "json";
-  const filename = params.filename ?? params.modelType;
+  const filename = params.filename ?? params.apiModelType;
   const payload = {
     name: filename,
     source: "db",
     model_key: String(params.modelSeq),
-    modelType: params.modelType,
+    modelType: params.apiModelType,
   };
   const blob = await apiRequest({
-    url: `basyx/${params.modelType}/download?format=${format}`,
+    url: `basyx/${params.apiModelType}/download?format=${format}`,
     options: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -155,14 +162,59 @@ export async function exportModel(params: ExportModelParams): Promise<void> {
     responseType: "blob",
     withToast: true,
   });
+
+  // ── SDK Export 경계 계층 ────────────────────────────────────────────────────
+  // 실제 직렬화는 백엔드(BaSyx)가 수행한다. 여기서는 다운로드 직전에
+  // JSON 결과만 SDK 로 round-trip(역직렬화 → 검증 → 재직렬화)하여
+  // - 역직렬화 실패(구조적으로 깨진 AAS)면 export 를 차단하고,
+  // - 메타모델 위반은 현 정책대로 콘솔 경고만 남긴 뒤 정규화된 JSON 으로 저장한다.
+  // XML/AASX 는 SDK 가 처리하지 않으므로 백엔드 blob 을 그대로 통과시킨다.
+  //
+  // 직렬화 분기는 백엔드 API 문자열이 아니라 canonical type(modelType) 기준으로 한다.
+  let outputBlob: Blob = blob;
+  if (format === "json") {
+    const text = await blob.text();
+    if (text.trim().length > 0) {
+      const parsed =
+        params.modelType === "submodel"
+          ? submodelFromJson(text)
+          : environmentFromJson(text);
+
+      if (!parsed.ok || parsed.value === null) {
+        const message = `AAS 구조를 해석할 수 없어 export 를 중단했습니다: ${
+          parsed.error ?? "알 수 없는 오류"
+        }`;
+        if (params.errorThrow) {
+          throw new Error(message);
+        }
+        console.warn(`[v0] export 차단: ${message}`);
+        return;
+      }
+
+      const issues = validate(parsed.value);
+      if (!issues.valid) {
+        console.warn(
+          `[v0] export SDK 메타모델 경고 ${issues.issues.length}건 (export 계속):`,
+          issues.issues.slice(0, 10),
+        );
+      }
+
+      // SDK 기준으로 정규화된 JSON 으로 다운로드한다(UI 전용/비표준 필드 제거).
+      outputBlob = new Blob([toJsonString(parsed.value)], {
+        type: "application/json",
+      });
+    }
+  }
+
   const { saveAs } = await import("file-saver");
-  saveAs(blob, `${filename}.${format}`);
+  saveAs(outputBlob, `${filename}.${format}`);
 }
 
 // ── Code ──────────────────────────────────────────────────────────────────────
 
 export async function getCodeList(type: string, withToast = false) {
-  return apiRequest({ url: `common/code/${type}`, withToast });
+  // 공개 리스트 페이지의 카테고리 사이드��에서도 쓰이므로 401 시 리다이렉트하지 않는다.
+  return apiRequest({ url: `common/code/${type}`, withToast, silent401: true });
 }
 
 // ── Published ─────────────────────────────────────────────────────────────────
@@ -268,10 +320,12 @@ export async function getInstanceDetail(params: GetInstanceParams) {
 // ── User ──────────────────────────────────────────────────────────────────────
 
 export async function getUserList(params: GetUserListParams) {
-  // API: user/info/list  — DataTables 형식 응답 { draw, recordsTotal, recordsFiltered, data }
-  const searchKey = (params.searchParams as any)?.searchKey;
-  const query = searchKey ? `?search=${encodeURIComponent(searchKey)}` : "";
-  const url = `user/info/list${query}`;
+  // 백엔드 검증된 엔드포인트: user/list/{pageNumber}/{pageSize}?{searchParams}
+  // (이전 운영 버전에서 사용하던 경로. user/info/list 는 빈 결과를 반환해 교체함)
+  const qs = new URLSearchParams(
+    params.searchParams as Record<string, string>
+  ).toString();
+  const url = `user/list/${params.pageNumber}/${params.pageSize}${qs ? `?${qs}` : ""}`;
   return apiRequest({ url, withToast: params.withToast });
 }
 

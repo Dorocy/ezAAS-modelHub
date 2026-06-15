@@ -10,7 +10,10 @@ import { importModel, upsertModel, verifyModel, apiVerifyInstance } from "@/api/
 import { ROUTES } from "@/constants/routes";
 import { base64ToFile } from "@/utils/index";
 import { addValuePaths, parsingAAS } from "@/utils/aas";
+import { environmentFromJson, submodelFromJson, validate } from "@/lib/aas";
+import type { JsonValue } from "@/lib/aas";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 import TemplateBlueprint from "@/components/feature/instance/TemplateBlueprint";
 import CategoryCombobox from "@/components/CategoryCombobox";
@@ -90,6 +93,7 @@ interface ModelCreateFormProps {
 export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const meta = META[modelType];
   const Icon = meta.icon;
   const routeKey = modelType.toUpperCase() as "AASMODEL" | "SUBMODEL";
@@ -214,10 +218,38 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
       const result: any = await importModel({ modelType, file });
       if (!result) return;
 
-      const parsed =
+      // 백엔드(BaSyx)가 돌려준 metadata 를 SDK 로 역직렬화하여 정규화 + 검증한다.
+      // - environmentFromJson/submodelFromJson 은 문자열/객체 입력을 모두 처리한다.
+      // - metadata state 에는 다운스트림(parsingAAS·썸네일 매칭·백엔드 재전송) 호환을
+      //   위해 "원본 raw JSON" 을 그대로 유지한다. SDK 객체로 치환하지 않는다.
+      // - 차단 정책(승인됨): 역직렬화 실패(구조적으로 깨진 AAS)만 경고하고,
+      //   메타모델 위반은 콘솔 경고로만 남긴다.
+      const rawMetadata =
         typeof result.metadata === "string"
           ? JSON.parse(result.metadata)
           : result.metadata;
+
+      const parseResult =
+        modelType === "aasmodel"
+          ? environmentFromJson(result.metadata as string | JsonValue)
+          : submodelFromJson(result.metadata as string | JsonValue);
+
+      if (!parseResult.ok || parseResult.value === null) {
+        toast(`AAS 구조를 해석할 수 없습니다: ${parseResult.error ?? "알 수 없는 오류"}`, {
+          icon: "⚠️",
+        });
+        return;
+      }
+
+      const sdkIssues = validate(parseResult.value);
+      if (!sdkIssues.valid) {
+        console.warn(
+          `[v0] import SDK 메타모델 경고 ${sdkIssues.issues.length}건 (계속 진행):`,
+          sdkIssues.issues.slice(0, 10),
+        );
+      }
+
+      const parsed = rawMetadata;
       setMetadata(parsed);
 
       // A freshly imported model must be re-verified before saving.
@@ -320,6 +352,34 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
     let result: "success" | "fail";
     try {
       setVerifying(true);
+
+      // ── 1차 게이트: 클라이언트 SDK 검증(주 검증) ──
+      // 백엔드 호출 전에 클라이언트에서 먼저 점검한다.
+      // metadata 는 shells/submodels 를 담은 Environment 형태이므로 그대로 역직렬화한다.
+      //
+      // 차단 정책: "역직렬화 실패(= 구조적으로 깨진 AAS)"만 저장을 차단한다.
+      // 메타모델 제약 위반(중복 언어 description 등)은 기존 정상 템플릿에도
+      // 다수 존재하므로 차단하지 않고 콘솔 경고로만 남긴다(회귀 방지).
+      const parsedEnv = environmentFromJson(metadata as JsonValue);
+      if (!parsedEnv.ok || parsedEnv.value === null) {
+        verificationRef.current = null;
+        setVerificationActive(null);
+        setVerificationSummary(null);
+        setVerificationError(
+          `AAS 구조를 해석할 수 없습니다: ${parsedEnv.error ?? "알 수 없는 오류"}`,
+        );
+        setVerification("fail");
+        return "fail";
+      }
+      const sdkResult = validate(parsedEnv.value);
+      if (!sdkResult.valid) {
+        console.warn(
+          `[v0] SDK 메타모델 경고 ${sdkResult.issues.length}건 (저장은 계속):`,
+          sdkResult.issues.slice(0, 10),
+        );
+      }
+
+      // ── 2차: 백엔드 검증(보조) ──
       let summary: string | undefined;
       if (modelType === "aasmodel") {
         // Real structure verification via the backend /instance/verification
@@ -482,7 +542,7 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
             className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-800 transition-colors mb-3"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            {meta.listLabel}
+            {t(meta.listLabel)}
           </Link>
 
           <div className="flex items-start justify-between gap-4">
@@ -491,10 +551,9 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
                 <Icon className="w-5 h-5 text-zinc-500" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-lg font-bold text-zinc-900">{meta.title}</h1>
+                <h1 className="text-lg font-bold text-zinc-900">{t(meta.title)}</h1>
                 <p className="text-sm text-zinc-500 mt-1 leading-relaxed max-w-2xl">
-                  Import a model file and fill in the details to register a new
-                  template.
+                  {t("Import a model file and fill in the details to register a new template.")}
                 </p>
               </div>
             </div>
@@ -512,12 +571,12 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
                 ) : (
                   <FileUp className="w-3.5 h-3.5 mr-1.5" />
                 )}
-                Import file
+                {t("Import file")}
               </Button>
               {metadata && (
                 <Button type="button" size="sm" variant="ghost" onClick={clearImport}>
                   <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-                  Reset
+                  {t("Reset")}
                 </Button>
               )}
             </div>
@@ -716,7 +775,7 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
                 Structure
               </h2>
               {Object.keys(importedFiles).length > 0 && (
-                <span className="text-[11px] text-zinc-400">
+                <span className="text-xs text-zinc-400">
                   {Object.keys(importedFiles).length} attachment(s)
                 </span>
               )}
@@ -794,7 +853,7 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
             href={meta.listRoute}
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
           >
-            Cancel
+            {t("Cancel")}
           </Link>
           <Button
             type="button"
@@ -804,7 +863,7 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
             onClick={() => handleSubmit("temporary")}
           >
             <Save className="w-3.5 h-3.5 mr-1.5" />
-            Save as draft
+            {t("Save as draft")}
           </Button>
           <Button
             type="button"
@@ -819,7 +878,7 @@ export default function ModelCreateForm({ modelType }: ModelCreateFormProps) {
             ) : (
               <Upload className="w-3.5 h-3.5 mr-1.5" />
             )}
-            Register
+            {t("Register")}
           </Button>
         </div>
       </div>

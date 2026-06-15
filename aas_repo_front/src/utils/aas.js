@@ -86,6 +86,16 @@ export const parsingSub = (obj) => {
 export function parsingAAS(json) {
   const { assetAdministrationShells, submodels, conceptDescriptions } = json;
 
+  // ConceptDescription 을 id 로 빠르게 찾기 위한 조회 맵.
+  // 실제 IDTA/ECLASS 템플릿은 semanticId 를 GlobalReference/ExternalReference 로
+  // 참조하므로 key.type 에 의존하지 말고 value(=CD.id)로 매칭한다.
+  const cdMap = new Map();
+  if (Array.isArray(conceptDescriptions)) {
+    for (const cd of conceptDescriptions) {
+      if (cd?.id != null) cdMap.set(String(cd.id), cd);
+    }
+  }
+
   const parsingSub = (obj) => {
     if (!obj) return null; // ✅ null 체크 추가
 
@@ -139,12 +149,13 @@ export function parsingAAS(json) {
 
     treeNode["Submodel"] = tempNode;
 
-    if (obj.semanticId?.keys?.length > 0) {
-      const { type, value } = obj.semanticId.keys[0];
-      if (type === "ConceptDescription") {
-        const find = conceptDescriptions.find((item) => item.id == value);
-        if (find != null) {
-          treeNode["ConceptDescription"] = find;
+    // semanticId 의 어떤 key 값이든 CD.id 와 일치하면 개념 설명을 연결한다.
+    if (Array.isArray(obj.semanticId?.keys)) {
+      for (const key of obj.semanticId.keys) {
+        const found = key?.value != null ? cdMap.get(String(key.value)) : null;
+        if (found != null) {
+          treeNode["ConceptDescription"] = found;
+          break;
         }
       }
     }

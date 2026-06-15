@@ -84,6 +84,9 @@
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* 전반적인 가독성 향상: 루트 폰트를 16px → 17px 로 키워
+       rem 기반 텍스트 크기(text-sm/xs/base 등)가 비례해서 커진다. */
+    font-size: 106.25%;
   }
 
   body {
@@ -91,6 +94,14 @@
     font-family: 'Pretendard', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
     font-feature-settings: 'kern' 1, 'liga' 1;
     line-height: 1.5;
+  }
+
+  /* ── Layout width toggle ──────────────────────────────────────
+     Header has a button that toggles `body.layout-wide`. In wide
+     mode, every centered `max-w-screen-2xl` container expands to
+     the full viewport width. */
+  body.layout-wide .max-w-screen-2xl {
+    max-width: 100%;
   }
 
   /* Smooth focus rings */
