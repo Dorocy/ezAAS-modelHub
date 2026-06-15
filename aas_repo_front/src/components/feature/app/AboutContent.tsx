@@ -10,6 +10,8 @@ import {
   ArrowUpRight,
   PlayCircle,
   FileText,
+  Boxes,
+  Layers,
 } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -199,6 +201,75 @@ export default function AboutContent() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── Template guides: GitBook documentation per template type ── */}
+      <section className="mx-auto max-w-screen-xl px-6 py-16 lg:py-20">
+        <div className="mb-10 max-w-2xl">
+          <p className="text-xs font-semibold uppercase tracking-widest text-blue-600">
+            {t("Template Guides")}
+          </p>
+          <h3 className="mt-2 text-2xl font-bold tracking-tight text-zinc-900 text-balance lg:text-3xl">
+            {t("Guides for each template type")}
+          </h3>
+          <p className="mt-3 text-base leading-relaxed text-zinc-600 text-pretty">
+            {t(
+              "Beyond the platform documentation, we provide dedicated guide documents for each of our AAS Templates and Submodel Templates — explaining their structure, elements, and how to use them.",
+            )}
+          </p>
+        </div>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          {[
+            {
+              icon: Boxes,
+              kind: t("AAS Template"),
+              title: t("AAS Template Guide"),
+              desc: t(
+                "Understand the structure of each AAS Template, its submodels, and how to apply it to your assets.",
+              ),
+              href: "https://keti-1.gitbook.io/keti-docs/",
+            },
+            {
+              icon: Layers,
+              kind: t("Submodel Template"),
+              title: t("Submodel Template Guide"),
+              desc: t(
+                "Learn what each Submodel Template captures — its elements, semantics, and the values you need to provide.",
+              ),
+              href: "https://keti-1.gitbook.io/keti-docs/",
+            },
+          ].map(({ icon: Icon, kind, title, desc, href }) => (
+            <a
+              key={title}
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              className="group flex flex-col rounded-2xl border border-zinc-200 bg-white p-6 transition-colors hover:border-blue-300 hover:bg-blue-50/30"
+            >
+              <div className="flex items-center justify-between">
+                <span className="inline-flex size-11 items-center justify-center rounded-xl bg-zinc-900 text-white transition-colors group-hover:bg-blue-600">
+                  <Icon className="size-5" />
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs font-medium text-zinc-500">
+                  <BookOpen className="size-3" />
+                  GitBook
+                </span>
+              </div>
+              <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-blue-600">
+                {kind}
+              </p>
+              <h4 className="mt-1 text-lg font-semibold text-zinc-900">{title}</h4>
+              <p className="mt-1.5 flex-1 text-sm leading-relaxed text-zinc-600">
+                {desc}
+              </p>
+              <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-zinc-900 group-hover:text-blue-600">
+                {t("Open guide")}
+                <ArrowUpRight className="size-4" />
+              </span>
+            </a>
+          ))}
         </div>
       </section>
 

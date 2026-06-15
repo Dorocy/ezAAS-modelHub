@@ -244,5 +244,13 @@
   "Language": "Language",
   "Show descriptions": "Show descriptions",
   "Hide descriptions": "Hide descriptions",
-  "Show the meaning, unit, and allowed values for each element": "Show the meaning, unit, and allowed values for each element"
+  "Show the meaning, unit, and allowed values for each element": "Show the meaning, unit, and allowed values for each element",
+  "Template Guides": "Template Guides",
+  "Guides for each template type": "Guides for each template type",
+  "Beyond the platform documentation, we provide dedicated guide documents for each of our AAS Templates and Submodel Templates — explaining their structure, elements, and how to use them.": "Beyond the platform documentation, we provide dedicated guide documents for each of our AAS Templates and Submodel Templates — explaining their structure, elements, and how to use them.",
+  "AAS Template Guide": "AAS Template Guide",
+  "Understand the structure of each AAS Template, its submodels, and how to apply it to your assets.": "Understand the structure of each AAS Template, its submodels, and how to apply it to your assets.",
+  "Submodel Template Guide": "Submodel Template Guide",
+  "Learn what each Submodel Template captures — its elements, semantics, and the values you need to provide.": "Learn what each Submodel Template captures — its elements, semantics, and the values you need to provide.",
+  "Open guide": "Open guide"
 }
