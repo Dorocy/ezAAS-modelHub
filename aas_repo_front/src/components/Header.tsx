@@ -161,6 +161,31 @@ function Header() {
                 className="hidden h-5 w-auto opacity-70 sm:block"
               />
             </Link>
+
+            {/* Inline nav (desktop) */}
+            <nav className="ml-2 hidden h-14 items-center gap-0.5 lg:flex">
+              {navLinks.map((link) => {
+                const active = isNavActive(link.href);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    title={link.desc}
+                    className={cn(
+                      "relative flex h-full items-center px-3 text-sm transition-colors",
+                      active
+                        ? "font-medium text-foreground"
+                        : "font-normal text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {link.label}
+                    {active && (
+                      <span className="absolute bottom-0 left-2 right-2 h-[2px] rounded-t-full bg-primary" />
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
           </div>
 
           {/* Right: actions + user */}
@@ -243,36 +268,6 @@ function Header() {
               </DropdownMenu>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* ── Bottom nav (desktop) ─────────────────────────────────── */}
-      <div className="hidden border-t border-border/60 bg-card lg:block">
-        <div className="mx-auto max-w-screen-2xl px-4 lg:px-8">
-          <nav className="flex h-10 items-center gap-0">
-            {navLinks.map((link) => {
-              const active = isNavActive(link.href);
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  title={link.desc}
-                  className={cn(
-                    "relative flex h-full items-center px-3.5 text-sm transition-colors",
-                    active
-                      ? "font-medium text-foreground"
-                      : "font-normal text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {link.label}
-                  {/* Active underline indicator */}
-                  {active && (
-                    <span className="absolute bottom-0 left-0 right-0 h-[2px] rounded-t-full bg-primary" />
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
         </div>
       </div>
     </header>
