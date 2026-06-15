@@ -2085,17 +2085,19 @@ export default function SubmodelFormEditor({
           })}
         </nav>
 
-        {/* Advanced toggle */}
-        <div className="shrink-0 px-3 py-2 border-t border-zinc-200">
-          <button
-            type="button"
-            onClick={onToggleAdvanced}
-            className="flex items-center gap-2 text-xs text-zinc-400 hover:text-zinc-600 transition-colors w-full py-1"
-          >
-            <Code2 size={12} />
-            {showAdvanced ? "Hide advanced view" : "Advanced (Tree) view"}
-          </button>
-        </div>
+        {/* Advanced toggle — 추후 오픈 예정, 현재는 숨김 (소스 유지) */}
+        {false && (
+          <div className="shrink-0 px-3 py-2 border-t border-zinc-200">
+            <button
+              type="button"
+              onClick={onToggleAdvanced}
+              className="flex items-center gap-2 text-xs text-zinc-400 hover:text-zinc-600 transition-colors w-full py-1"
+            >
+              <Code2 size={12} />
+              {showAdvanced ? "Hide advanced view" : "Advanced (Tree) view"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Right content ── */}
