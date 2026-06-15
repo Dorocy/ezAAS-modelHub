@@ -18,6 +18,12 @@ const MAX_VISIBLE_ISSUES = 20;
 interface ValidationSummaryProps {
   report: ModelValidationReport;
   className?: string;
+  /**
+   * 승인되어 게시(published)된 템플릿처럼 "항상 검증 통과"로 간주해야 하는 경우 true.
+   * 관리자가 검증을 통과한 템플릿만 승인·게시하므로, 게시본에서 클라이언트 측
+   * 검증의 오탐(경고/오류)이 노출되지 않도록 항상 Valid 로 표시하고 이슈를 숨긴다.
+   */
+  forceValid?: boolean;
 }
 
 /**
@@ -28,17 +34,20 @@ interface ValidationSummaryProps {
  *
  * 이 컴포넌트는 어떤 편집 상태도 변경하지 않는다(정보 제공 전용).
  */
-export default function ValidationSummary({ report, className }: ValidationSummaryProps) {
+export default function ValidationSummary({ report, className, forceValid = false }: ValidationSummaryProps) {
   const { t } = useLanguage();
   const { parsed, errorCount, warningCount, issues } = report;
 
-  const tone: "valid" | "warning" | "error" = !parsed
-    ? "error"
-    : warningCount > 0
-      ? "warning"
-      : "valid";
+  const tone: "valid" | "warning" | "error" = forceValid
+    ? "valid"
+    : !parsed
+      ? "error"
+      : warningCount > 0
+        ? "warning"
+        : "valid";
 
-  const visibleIssues = issues.slice(0, MAX_VISIBLE_ISSUES);
+  // 게시본은 검증 통과로 간주하므로 이슈 목록을 노출하지 않는다.
+  const visibleIssues = forceValid ? [] : issues.slice(0, MAX_VISIBLE_ISSUES);
   const hiddenCount = Math.max(0, issues.length - visibleIssues.length);
 
   return (
@@ -62,7 +71,7 @@ export default function ValidationSummary({ report, className }: ValidationSumma
       </div>
 
       {/* ── Detail panel (collapsible) ── */}
-      {issues.length > 0 && (
+      {visibleIssues.length > 0 && (
         <div className="border-t border-zinc-100 px-2">
           <Accordion>
             <AccordionItem value="issues" className="border-b-0">

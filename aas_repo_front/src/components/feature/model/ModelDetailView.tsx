@@ -91,6 +91,13 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
     return validateModelMetadata(metadata, kind);
   }, [model, modelType]);
 
+  // 관리자는 검증을 통과한 템플릿만 승인·게시한다. 따라서 게시본(published/success)은
+  // 항상 검증 통과로 간주하고, 클라이언트 측 검증의 오탐을 실패로 표시하지 않는다.
+  // 반면 draft/temporary 는 작업 중 상태이므로 실제 검증 결과를 그대로 보여준다.
+  const isApprovedTemplate = ["published", "success", "approved"].includes(
+    String(model?.status ?? "").toLowerCase(),
+  );
+
   return (
     <div className="min-h-screen bg-zinc-50">
       {/* ── Header ── */}
@@ -198,7 +205,7 @@ export default function ModelDetailView({ modelType, modelSeq }: ModelDetailView
                   <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
                     {t("Validation")}
                   </h2>
-                  <ValidationSummary report={validationReport} />
+                  <ValidationSummary report={validationReport} forceValid={isApprovedTemplate} />
                 </div>
               )}
             </div>
