@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 function Header() {
   const [widthMode, setWidthMode] = useState<"Normal" | "Wide">("Normal");
   const [mounted, setMounted] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -47,6 +48,11 @@ function Header() {
     const saved = (localStorage.getItem("data-layout-width") || "Normal") as "Normal" | "Wide";
     setWidthMode(saved);
     if (saved === "Wide") document.body.classList.add("layout-wide");
+
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   const toggleWidthMode = () => {
@@ -83,7 +89,12 @@ function Header() {
     pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-card">
+    <header
+      className={cn(
+        "sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 transition-shadow duration-200",
+        scrolled ? "border-border shadow-sm" : "border-border/60"
+      )}
+    >
       {/* ── Top bar ──────────────────────────────────────────────── */}
       <div className="mx-auto max-w-screen-2xl px-4 lg:px-8">
         <div className="flex h-14 items-center justify-between gap-4">
@@ -100,8 +111,9 @@ function Header() {
               <SheetContent side="left" className="w-72 p-0">
                 <SheetHeader className="border-b border-border px-5 py-4">
                   <SheetTitle>
-                    <Link href={ROUTES.HOME}>
-                      <img src="/assets/media/logos/keti_logo.png" alt="KETI ezAAS" className="h-8" />
+                    <Link href={ROUTES.HOME} className="flex flex-col gap-2">
+                      <img src="/assets/media/logos/ezaas_badge.png" alt="ezAAS" className="h-7 w-auto self-start" />
+                      <img src="/assets/media/logos/keti_logo.png" alt="KETI — Korea Electronics Technology Institute" className="h-4 w-auto self-start opacity-65" />
                     </Link>
                   </SheetTitle>
                 </SheetHeader>
@@ -136,8 +148,18 @@ function Header() {
               </SheetContent>
             </Sheet>
 
-            <Link href={ROUTES.HOME} className="flex items-center shrink-0">
-              <img src="/assets/media/logos/keti_logo.png" alt="KETI ezAAS" className="h-8 lg:h-8" />
+            <Link href={ROUTES.HOME} className="flex items-center gap-2.5 shrink-0" title="ezAAS — The All-in-one AAS Solution">
+              <img
+                src="/assets/media/logos/ezaas_badge.png"
+                alt="ezAAS"
+                className="h-7 w-auto"
+              />
+              <span className="hidden h-6 w-px bg-border sm:block" aria-hidden="true" />
+              <img
+                src="/assets/media/logos/keti_logo.png"
+                alt="KETI — Korea Electronics Technology Institute"
+                className="hidden h-5 w-auto opacity-70 sm:block"
+              />
             </Link>
           </div>
 
